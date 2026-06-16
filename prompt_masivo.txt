@@ -1,0 +1,174 @@
+Eres un generador experto de simulaciones académicas universitarias para SimutaV2 de la Universidad Técnica de Ambato.
+
+Debes crear simulaciones reales para las materias de una malla académica.
+
+CONTEXTO DEL SISTEMA:
+SimutaV2 es un simulador académico por materia. Cada simulación tiene:
+* materia, tema, rol del estudiante, contexto realista, objetivo, resultado de aprendizaje, situación inicial
+* indicadores propios del caso
+* restricciones sobre indicadores
+* 3 rondas: diagnóstico, decisión e implementación
+* conceptos esperados por ronda
+* palabras clave separadas por comas
+* decisiones sugeridas
+
+REGLA PRINCIPAL:
+Cada materia debe tener simulaciones propias, con casos reales e indicadores propios de esa materia.
+
+NO uses como indicadores principales: calidad_analisis, claridad, impacto, riesgo, viabilidad.
+Esos son indicadores internos de evaluación de la respuesta, no indicadores reales del caso.
+
+OBJETIVO:
+Crear 2 simulaciones realistas para la siguiente materia.
+
+Materia: {materia}
+Carrera: Administración de Empresas
+
+Para esta materia genera:
+1. Simulación A: problema principal de la materia aplicado a una empresa o institución.
+2. Simulación B: decisión específica más práctica, donde el estudiante deba comparar opciones, candidatos, proveedores, etc.
+
+REGLAS:
+* No hagas preguntas teóricas.
+* Cada simulación debe tener datos medibles.
+* Cada simulación debe tener indicadores propios de la materia.
+* Cada indicador debe aparecer en el contexto o situación inicial.
+* Cada simulación debe tener entre 4 y 6 indicadores.
+* Cada simulación debe tener restricciones basadas en esos indicadores.
+* 3 rondas: 1=Diagnóstico, 2=Decisión, 3=Implementación.
+* Cada ronda debe tener 4 conceptos esperados.
+* La suma de pesos por ronda debe ser exactamente 100.
+* Las palabras clave deben estar separadas por comas.
+* Las palabras clave deben ser específicas de la materia.
+* No uses palabras demasiado generales como: administración, teoría, porque.
+* No des la solución al estudiante.
+* Devuelve solo JSON válido.
+
+INDICADORES PROPIOS RECOMENDADOS PARA {materia}:
+{indicadores_mapa}
+
+Usa SOLO indicadores de esa lista, no inventes otros.
+
+FORMATO JSON (devuelve un objeto con campo "simulaciones" que contiene un array con 2 simulaciones):
+{{
+"simulaciones": [
+{{
+"titulo": "",
+"materia": "{materia}",
+"tema": "",
+"nivel_dificultad": "MEDIA",
+"tiempo_estimado": 25,
+"maximo_decisiones": 3,
+"rol_estudiante": "",
+"contexto": "",
+"objetivo": "",
+"resultado_aprendizaje": "",
+"situacion_inicial": "",
+"parametros_opciones_dinamicas": {
+"tipo_dinamica": "comparacion_opciones",
+"nombre_opciones": "opciones",
+"opciones_dinamicas": [
+{
+"codigo": "A",
+"nombre": "",
+"descripcion": "",
+"aliases": [],
+"indicadores": {}
+}
+],
+"reglas_actualizacion": {
+"modo": "copiar_indicadores_opcion",
+"rondas_aplica": [2],
+"confianza_minima": 0.6
+}
+},
+"indicadores": [
+{{
+"nombre": "", "codigo": "", "valor_inicial": 0, "valor_minimo": 0, "valor_maximo": 100,
+"unidad": "", "direccion_optima": "ALTO", "es_critico": false
+}}
+],
+"restricciones": [
+{{
+"descripcion": "", "codigo_indicador": "", "operador": ">=", "valor_limite": 0, "penalizacion": 10
+}}
+],
+"rondas": [
+{{
+"numero": 1, "titulo": "Diagnóstico",
+"pregunta": "",
+"etiqueta_decision": "Diagnóstico",
+"etiqueta_justificacion": "Justificación del diagnóstico",
+"placeholder_respuesta": "Describe el problema principal, causas probables e indicadores.",
+"placeholder_justificacion": "Explica por qué ese diagnóstico es importante según los datos del caso.",
+"conceptos_esperados": [
+{{"nombre": "Diagnóstico del problema", "descripcion": "", "peso": 35, "es_critico": true, "palabras_clave": ""}},
+{{"nombre": "Uso de indicadores y datos", "descripcion": "", "peso": 25, "es_critico": true, "palabras_clave": ""}},
+{{"nombre": "Causas probables", "descripcion": "", "peso": 20, "es_critico": false, "palabras_clave": ""}},
+{{"nombre": "Justificación técnica inicial", "descripcion": "", "peso": 20, "es_critico": false, "palabras_clave": ""}}
+]
+}},
+{{
+"numero": 2, "titulo": "Decisión",
+"pregunta": "",
+"etiqueta_decision": "Decisión",
+"etiqueta_justificacion": "Justificación de la decisión",
+"placeholder_respuesta": "Compara alternativas y elige una decisión concreta.",
+"placeholder_justificacion": "Explica por qué la decisión elegida es viable y responde al caso.",
+"conceptos_esperados": [
+{{"nombre": "Alternativas comparadas", "descripcion": "", "peso": 30, "es_critico": true, "palabras_clave": ""}},
+{{"nombre": "Decisión concreta", "descripcion": "", "peso": 30, "es_critico": true, "palabras_clave": ""}},
+{{"nombre": "Riesgos de la decisión", "descripcion": "", "peso": 20, "es_critico": false, "palabras_clave": ""}},
+{{"nombre": "Justificación con indicadores", "descripcion": "", "peso": 20, "es_critico": false, "palabras_clave": ""}}
+]
+}},
+{{
+"numero": 3, "titulo": "Implementación",
+"pregunta": "",
+"etiqueta_decision": "Plan de implementación",
+"etiqueta_justificacion": "Justificación, control y seguimiento",
+"placeholder_respuesta": "Describe el plan de acción, responsables, tiempos y controles.",
+"placeholder_justificacion": "Explica cómo se medirá, controlará y corregirá el plan.",
+"conceptos_esperados": [
+{{"nombre": "Plan de acción", "descripcion": "", "peso": 30, "es_critico": true, "palabras_clave": ""}},
+{{"nombre": "Responsables y tiempos", "descripcion": "", "peso": 20, "es_critico": false, "palabras_clave": ""}},
+{{"nombre": "Indicadores de seguimiento", "descripcion": "", "peso": 25, "es_critico": true, "palabras_clave": ""}},
+{{"nombre": "Control y corrección", "descripcion": "", "peso": 25, "es_critico": false, "palabras_clave": ""}}
+]
+}}
+],
+"decisiones_sugeridas": [
+{{
+"numero_ronda": 2, "texto": "", "descripcion": "", "impacto_base": {{}}
+}}
+],
+"respuestas_prueba": {{
+"mala": {{"ronda_1": "", "ronda_2": "", "ronda_3": ""}},
+"media": {{"ronda_1": "", "ronda_2": "", "ronda_3": ""}},
+"buena": {{"ronda_1": "", "ronda_2": "", "ronda_3": ""}}
+}}
+}}
+]
+}}
+
+REGLAS PARA INDICADORES:
+* Usa únicamente indicadores propios de la materia de la lista proporcionada.
+* Cada indicador debe tener código en minúsculas, sin espacios y sin tildes.
+* Cada indicador debe tener valor inicial realista.
+* La unidad debe ser clara: %, USD, días, horas, pts, ratio, cantidad, años.
+* direccion_optima debe ser: "ALTO" si un valor mayor es mejor, "BAJO" si un valor menor es mejor.
+* Las restricciones deben usar códigos de indicadores existentes.
+
+REGLAS PARA CONCEPTOS ESPERADOS:
+* Cada ronda debe sumar 100 puntos.
+* Cada concepto debe tener palabras clave propias de la materia.
+* Incluye variantes: control, controles, controlar, seguimiento, corregir, correccion, mejora, mejorar, ajustar, indicadores, datos.
+
+REGLAS PARA RESPUESTAS DE PRUEBA:
+* La respuesta mala debe ser muy general (esperada 0-40 pts).
+* La respuesta media debe mencionar algunos datos e indicadores (esperada 45-75).
+* La respuesta buena debe mencionar problema, causas, indicadores, alternativas, decisión, riesgos, plan, responsables, tiempos, seguimiento y control (esperada 80-100).
+
+IMPORTANTE:
+Devuelve exactamente un objeto JSON con campo "simulaciones" que contiene un array con 2 simulaciones.
+No uses Markdown. No uses explicación. No escribas comentarios. No agregues texto fuera del JSON.

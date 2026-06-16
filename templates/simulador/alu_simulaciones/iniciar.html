@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}{{ simulacion.titulo }}{% endblock %}
+{% block content %}
+<div class="game-screen">
+
+    <!-- Portada de la mision -->
+    <div class="mission-hero mb-3">
+        <div class="mission-hero-inner">
+            <div class="hud-label">Nueva misión · {{ simulacion.materia_malla.materia.nombre }}</div>
+            <h1 class="mission-title">{{ simulacion.titulo }}</h1>
+            <div class="mission-tags">
+                {% if simulacion.nivel_dificultad == 'BASICA' %}<span class="chip chip-basica">Básica</span>
+                {% elif simulacion.nivel_dificultad == 'AVANZADA' %}<span class="chip chip-avanzada">Avanzada</span>
+                {% else %}<span class="chip chip-media">Media</span>{% endif %}
+                <span class="mission-tag">⏱ {{ simulacion.tiempo_estimado }} min</span>
+                <span class="mission-tag">🎯 {{ simulacion.maximo_decisiones }} rondas</span>
+                {% if simulacion.tema %}<span class="mission-tag">{{ simulacion.tema }}</span>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            {% if simulacion.rol_estudiante %}
+            <div class="game-card mb-3">
+                <div class="game-card-head"><span class="game-tag">🦸 Tu personaje</span></div>
+                <p class="mb-0">{{ simulacion.rol_estudiante }}</p>
+            </div>
+            {% endif %}
+
+            {% if simulacion.contexto %}
+            <div class="game-card briefing mb-3">
+                <div class="game-card-head"><span class="game-tag">🎬 Briefing de la misión</span></div>
+                <p class="briefing-text mb-0">{{ simulacion.contexto }}</p>
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+                {% if simulacion.objetivo %}
+                <div class="col-md-6">
+                    <div class="game-card h-100">
+                        <div class="game-card-head"><span class="game-tag">🏁 Objetivo</span></div>
+                        <p class="mb-0 small">{{ simulacion.objetivo }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% if simulacion.resultado_aprendizaje %}
+                <div class="col-md-6">
+                    <div class="game-card h-100">
+                        <div class="game-card-head"><span class="game-tag">🧠 Aprenderás</span></div>
+                        <p class="mb-0 small">{{ simulacion.resultado_aprendizaje }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if simulacion.situacion_inicial %}
+            <div class="game-card mt-3">
+                <div class="game-card-head"><span class="game-tag">📍 Punto de partida</span></div>
+                <p class="mb-0">{{ simulacion.situacion_inicial }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            {% if indicadores %}
+            <div class="game-card mb-3">
+                <div class="game-card-head"><span class="game-tag">📊 Tus indicadores</span></div>
+                <p class="text-muted small mb-2">Estos son los marcadores que tus decisiones moverán.</p>
+                <div class="vstack gap-2">
+                    {% for ind in indicadores %}
+                    <div class="d-flex justify-content-between align-items-center mission-ind">
+                        <span class="fw-semibold small">{{ ind.nombre }}{% if ind.es_critico %} <span class="game-crit">clave</span>{% endif %}</span>
+                        <span class="mission-ind-val">{{ ind.valor_inicial }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="game-card mission-start">
+                <p class="small text-muted mb-3">Tomarás <strong>{{ simulacion.maximo_decisiones }} decisiones</strong>. Cada una mueve la empresa. ¿List@ para jugar?</p>
+                <form method="post" action="?action=iniciar" onsubmit="return enviar_formulario(this)">
+                    {% csrf_token %}
+                    <input type="hidden" name="simulacion_id" value="{{ simulacion.pk }}">
+                    <button class="btn btn-primary btn-play btn-lg w-100">▶ Iniciar misión</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

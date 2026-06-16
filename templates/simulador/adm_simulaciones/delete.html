@@ -1,0 +1,15 @@
+<form method="post" action="{% url 'adm_simulaciones' %}?action=delete&pk={{ object.pk }}" onsubmit="return enviar_formulario(this)">
+    {% csrf_token %}
+    <div class="modal-header">
+        <h5 class="modal-title">Eliminar simulacion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+        <p>Esta seguro de eliminar la simulacion <strong>{{ object.titulo }}</strong>?</p>
+        <p class="text-danger small mb-0">Se desactivara el registro para conservar el historial.</p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-danger">Eliminar</button>
+    </div>
+</form>

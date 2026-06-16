@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div><div class="section-title">Profesor</div><h1 class="h3 mb-0">Examenes configurados</h1></div>
+    <div>
+        <button class="btn btn-primary" onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=add')">Nueva simulacion</button>
+    </div>
+</div>
+<div class="row g-3">
+    <div class="col-xl-8">
+        <div class="module-card p-3 table-responsive">
+            <table class="table table-hover align-middle">
+                <thead><tr><th>Examen</th><th>Tipo</th><th>Estado</th><th>Configuracion</th></tr></thead>
+                <tbody>
+                {% for s in list %}
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">{{ s.titulo }}</div>
+                            <div class="text-muted small">{{ s.materia_malla.materia.nombre }} / Nivel {{ s.materia_malla.nivel.numero }}</div>
+                            <div class="text-muted small">Rol: {{ s.rol_estudiante|default:"Responsable de decision" }}</div>
+                        </td>
+                        <td><span class="badge text-bg-light border">{{ s.get_tipo_simulacion_display }}</span></td>
+                        <td>
+                            <span class="badge text-bg-{% if s.estado == 'PUBLICADA' %}success{% elif s.estado == 'BORRADOR' %}warning{% else %}secondary{% endif %}">
+                                {{ s.estado }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-row">
+                            <button class="btn btn-sm btn-outline-primary" onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=edit&id={{ s.pk }}')">Editar</button>
+                            <a class="btn btn-sm btn-outline-dark" href="{% url 'pro_simulaciones' %}?action=configuracion&id={{ s.pk }}">Config</a>
+                            <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=indicadores&id={{ s.pk }}">Indicadores</a>
+                            {% if s.tipo_simulacion == 'SIN_IA_ARBOL' %}
+                                <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=escenarios&id={{ s.pk }}">Arbol</a>
+                            {% else %}
+                                <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=restricciones&id={{ s.pk }}">Restricciones</a>
+                                <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=criterios&id={{ s.pk }}">Criterios</a>
+                                <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=conceptos&id={{ s.pk }}">Conceptos</a>
+                                <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=acciones&id={{ s.pk }}">Acciones</a>
+                            {% endif %}
+                            <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=condiciones&id={{ s.pk }}">Exito</a>
+                            {% if s.estado == 'BORRADOR' %}
+                                <form method="post" action="{% url 'pro_simulaciones' %}" class="d-inline" onsubmit="return enviar_formulario(this)">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="publicar">
+                                    <input type="hidden" name="pk" value="{{ s.pk }}">
+                                    <button class="btn btn-sm btn-success">Publicar</button>
+                                </form>
+                            {% endif %}
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'pro_simulaciones' %}?action=revisar&id={{ s.pk }}">Revisar</a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="text-muted">No tienes simulaciones.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="module-card p-3">
+            <h2 class="h5">Materias asignadas</h2>
+            {% for a in asignaciones %}
+                <div class="border-top py-2">
+                    <div class="fw-semibold">{{ a.materia_malla.materia.nombre }}</div>
+                    <div class="text-muted small">{{ a.periodo }} / Nivel {{ a.materia_malla.nivel.numero }}</div>
+                    <form method="post" action="{% url 'pro_simulaciones' %}" class="mt-2" onsubmit="return enviar_formulario(this)">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="generar_desde_plantilla">
+                        <input type="hidden" name="materia_malla_id" value="{{ a.materia_malla.pk }}">
+                        <button class="btn btn-sm btn-outline-primary">Generar simulacion IA</button>
+                    </form>
+                </div>
+            {% empty %}
+                <p class="text-muted mb-0">Sin materias asignadas.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

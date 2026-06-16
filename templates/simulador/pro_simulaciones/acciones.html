@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Acciones sugeridas - {{ simulacion.titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <div class="section-title">Configuracion</div>
+        <h1 class="h3 mb-0">Decisiones sugeridas</h1>
+        <div class="text-muted">{{ simulacion.titulo }}</div>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}">&larr; Volver</a>
+</div>
+
+<div class="alert alert-info py-2 small">
+    Estas son <strong>decisiones de ejemplo</strong> que el estudiante vera y podra elegir.
+    Por cada decision, indica <strong>cuanto cambia cada indicador</strong> si el estudiante la toma:
+    un numero <strong>positivo lo sube</strong> (ej. <code>+10</code>) y uno <strong>negativo lo baja</strong> (ej. <code>-8</code>).
+    Deja en blanco los indicadores que no cambian. <strong>No necesitas escribir codigo.</strong>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="module-card p-3">
+            <h2 class="h5 mb-3">Nueva decision</h2>
+            <form method="post" action="{% url 'pro_simulaciones' %}?action=add_accion&id={{ simulacion.pk }}"
+                  onsubmit="return enviar_formulario(this)">
+                {% csrf_token %}
+                {{ form.simulacion }}
+                <div class="mb-3">
+                    <label class="form-label" for="id_texto">Decision (lo que vera el estudiante)</label>
+                    {{ form.texto }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="id_descripcion">Descripcion / consecuencia (opcional)</label>
+                    {{ form.descripcion }}
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label mb-1">Efecto sobre los indicadores</label>
+                    <div class="text-muted small mb-2">Positivo sube, negativo baja. En blanco = sin cambio.</div>
+                    {% for ind in indicadores %}
+                    <div class="impacto-row">
+                        <div class="impacto-label">
+                            <span class="fw-semibold">{{ ind.nombre }}</span>
+                            <span class="text-muted small d-block">
+                                {% if ind.direccion_optima == 'BAJO' %}mejor cuando es bajo{% else %}mejor cuando es alto{% endif %}
+                            </span>
+                        </div>
+                        <input type="number" step="1" class="impacto-input" name="impacto_{{ ind.codigo }}"
+                               placeholder="0" inputmode="numeric">
+                    </div>
+                    {% empty %}
+                    <div class="text-muted small">Esta simulacion aun no tiene indicadores configurados.</div>
+                    {% endfor %}
+                </div>
+
+                <label class="d-block mt-3 mb-3">
+                    {{ form.activo }} <span class="ms-1">Visible para el estudiante</span>
+                </label>
+                <button class="btn btn-primary">Guardar decision</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="module-card p-3">
+            <h2 class="h5 mb-3">Decisiones actuales</h2>
+            <div class="vstack gap-2">
+            {% for item in acciones %}
+                <div class="decision-item">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <div class="fw-semibold">{{ item.texto }}</div>
+                            {% if item.descripcion %}<div class="text-muted small">{{ item.descripcion }}</div>{% endif %}
+                        </div>
+                        <form method="post" action="{% url 'pro_simulaciones' %}?action=delete_accion&id={{ item.pk }}"
+                              onsubmit="return enviar_formulario(this)">
+                            {% csrf_token %}
+                            <button class="btn btn-outline-dark btn-sm" title="Eliminar">&times;</button>
+                        </form>
+                    </div>
+                    <div class="sim-tags mt-2">
+                        {% for nombre, valor in item.impacto_legible %}
+                            <span class="chip {% if valor >= 0 %}chip-up{% else %}chip-down{% endif %}">
+                                {{ nombre }} {% if valor >= 0 %}+{% endif %}{{ valor }}
+                            </span>
+                        {% empty %}
+                            <span class="chip chip-soft">Sin efecto en indicadores</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-muted mb-0">Aun no hay decisiones. Crea la primera con el formulario.</p>
+            {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

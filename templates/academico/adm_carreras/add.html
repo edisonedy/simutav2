@@ -1,0 +1,14 @@
+<form action="." method="post" onsubmit="return enviar_formulario(this)">
+    {% csrf_token %}
+    <div class="modal-header">
+        <h5 class="modal-title">Nueva carrera</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+        {{ form.as_p }}
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary" onclick="enviar_formulario(this.form)">Guardar</button>
+    </div>
+</form>

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+    <h1 class="h3">Materias</h1>
+    <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_materias' %}?action=add')">Nueva materia</button>
+</div>
+<div class="module-card p-3 table-responsive">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Codigo</th><th>Nombre</th><th>Institucion</th><th>Creditos</th><th>Horas</th><th>Acciones</th></tr></thead>
+        <tbody>
+        {% for item in list %}
+            <tr>
+                <td>{{ item.codigo }}</td>
+                <td>{{ item.nombre }}</td>
+                <td>{{ item.institucion }}</td>
+                <td>{{ item.creditos }}</td>
+                <td>{{ item.horas }}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary btn-action" onclick="abrir_modal('{% url 'adm_materias' %}?action=edit&pk={{ item.pk }}')">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger btn-action" onclick="abrir_modal('{% url 'adm_materias' %}?action=delete&pk={{ item.pk }}')">Eliminar</button>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6" class="text-muted">No hay registros</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

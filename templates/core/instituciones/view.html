@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+    <h1 class="h3">Instituciones</h1>
+    <a class="btn btn-primary" href="{% url 'core:institucion_add' %}">Nueva institucion</a>
+</div>
+<div class="module-card p-3 table-responsive">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Nombre</th><th>Siglas</th><th>RUC</th><th>Email</th><th></th></tr></thead>
+        <tbody>
+        {% for institucion in instituciones %}
+            <tr>
+                <td>{{ institucion.nombre }}</td>
+                <td>{{ institucion.siglas }}</td>
+                <td>{{ institucion.ruc }}</td>
+                <td>{{ institucion.email }}</td>
+                <td><a class="btn btn-sm btn-outline-primary" href="{% url 'core:institucion_edit' institucion.pk %}">Editar</a></td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="text-muted">No hay instituciones registradas.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

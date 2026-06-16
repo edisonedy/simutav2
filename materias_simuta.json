@@ -1,0 +1,3096 @@
+[
+  {
+    "materia_malla_id": 1,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N1M1_ESTADISTICA_DESCRIPTIV - Estadistica Descriptiva",
+    "materia": "N1M1_ESTADISTICA_DESCRIPTIV - Estadistica Descriptiva",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 1",
+    "orden": 1,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N1M1_ESTADISTICA_DESCRIPTIV - Estadistica Descriptiva",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.710186+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.710191+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 1"
+      },
+      "materia": {
+        "id": 1,
+        "texto": "N1M1_ESTADISTICA_DESCRIPTIV - Estadistica Descriptiva"
+      },
+      "orden": "1",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "1",
+      "texto": "N1M1_ESTADISTICA_DESCRIPTIV - Estadistica Descriptiva",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.706749+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.706756+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N1M1_ESTADISTICA_DESCRIPTIV",
+      "nombre": "Estadistica Descriptiva",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 1",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.703110+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.703116+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "1",
+      "nombre": "1 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 2,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N1M2_CONTABILIDAD_DE_COSTOS - Contabilidad de Costos",
+    "materia": "N1M2_CONTABILIDAD_DE_COSTOS - Contabilidad de Costos",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 1",
+    "orden": 2,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "2",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N1M2_CONTABILIDAD_DE_COSTOS - Contabilidad de Costos",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.714628+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.714634+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 1"
+      },
+      "materia": {
+        "id": 2,
+        "texto": "N1M2_CONTABILIDAD_DE_COSTOS - Contabilidad de Costos"
+      },
+      "orden": "2",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "2",
+      "texto": "N1M2_CONTABILIDAD_DE_COSTOS - Contabilidad de Costos",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.712622+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.712627+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N1M2_CONTABILIDAD_DE_COSTOS",
+      "nombre": "Contabilidad de Costos",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 1",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.703110+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.703116+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "1",
+      "nombre": "1 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 3,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N1M3_PROCESOS_ADMINISTRATIV - Procesos Administrativos",
+    "materia": "N1M3_PROCESOS_ADMINISTRATIV - Procesos Administrativos",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 1",
+    "orden": 3,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "3",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N1M3_PROCESOS_ADMINISTRATIV - Procesos Administrativos",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.718226+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.718230+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 1"
+      },
+      "materia": {
+        "id": 3,
+        "texto": "N1M3_PROCESOS_ADMINISTRATIV - Procesos Administrativos"
+      },
+      "orden": "3",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "3",
+      "texto": "N1M3_PROCESOS_ADMINISTRATIV - Procesos Administrativos",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.716408+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.716413+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N1M3_PROCESOS_ADMINISTRATIV",
+      "nombre": "Procesos Administrativos",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 1",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.703110+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.703116+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "1",
+      "nombre": "1 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 4,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N1M4_DERECHO_LABORAL - Derecho Laboral",
+    "materia": "N1M4_DERECHO_LABORAL - Derecho Laboral",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 1",
+    "orden": 4,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "4",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N1M4_DERECHO_LABORAL - Derecho Laboral",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.722131+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.722135+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 1"
+      },
+      "materia": {
+        "id": 4,
+        "texto": "N1M4_DERECHO_LABORAL - Derecho Laboral"
+      },
+      "orden": "4",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "4",
+      "texto": "N1M4_DERECHO_LABORAL - Derecho Laboral",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.720134+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.720139+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N1M4_DERECHO_LABORAL",
+      "nombre": "Derecho Laboral",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 1",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.703110+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.703116+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "1",
+      "nombre": "1 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 5,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N2M1_DESARROLLO_Y_COMPORTAM - Desarrollo y Comportamiento Organizacional",
+    "materia": "N2M1_DESARROLLO_Y_COMPORTAM - Desarrollo y Comportamiento Organizacional",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 2",
+    "orden": 1,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "5",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N2M1_DESARROLLO_Y_COMPORTAM - Desarrollo y Comportamiento Organizacional",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.727346+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.727351+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 2,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 2"
+      },
+      "materia": {
+        "id": 5,
+        "texto": "N2M1_DESARROLLO_Y_COMPORTAM - Desarrollo y Comportamiento Organizacional"
+      },
+      "orden": "1",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "5",
+      "texto": "N2M1_DESARROLLO_Y_COMPORTAM - Desarrollo y Comportamiento Organizacional",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.725632+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.725637+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N2M1_DESARROLLO_Y_COMPORTAM",
+      "nombre": "Desarrollo y Comportamiento Organizacional",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "2",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 2",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.723909+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.723913+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "2",
+      "nombre": "2 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 6,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N2M2_METODOLOGIA_DE_LA_INVE - Metodologia de la Investigacion",
+    "materia": "N2M2_METODOLOGIA_DE_LA_INVE - Metodologia de la Investigacion",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 2",
+    "orden": 2,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "6",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N2M2_METODOLOGIA_DE_LA_INVE - Metodologia de la Investigacion",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.730798+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.730802+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 2,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 2"
+      },
+      "materia": {
+        "id": 6,
+        "texto": "N2M2_METODOLOGIA_DE_LA_INVE - Metodologia de la Investigacion"
+      },
+      "orden": "2",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "6",
+      "texto": "N2M2_METODOLOGIA_DE_LA_INVE - Metodologia de la Investigacion",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.729005+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.729009+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N2M2_METODOLOGIA_DE_LA_INVE",
+      "nombre": "Metodologia de la Investigacion",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "2",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 2",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.723909+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.723913+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "2",
+      "nombre": "2 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 7,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N2M3_DERECHO_EMPRESARIAL - Derecho Empresarial",
+    "materia": "N2M3_DERECHO_EMPRESARIAL - Derecho Empresarial",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 2",
+    "orden": 3,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "7",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N2M3_DERECHO_EMPRESARIAL - Derecho Empresarial",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.734467+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.734471+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 2,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 2"
+      },
+      "materia": {
+        "id": 7,
+        "texto": "N2M3_DERECHO_EMPRESARIAL - Derecho Empresarial"
+      },
+      "orden": "3",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "7",
+      "texto": "N2M3_DERECHO_EMPRESARIAL - Derecho Empresarial",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.732689+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.732693+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N2M3_DERECHO_EMPRESARIAL",
+      "nombre": "Derecho Empresarial",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "2",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 2",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.723909+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.723913+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "2",
+      "nombre": "2 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 8,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N3M1_ADMINISTRACION_FINANCI - Administracion Financiera",
+    "materia": "N3M1_ADMINISTRACION_FINANCI - Administracion Financiera",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 3",
+    "orden": 1,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "8",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N3M1_ADMINISTRACION_FINANCI - Administracion Financiera",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.739531+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.739535+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 3,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 3"
+      },
+      "materia": {
+        "id": 8,
+        "texto": "N3M1_ADMINISTRACION_FINANCI - Administracion Financiera"
+      },
+      "orden": "1",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "8",
+      "texto": "N3M1_ADMINISTRACION_FINANCI - Administracion Financiera",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.737825+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.737829+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N3M1_ADMINISTRACION_FINANCI",
+      "nombre": "Administracion Financiera",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "3",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 3",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.736154+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.736159+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "3",
+      "nombre": "3 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 9,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N3M2_GESTION_Y_ADMINISTRACI - Gestion y Administracion del Talento Humano",
+    "materia": "N3M2_GESTION_Y_ADMINISTRACI - Gestion y Administracion del Talento Humano",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 3",
+    "orden": 2,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "9",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N3M2_GESTION_Y_ADMINISTRACI - Gestion y Administracion del Talento Humano",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.742859+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.742863+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 3,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 3"
+      },
+      "materia": {
+        "id": 9,
+        "texto": "N3M2_GESTION_Y_ADMINISTRACI - Gestion y Administracion del Talento Humano"
+      },
+      "orden": "2",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "9",
+      "texto": "N3M2_GESTION_Y_ADMINISTRACI - Gestion y Administracion del Talento Humano",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.741153+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.741157+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N3M2_GESTION_Y_ADMINISTRACI",
+      "nombre": "Gestion y Administracion del Talento Humano",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "3",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 3",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.736154+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.736159+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "3",
+      "nombre": "3 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 10,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N3M3_TECNOLOGIAS_DE_LA_INFO - Tecnologias de la Informacion y la Comunicacion",
+    "materia": "N3M3_TECNOLOGIAS_DE_LA_INFO - Tecnologias de la Informacion y la Comunicacion",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 3",
+    "orden": 3,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "10",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N3M3_TECNOLOGIAS_DE_LA_INFO - Tecnologias de la Informacion y la Comunicacion",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.747978+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.747983+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 3,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 3"
+      },
+      "materia": {
+        "id": 10,
+        "texto": "N3M3_TECNOLOGIAS_DE_LA_INFO - Tecnologias de la Informacion y la Comunicacion"
+      },
+      "orden": "3",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "10",
+      "texto": "N3M3_TECNOLOGIAS_DE_LA_INFO - Tecnologias de la Informacion y la Comunicacion",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.745506+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.745511+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N3M3_TECNOLOGIAS_DE_LA_INFO",
+      "nombre": "Tecnologias de la Informacion y la Comunicacion",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "3",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 3",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.736154+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.736159+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "3",
+      "nombre": "3 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 11,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N4M1_GERENCIA_DE_LA_CALIDAD - Gerencia de la Calidad",
+    "materia": "N4M1_GERENCIA_DE_LA_CALIDAD - Gerencia de la Calidad",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 4",
+    "orden": 1,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "11",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N4M1_GERENCIA_DE_LA_CALIDAD - Gerencia de la Calidad",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.754097+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.754102+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 4,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 4"
+      },
+      "materia": {
+        "id": 11,
+        "texto": "N4M1_GERENCIA_DE_LA_CALIDAD - Gerencia de la Calidad"
+      },
+      "orden": "1",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "11",
+      "texto": "N4M1_GERENCIA_DE_LA_CALIDAD - Gerencia de la Calidad",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.752293+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.752299+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N4M1_GERENCIA_DE_LA_CALIDAD",
+      "nombre": "Gerencia de la Calidad",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "4",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 4",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.750409+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.750415+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "4",
+      "nombre": "4 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 12,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N4M2_ADMINISTRACION_DE_LA_P - Administracion de la Produccion",
+    "materia": "N4M2_ADMINISTRACION_DE_LA_P - Administracion de la Produccion",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 4",
+    "orden": 2,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "12",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N4M2_ADMINISTRACION_DE_LA_P - Administracion de la Produccion",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.757992+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.757997+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 4,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 4"
+      },
+      "materia": {
+        "id": 12,
+        "texto": "N4M2_ADMINISTRACION_DE_LA_P - Administracion de la Produccion"
+      },
+      "orden": "2",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "12",
+      "texto": "N4M2_ADMINISTRACION_DE_LA_P - Administracion de la Produccion",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.755839+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.755844+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N4M2_ADMINISTRACION_DE_LA_P",
+      "nombre": "Administracion de la Produccion",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "4",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 4",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.750409+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.750415+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "4",
+      "nombre": "4 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 13,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N4M3_ETICA_EMPRESARIAL_Y_RE - Etica Empresarial y Responsabilidad Social",
+    "materia": "N4M3_ETICA_EMPRESARIAL_Y_RE - Etica Empresarial y Responsabilidad Social",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 4",
+    "orden": 3,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "13",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N4M3_ETICA_EMPRESARIAL_Y_RE - Etica Empresarial y Responsabilidad Social",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.761637+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.761642+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 4,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 4"
+      },
+      "materia": {
+        "id": 13,
+        "texto": "N4M3_ETICA_EMPRESARIAL_Y_RE - Etica Empresarial y Responsabilidad Social"
+      },
+      "orden": "3",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "13",
+      "texto": "N4M3_ETICA_EMPRESARIAL_Y_RE - Etica Empresarial y Responsabilidad Social",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.759788+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.759793+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N4M3_ETICA_EMPRESARIAL_Y_RE",
+      "nombre": "Etica Empresarial y Responsabilidad Social",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "4",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 4",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.750409+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.750415+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "4",
+      "nombre": "4 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 14,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N4M4_NUEVAS_TENDENCIAS_EN_A - Nuevas Tendencias en Administracion",
+    "materia": "N4M4_NUEVAS_TENDENCIAS_EN_A - Nuevas Tendencias en Administracion",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 4",
+    "orden": 4,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "14",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N4M4_NUEVAS_TENDENCIAS_EN_A - Nuevas Tendencias en Administracion",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.766518+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.766524+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 4,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 4"
+      },
+      "materia": {
+        "id": 14,
+        "texto": "N4M4_NUEVAS_TENDENCIAS_EN_A - Nuevas Tendencias en Administracion"
+      },
+      "orden": "4",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "14",
+      "texto": "N4M4_NUEVAS_TENDENCIAS_EN_A - Nuevas Tendencias en Administracion",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.763555+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.763560+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N4M4_NUEVAS_TENDENCIAS_EN_A",
+      "nombre": "Nuevas Tendencias en Administracion",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "4",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 4",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.750409+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.750415+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "4",
+      "nombre": "4 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 15,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N5M1_EMPRENDIMIENTO - Emprendimiento",
+    "materia": "N5M1_EMPRENDIMIENTO - Emprendimiento",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5",
+    "orden": 1,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "15",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N5M1_EMPRENDIMIENTO - Emprendimiento",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.771510+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.771514+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 5,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5"
+      },
+      "materia": {
+        "id": 15,
+        "texto": "N5M1_EMPRENDIMIENTO - Emprendimiento"
+      },
+      "orden": "1",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "15",
+      "texto": "N5M1_EMPRENDIMIENTO - Emprendimiento",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.769912+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.769916+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N5M1_EMPRENDIMIENTO",
+      "nombre": "Emprendimiento",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "5",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.768282+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.768287+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "5",
+      "nombre": "5 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 16,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N5M2_INVESTIGACION_OPERATIV - Investigacion Operativa",
+    "materia": "N5M2_INVESTIGACION_OPERATIV - Investigacion Operativa",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5",
+    "orden": 2,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "16",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N5M2_INVESTIGACION_OPERATIV - Investigacion Operativa",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.774719+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.774723+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 5,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5"
+      },
+      "materia": {
+        "id": 16,
+        "texto": "N5M2_INVESTIGACION_OPERATIV - Investigacion Operativa"
+      },
+      "orden": "2",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "16",
+      "texto": "N5M2_INVESTIGACION_OPERATIV - Investigacion Operativa",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.773076+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.773080+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N5M2_INVESTIGACION_OPERATIV",
+      "nombre": "Investigacion Operativa",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "5",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.768282+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.768287+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "5",
+      "nombre": "5 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 17,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N5M3_ADMINISTRACION_ESTRATE - Administracion Estrategica",
+    "materia": "N5M3_ADMINISTRACION_ESTRATE - Administracion Estrategica",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5",
+    "orden": 3,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "17",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N5M3_ADMINISTRACION_ESTRATE - Administracion Estrategica",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.777374+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.777379+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 5,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5"
+      },
+      "materia": {
+        "id": 17,
+        "texto": "N5M3_ADMINISTRACION_ESTRATE - Administracion Estrategica"
+      },
+      "orden": "3",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "17",
+      "texto": "N5M3_ADMINISTRACION_ESTRATE - Administracion Estrategica",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.776444+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.776448+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N5M3_ADMINISTRACION_ESTRATE",
+      "nombre": "Administracion Estrategica",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "5",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.768282+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.768287+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "5",
+      "nombre": "5 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 18,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N5M4_SIMULACION_DE_NEGOCIOS - Simulacion de Negocios",
+    "materia": "N5M4_SIMULACION_DE_NEGOCIOS - Simulacion de Negocios",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5",
+    "orden": 4,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "18",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N5M4_SIMULACION_DE_NEGOCIOS - Simulacion de Negocios",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.779175+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.779179+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 5,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5"
+      },
+      "materia": {
+        "id": 18,
+        "texto": "N5M4_SIMULACION_DE_NEGOCIOS - Simulacion de Negocios"
+      },
+      "orden": "4",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "18",
+      "texto": "N5M4_SIMULACION_DE_NEGOCIOS - Simulacion de Negocios",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.778225+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.778229+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N5M4_SIMULACION_DE_NEGOCIOS",
+      "nombre": "Simulacion de Negocios",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "5",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.768282+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.768287+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "5",
+      "nombre": "5 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 19,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N5M5_SISTEMAS_DE_INFORMACIO - Sistemas de Informacion Gerencial",
+    "materia": "N5M5_SISTEMAS_DE_INFORMACIO - Sistemas de Informacion Gerencial",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5",
+    "orden": 5,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "19",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N5M5_SISTEMAS_DE_INFORMACIO - Sistemas de Informacion Gerencial",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.780639+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.780642+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 5,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5"
+      },
+      "materia": {
+        "id": 19,
+        "texto": "N5M5_SISTEMAS_DE_INFORMACIO - Sistemas de Informacion Gerencial"
+      },
+      "orden": "5",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "19",
+      "texto": "N5M5_SISTEMAS_DE_INFORMACIO - Sistemas de Informacion Gerencial",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.779887+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.779891+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N5M5_SISTEMAS_DE_INFORMACIO",
+      "nombre": "Sistemas de Informacion Gerencial",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "5",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 5",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.768282+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.768287+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "5",
+      "nombre": "5 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 20,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N6M1_PRACTICAS_LABORALES - Practicas Laborales",
+    "materia": "N6M1_PRACTICAS_LABORALES - Practicas Laborales",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6",
+    "orden": 1,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "20",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N6M1_PRACTICAS_LABORALES - Practicas Laborales",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.782736+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.782740+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 6,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6"
+      },
+      "materia": {
+        "id": 20,
+        "texto": "N6M1_PRACTICAS_LABORALES - Practicas Laborales"
+      },
+      "orden": "1",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "20",
+      "texto": "N6M1_PRACTICAS_LABORALES - Practicas Laborales",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.782019+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.782023+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N6M1_PRACTICAS_LABORALES",
+      "nombre": "Practicas Laborales",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "6",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.781328+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.781332+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "6",
+      "nombre": "6 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 21,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N6M2_AUDITORIA_ADMINISTRATI - Auditoria Administrativa",
+    "materia": "N6M2_AUDITORIA_ADMINISTRATI - Auditoria Administrativa",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6",
+    "orden": 2,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "21",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N6M2_AUDITORIA_ADMINISTRATI - Auditoria Administrativa",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.784061+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.784064+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 6,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6"
+      },
+      "materia": {
+        "id": 21,
+        "texto": "N6M2_AUDITORIA_ADMINISTRATI - Auditoria Administrativa"
+      },
+      "orden": "2",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "21",
+      "texto": "N6M2_AUDITORIA_ADMINISTRATI - Auditoria Administrativa",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.783379+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.783383+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N6M2_AUDITORIA_ADMINISTRATI",
+      "nombre": "Auditoria Administrativa",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "6",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.781328+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.781332+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "6",
+      "nombre": "6 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 22,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N6M3_ADMINISTRACION_DE_OPER - Administracion de Operaciones",
+    "materia": "N6M3_ADMINISTRACION_DE_OPER - Administracion de Operaciones",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6",
+    "orden": 3,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "22",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N6M3_ADMINISTRACION_DE_OPER - Administracion de Operaciones",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.785412+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.785415+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 6,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6"
+      },
+      "materia": {
+        "id": 22,
+        "texto": "N6M3_ADMINISTRACION_DE_OPER - Administracion de Operaciones"
+      },
+      "orden": "3",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "22",
+      "texto": "N6M3_ADMINISTRACION_DE_OPER - Administracion de Operaciones",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.784728+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.784732+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N6M3_ADMINISTRACION_DE_OPER",
+      "nombre": "Administracion de Operaciones",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "6",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.781328+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.781332+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "6",
+      "nombre": "6 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 23,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N6M4_MIPYMES_MARCAS_Y_PATEN - MIPYMES, Marcas y Patentes",
+    "materia": "N6M4_MIPYMES_MARCAS_Y_PATEN - MIPYMES, Marcas y Patentes",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6",
+    "orden": 4,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "23",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N6M4_MIPYMES_MARCAS_Y_PATEN - MIPYMES, Marcas y Patentes",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.786761+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.786765+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 6,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6"
+      },
+      "materia": {
+        "id": 23,
+        "texto": "N6M4_MIPYMES_MARCAS_Y_PATEN - MIPYMES, Marcas y Patentes"
+      },
+      "orden": "4",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "23",
+      "texto": "N6M4_MIPYMES_MARCAS_Y_PATEN - MIPYMES, Marcas y Patentes",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.786065+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.786068+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N6M4_MIPYMES_MARCAS_Y_PATEN",
+      "nombre": "MIPYMES, Marcas y Patentes",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "6",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.781328+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.781332+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "6",
+      "nombre": "6 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 24,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N6M5_HABILIDADES_GERENCIALE - Habilidades Gerenciales",
+    "materia": "N6M5_HABILIDADES_GERENCIALE - Habilidades Gerenciales",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6",
+    "orden": 5,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "24",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N6M5_HABILIDADES_GERENCIALE - Habilidades Gerenciales",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.788096+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.788100+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 6,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6"
+      },
+      "materia": {
+        "id": 24,
+        "texto": "N6M5_HABILIDADES_GERENCIALE - Habilidades Gerenciales"
+      },
+      "orden": "5",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "24",
+      "texto": "N6M5_HABILIDADES_GERENCIALE - Habilidades Gerenciales",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.787425+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.787429+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N6M5_HABILIDADES_GERENCIALE",
+      "nombre": "Habilidades Gerenciales",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "6",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 6",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.781328+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.781332+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "6",
+      "nombre": "6 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 25,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N7M1_PRACTICAS_DE_SERVICIO_ - Practicas de Servicio Comunitario",
+    "materia": "N7M1_PRACTICAS_DE_SERVICIO_ - Practicas de Servicio Comunitario",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7",
+    "orden": 1,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "25",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N7M1_PRACTICAS_DE_SERVICIO_ - Practicas de Servicio Comunitario",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.790060+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.790064+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 7,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7"
+      },
+      "materia": {
+        "id": 25,
+        "texto": "N7M1_PRACTICAS_DE_SERVICIO_ - Practicas de Servicio Comunitario"
+      },
+      "orden": "1",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "25",
+      "texto": "N7M1_PRACTICAS_DE_SERVICIO_ - Practicas de Servicio Comunitario",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.789373+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.789376+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N7M1_PRACTICAS_DE_SERVICIO_",
+      "nombre": "Practicas de Servicio Comunitario",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "7",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.788728+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.788732+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "7",
+      "nombre": "7 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 26,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N7M2_VALORACION_DE_EMPRESAS - Valoracion de Empresas",
+    "materia": "N7M2_VALORACION_DE_EMPRESAS - Valoracion de Empresas",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7",
+    "orden": 2,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "26",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N7M2_VALORACION_DE_EMPRESAS - Valoracion de Empresas",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.791972+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.791976+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 7,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7"
+      },
+      "materia": {
+        "id": 26,
+        "texto": "N7M2_VALORACION_DE_EMPRESAS - Valoracion de Empresas"
+      },
+      "orden": "2",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "26",
+      "texto": "N7M2_VALORACION_DE_EMPRESAS - Valoracion de Empresas",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.791023+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.791028+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N7M2_VALORACION_DE_EMPRESAS",
+      "nombre": "Valoracion de Empresas",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "7",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.788728+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.788732+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "7",
+      "nombre": "7 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 27,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N7M3_DISENO_DESARROLLO_DE_P - Diseno, Desarrollo de Productos y Gestion de Productos y Servicios",
+    "materia": "N7M3_DISENO_DESARROLLO_DE_P - Diseno, Desarrollo de Productos y Gestion de Productos y Servicios",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7",
+    "orden": 3,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "27",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N7M3_DISENO_DESARROLLO_DE_P - Diseno, Desarrollo de Productos y Gestion de Productos y Servicios",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.793703+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.793707+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 7,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7"
+      },
+      "materia": {
+        "id": 27,
+        "texto": "N7M3_DISENO_DESARROLLO_DE_P - Diseno, Desarrollo de Productos y Gestion de Productos y Servicios"
+      },
+      "orden": "3",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "27",
+      "texto": "N7M3_DISENO_DESARROLLO_DE_P - Diseno, Desarrollo de Productos y Gestion de Productos y Servicios",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.792740+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.792744+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N7M3_DISENO_DESARROLLO_DE_P",
+      "nombre": "Diseno, Desarrollo de Productos y Gestion de Productos y Servicios",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "7",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.788728+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.788732+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "7",
+      "nombre": "7 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 28,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N7M4_DISENO_DE_PROYECTOS - Diseno de Proyectos",
+    "materia": "N7M4_DISENO_DE_PROYECTOS - Diseno de Proyectos",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7",
+    "orden": 4,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "28",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N7M4_DISENO_DE_PROYECTOS - Diseno de Proyectos",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.795266+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.795270+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 7,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7"
+      },
+      "materia": {
+        "id": 28,
+        "texto": "N7M4_DISENO_DE_PROYECTOS - Diseno de Proyectos"
+      },
+      "orden": "4",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "28",
+      "texto": "N7M4_DISENO_DE_PROYECTOS - Diseno de Proyectos",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.794538+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.794542+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N7M4_DISENO_DE_PROYECTOS",
+      "nombre": "Diseno de Proyectos",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "7",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.788728+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.788732+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "7",
+      "nombre": "7 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 29,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N7M5_COMERCIO_EXTERIOR_E_IN - Comercio Exterior e Integracion",
+    "materia": "N7M5_COMERCIO_EXTERIOR_E_IN - Comercio Exterior e Integracion",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7",
+    "orden": 5,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "29",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N7M5_COMERCIO_EXTERIOR_E_IN - Comercio Exterior e Integracion",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.796624+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.796628+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 7,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7"
+      },
+      "materia": {
+        "id": 29,
+        "texto": "N7M5_COMERCIO_EXTERIOR_E_IN - Comercio Exterior e Integracion"
+      },
+      "orden": "5",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "29",
+      "texto": "N7M5_COMERCIO_EXTERIOR_E_IN - Comercio Exterior e Integracion",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.795938+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.795942+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N7M5_COMERCIO_EXTERIOR_E_IN",
+      "nombre": "Comercio Exterior e Integracion",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "7",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 7",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.788728+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.788732+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "7",
+      "nombre": "7 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 30,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N8M1_TITULACION - Titulacion",
+    "materia": "N8M1_TITULACION - Titulacion",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 8",
+    "orden": 1,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "30",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N8M1_TITULACION - Titulacion",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.798666+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.798671+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 8,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 8"
+      },
+      "materia": {
+        "id": 30,
+        "texto": "N8M1_TITULACION - Titulacion"
+      },
+      "orden": "1",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "30",
+      "texto": "N8M1_TITULACION - Titulacion",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.797906+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.797910+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N8M1_TITULACION",
+      "nombre": "Titulacion",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "8",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 8",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.797263+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.797266+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "8",
+      "nombre": "8 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 31,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N8M2_DESARROLLO_DE_PROYECTO - Desarrollo de Proyectos",
+    "materia": "N8M2_DESARROLLO_DE_PROYECTO - Desarrollo de Proyectos",
+    "malla": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 8",
+    "orden": 2,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "31",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / N8M2_DESARROLLO_DE_PROYECTO - Desarrollo de Proyectos",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.800398+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.800402+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "nivel": {
+        "id": 8,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 8"
+      },
+      "materia": {
+        "id": 31,
+        "texto": "N8M2_DESARROLLO_DE_PROYECTO - Desarrollo de Proyectos"
+      },
+      "orden": "2",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "31",
+      "texto": "N8M2_DESARROLLO_DE_PROYECTO - Desarrollo de Proyectos",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.799542+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.799546+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N8M2_DESARROLLO_DE_PROYECTO",
+      "nombre": "Desarrollo de Proyectos",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "1",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.699810+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.699816+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "carrera": {
+        "id": 1,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion de Empresas UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "8",
+      "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026 / Nivel 8",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.797263+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.797266+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "malla": {
+        "id": 1,
+        "texto": "Administracion de Empresas - Malla Administracion de Empresas UTA 2026"
+      },
+      "numero": "8",
+      "nombre": "8 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 34,
+    "materia_malla_texto": "Administracion de Empresas - Malla Administracion UTA 2026 / N3M1_ADMINISTRACION_FINANCI - Administracion Financiera",
+    "materia": "N3M1_ADMINISTRACION_FINANCI - Administracion Financiera",
+    "malla": "Administracion de Empresas - Malla Administracion UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion UTA 2026 / Nivel 3",
+    "orden": 1,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "34",
+      "texto": "Administracion de Empresas - Malla Administracion UTA 2026 / N3M1_ADMINISTRACION_FINANCI - Administracion Financiera",
+      "activo": "True",
+      "fecha_creacion": "2026-06-14T17:35:40.452373+00:00",
+      "fecha_modificacion": "2026-06-14T17:35:40.452391+00:00",
+      "usuario_creacion": {
+        "id": 3,
+        "texto": "emoyolema"
+      },
+      "malla": {
+        "id": 4,
+        "texto": "Administracion de Empresas - Malla Administracion UTA 2026"
+      },
+      "nivel": {
+        "id": 11,
+        "texto": "Administracion de Empresas - Malla Administracion UTA 2026 / Nivel 3"
+      },
+      "materia": {
+        "id": 8,
+        "texto": "N3M1_ADMINISTRACION_FINANCI - Administracion Financiera"
+      },
+      "orden": "1",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "8",
+      "texto": "N3M1_ADMINISTRACION_FINANCI - Administracion Financiera",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T00:55:37.737825+00:00",
+      "fecha_modificacion": "2026-06-13T00:55:37.737829+00:00",
+      "usuario_creacion": {
+        "id": null,
+        "texto": ""
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "N3M1_ADMINISTRACION_FINANCI",
+      "nombre": "Administracion Financiera",
+      "descripcion": "",
+      "creditos": "0",
+      "horas": "0"
+    },
+    "datos_malla": {
+      "id": "4",
+      "texto": "Administracion de Empresas - Malla Administracion UTA 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-14T17:35:40.430540+00:00",
+      "fecha_modificacion": "2026-06-14T17:35:40.430562+00:00",
+      "usuario_creacion": {
+        "id": 3,
+        "texto": "emoyolema"
+      },
+      "carrera": {
+        "id": 4,
+        "texto": "Administracion de Empresas"
+      },
+      "nombre": "Malla Administracion UTA 2026",
+      "codigo": "ADM-UTA-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "11",
+      "texto": "Administracion de Empresas - Malla Administracion UTA 2026 / Nivel 3",
+      "activo": "True",
+      "fecha_creacion": "2026-06-14T17:35:40.438829+00:00",
+      "fecha_modificacion": "2026-06-14T17:35:40.438844+00:00",
+      "usuario_creacion": {
+        "id": 3,
+        "texto": "emoyolema"
+      },
+      "malla": {
+        "id": 4,
+        "texto": "Administracion de Empresas - Malla Administracion UTA 2026"
+      },
+      "numero": "3",
+      "nombre": "3 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 32,
+    "materia_malla_texto": "Ingenieria de Software - Malla Demo Django 2026 / WEB-DJANGO - Programacion Web con Django",
+    "materia": "WEB-DJANGO - Programacion Web con Django",
+    "malla": "Ingenieria de Software - Malla Demo Django 2026",
+    "nivel": "Ingenieria de Software - Malla Demo Django 2026 / Nivel 5",
+    "orden": 1,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "32",
+      "texto": "Ingenieria de Software - Malla Demo Django 2026 / WEB-DJANGO - Programacion Web con Django",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T03:19:02.297930+00:00",
+      "fecha_modificacion": "2026-06-13T03:19:02.297935+00:00",
+      "usuario_creacion": {
+        "id": 3,
+        "texto": "emoyolema"
+      },
+      "malla": {
+        "id": 2,
+        "texto": "Ingenieria de Software - Malla Demo Django 2026"
+      },
+      "nivel": {
+        "id": 9,
+        "texto": "Ingenieria de Software - Malla Demo Django 2026 / Nivel 5"
+      },
+      "materia": {
+        "id": 32,
+        "texto": "WEB-DJANGO - Programacion Web con Django"
+      },
+      "orden": "1",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "32",
+      "texto": "WEB-DJANGO - Programacion Web con Django",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T03:19:02.295543+00:00",
+      "fecha_modificacion": "2026-06-13T03:19:02.295549+00:00",
+      "usuario_creacion": {
+        "id": 3,
+        "texto": "emoyolema"
+      },
+      "institucion": {
+        "id": 1,
+        "texto": "Universidad Tecnica de Ambato"
+      },
+      "codigo": "WEB-DJANGO",
+      "nombre": "Programacion Web con Django",
+      "descripcion": "Modelos, vistas, formularios, validaciones y transacciones en Django.",
+      "creditos": "4",
+      "horas": "64"
+    },
+    "datos_malla": {
+      "id": "2",
+      "texto": "Ingenieria de Software - Malla Demo Django 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T03:19:02.291139+00:00",
+      "fecha_modificacion": "2026-06-13T03:19:02.291146+00:00",
+      "usuario_creacion": {
+        "id": 3,
+        "texto": "emoyolema"
+      },
+      "carrera": {
+        "id": 2,
+        "texto": "Ingenieria de Software"
+      },
+      "nombre": "Malla Demo Django 2026",
+      "codigo": "SOFT-DJANGO-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "9",
+      "texto": "Ingenieria de Software - Malla Demo Django 2026 / Nivel 5",
+      "activo": "True",
+      "fecha_creacion": "2026-06-13T03:19:02.293515+00:00",
+      "fecha_modificacion": "2026-06-13T03:19:02.293522+00:00",
+      "usuario_creacion": {
+        "id": 3,
+        "texto": "emoyolema"
+      },
+      "malla": {
+        "id": 2,
+        "texto": "Ingenieria de Software - Malla Demo Django 2026"
+      },
+      "numero": "5",
+      "nombre": "5 Periodo"
+    }
+  },
+  {
+    "materia_malla_id": 33,
+    "materia_malla_texto": "Tecnologia de la Informacion - Malla Demo Computadoras 2026 / COMP-DEC - Toma de decisiones tecnicas",
+    "materia": "COMP-DEC - Toma de decisiones tecnicas",
+    "malla": "Tecnologia de la Informacion - Malla Demo Computadoras 2026",
+    "nivel": "Tecnologia de la Informacion - Malla Demo Computadoras 2026 / Nivel 1",
+    "orden": 1,
+    "obligatoria": true,
+    "datos_materia_malla": {
+      "id": "33",
+      "texto": "Tecnologia de la Informacion - Malla Demo Computadoras 2026 / COMP-DEC - Toma de decisiones tecnicas",
+      "activo": "True",
+      "fecha_creacion": "2026-06-14T16:44:16.164578+00:00",
+      "fecha_modificacion": "2026-06-14T16:44:16.164587+00:00",
+      "usuario_creacion": {
+        "id": 12,
+        "texto": "profesor_demo"
+      },
+      "malla": {
+        "id": 3,
+        "texto": "Tecnologia de la Informacion - Malla Demo Computadoras 2026"
+      },
+      "nivel": {
+        "id": 10,
+        "texto": "Tecnologia de la Informacion - Malla Demo Computadoras 2026 / Nivel 1"
+      },
+      "materia": {
+        "id": 33,
+        "texto": "COMP-DEC - Toma de decisiones tecnicas"
+      },
+      "orden": "1",
+      "obligatoria": "True"
+    },
+    "datos_materia": {
+      "id": "33",
+      "texto": "COMP-DEC - Toma de decisiones tecnicas",
+      "activo": "True",
+      "fecha_creacion": "2026-06-14T16:44:16.158597+00:00",
+      "fecha_modificacion": "2026-06-14T16:44:16.158608+00:00",
+      "usuario_creacion": {
+        "id": 12,
+        "texto": "profesor_demo"
+      },
+      "institucion": {
+        "id": 2,
+        "texto": "Instituto Demo SimulaMalla"
+      },
+      "codigo": "COMP-DEC",
+      "nombre": "Toma de decisiones tecnicas",
+      "descripcion": "Evaluacion de alternativas, requisitos y costos.",
+      "creditos": "3",
+      "horas": "48"
+    },
+    "datos_malla": {
+      "id": "3",
+      "texto": "Tecnologia de la Informacion - Malla Demo Computadoras 2026",
+      "activo": "True",
+      "fecha_creacion": "2026-06-14T16:44:16.147306+00:00",
+      "fecha_modificacion": "2026-06-14T16:44:16.147314+00:00",
+      "usuario_creacion": {
+        "id": 12,
+        "texto": "profesor_demo"
+      },
+      "carrera": {
+        "id": 3,
+        "texto": "Tecnologia de la Informacion"
+      },
+      "nombre": "Malla Demo Computadoras 2026",
+      "codigo": "TI-COMP-2026",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "vigente": "True"
+    },
+    "datos_nivel": {
+      "id": "10",
+      "texto": "Tecnologia de la Informacion - Malla Demo Computadoras 2026 / Nivel 1",
+      "activo": "True",
+      "fecha_creacion": "2026-06-14T16:44:16.153449+00:00",
+      "fecha_modificacion": "2026-06-14T16:44:16.153458+00:00",
+      "usuario_creacion": {
+        "id": 12,
+        "texto": "profesor_demo"
+      },
+      "malla": {
+        "id": 3,
+        "texto": "Tecnologia de la Informacion - Malla Demo Computadoras 2026"
+      },
+      "numero": "1",
+      "nombre": "Primer periodo"
+    }
+  }
+]

@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}Resultado - {{ intento.simulacion.titulo }}{% endblock %}
+{% block content %}
+{% if not intento.finalizado %}
+<div class="alert alert-warning">Este intento aun no ha finalizado.</div>
+{% endif %}
+
+<h1 class="h3 mb-3">Resultado final</h1>
+
+{% if gamificacion %}
+<div class="game-panel mb-3">
+    <div class="game-rank">
+        <div class="game-rank-icon">{{ gamificacion.icono }}</div>
+        <div>
+            <div class="section-title text-light-emphasis">Tu rango</div>
+            <div class="game-rank-name">{{ gamificacion.rango }}</div>
+            <div class="game-xp">{{ gamificacion.xp_total }} XP · {{ gamificacion.rondas_validas }} rondas
+                {% if gamificacion.salud is not None %}· salud empresa {{ gamificacion.salud }}%{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="game-progress-wrap">
+        <div class="d-flex justify-content-between small text-white-50">
+            <span>Progreso al siguiente rango</span><span>{{ gamificacion.progreso_pct }}%</span>
+        </div>
+        <div class="game-progress">
+            <div class="game-progress-bar" style="width: {{ gamificacion.progreso_pct }}%;"></div>
+        </div>
+        <div class="game-badges">
+            {% for b in gamificacion.insignias %}
+                <span class="game-badge" title="{{ b.nombre }}">{{ b.icono }} {{ b.nombre }}</span>
+            {% empty %}
+                <span class="text-white-50 small">Completa rondas con buen desempeño para ganar insignias.</span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="module-card p-3 mb-3">
+            <h2 class="h5">Puntuacion</h2>
+            <div class="display-6">{{ intento.puntuacion_final|default:"-" }}</div>
+            {% with nivel=intento.nivel_resultado %}
+            <p class="mb-0">
+                <strong>Nivel:</strong>
+                {% if nivel == "Insuficiente" %}
+                    <span class="badge bg-danger">{{ nivel }}</span>
+                {% elif nivel == "Basico" or nivel == "Básico" %}
+                    <span class="badge bg-warning text-dark">{{ nivel }}</span>
+                {% elif nivel == "Aceptable" %}
+                    <span class="badge bg-warning text-dark">{{ nivel }}</span>
+                {% elif nivel == "Bueno" %}
+                    <span class="badge bg-primary">{{ nivel }}</span>
+                {% elif nivel == "Excelente" %}
+                    <span class="badge bg-success">{{ nivel }}</span>
+                {% else %}
+                    <span class="badge bg-secondary">{{ nivel|default:"-" }}</span>
+                {% endif %}
+            </p>
+            {% endwith %}
+        </div>
+
+        <div class="module-card p-3 mb-3">
+            <h2 class="h5">Estado</h2>
+            <p class="mb-0"><strong>Estado:</strong> Finalizado</p>
+            <p class="mb-0"><strong>Inicio:</strong> {{ intento.fecha_inicio|date:"d/m/Y H:i" }}</p>
+            <p class="mb-0"><strong>Fin:</strong> {{ intento.fecha_fin|date:"d/m/Y H:i" }}</p>
+        </div>
+
+        {% if intento.estado_actual %}
+        <div class="module-card p-3">
+            <h2 class="h5">Estado final de indicadores</h2>
+            <div class="state-grid">
+                {% for clave, valor in intento.estado_actual.items %}
+                    <div class="border rounded p-2">
+                        <div class="text-muted small">{{ clave }}</div>
+                        <div class="h5 mb-0">{{ valor }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-8">
+        {% if intento.debriefing_final %}
+        <div class="module-card p-3 mb-3">
+            <div class="section-title">Debriefing</div>
+            <pre class="mb-0 mt-2" style="white-space: pre-wrap;">{{ intento.debriefing_final }}</pre>
+        </div>
+        {% endif %}
+
+        {% if intento.retroalimentacion_final %}
+        <div class="module-card p-3 mb-3">
+            <div class="section-title">Retroalimentacion</div>
+            <p class="mb-0 mt-2">{{ intento.retroalimentacion_final }}</p>
+        </div>
+        {% endif %}
+
+        <div class="module-card p-3">
+            <div class="section-title">Historial de pasos</div>
+            <div class="table-responsive mt-2">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Paso</th>
+                            <th>Tipo</th>
+                            <th>Situacion</th>
+                            <th>Decision</th>
+                            <th>Justificacion</th>
+                            <th>Evaluacion IA</th>
+                            <th>Impacto</th>
+                            <th>Estado Antes</th>
+                            <th>Estado Despues</th>
+                            <th>Puntaje</th>
+                            <th>Penalizacion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for paso in intento.pasos.all %}
+                        <tr>
+                            <td>{{ paso.numero }}</td>
+                            <td>
+                                {% if paso.es_valido %}
+                                    <span class="badge text-bg-success">VALIDO</span>
+                                {% else %}
+                                    <span class="badge text-bg-danger">INVALIDO</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ paso.situacion_presentada|truncatewords:20 }}</td>
+                            <td>{{ paso.decision_estudiante|truncatewords:15 }}</td>
+                            <td>{{ paso.justificacion_estudiante|truncatewords:10 }}</td>
+                            <td>{{ paso.evaluacion_ia|truncatewords:10 }}</td>
+                            <td><code>{{ paso.impacto_calculado }}</code></td>
+                            <td><code>{{ paso.estado_antes }}</code></td>
+                            <td><code>{{ paso.estado_despues }}</code></td>
+                            <td>{{ paso.puntaje_paso }}</td>
+                            <td>{{ paso.penalizacion_aplicada }}</td>
+                        </tr>
+                        {% if paso.evaluacion_detalle.conceptos %}
+                        <tr>
+                            <td></td>
+                            <td colspan="10">
+                                <div class="border rounded p-2 bg-light">
+                                    <div class="section-title mb-2">Desglose de rubrica</div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Concepto</th>
+                                                    <th>Resultado</th>
+                                                    <th>Puntos</th>
+                                                    <th>Evidencia</th>
+                                                    <th>Retroalimentacion</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for concepto in paso.evaluacion_detalle.conceptos %}
+                                                <tr>
+                                                    <td>
+                                                        {{ concepto.nombre }}
+                                                        {% if concepto.es_critico %}
+                                                            <span class="badge text-bg-danger">Critico</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if concepto.cumple %}
+                                                            <span class="badge text-bg-success">Cumple</span>
+                                                        {% else %}
+                                                            <span class="badge text-bg-secondary">Falta</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>{{ concepto.puntos_obtenidos }} / {{ concepto.puntos_maximos }}</td>
+                                                    <td>
+                                                        <code>{{ concepto.palabras_detectadas }}</code>
+                                                        {% if concepto.factor_coincidencia and concepto.factor_coincidencia < 1 and concepto.factor_coincidencia > 0 %}
+                                                            <div class="small text-warning">Coincidencia parcial: {{ concepto.factor_coincidencia }}</div>
+                                                        {% endif %}
+                                                        {% if concepto.sinonimos_detectados %}
+                                                            <div class="small text-info">Sinonimos: {{ concepto.sinonimos_detectados }}</div>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {{ concepto.retroalimentacion|default:"-" }}
+                                                        {% if concepto.obligatorias_faltantes %}
+                                                            <div class="small text-danger">Falta obligatorio: <code>{{ concepto.obligatorias_faltantes }}</code></div>
+                                                        {% endif %}
+                                                        {% if concepto.alternativas_faltantes %}
+                                                            <div class="small text-danger">Debe incluir una opcion valida: <code>{{ concepto.alternativas_faltantes }}</code></div>
+                                                        {% endif %}
+                                                        {% if concepto.prohibidas_detectadas %}
+                                                            <div class="small text-danger">No recomendado detectado: <code>{{ concepto.prohibidas_detectadas }}</code></div>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="small text-muted mt-2">
+                                        Puntaje por conceptos: {{ paso.evaluacion_detalle.puntaje_conceptos }}.
+                                        {% if paso.evaluacion_detalle.tope_critico %}
+                                            Tope aplicado por concepto critico faltante: {{ paso.evaluacion_detalle.tope_critico }}.
+                                        {% endif %}
+                                        Penalizacion aplicada: {{ paso.penalizacion_aplicada }}.
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    {% empty %}
+                        <tr><td colspan="11" class="text-muted">Sin pasos registrados.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

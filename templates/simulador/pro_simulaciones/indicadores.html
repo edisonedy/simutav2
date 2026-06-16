@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Indicadores - {{ simulacion.titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div><div class="section-title">Configuracion</div><h1 class="h3 mb-0">Indicadores</h1><div class="text-muted">{{ simulacion.titulo }}</div></div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}">← Volver</a>
+</div>
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="module-card p-3">
+            <h2 class="h5">Nuevo indicador</h2>
+            <form method="post" action="{% url 'pro_simulaciones' %}?action=add_indicador&id={{ simulacion.pk }}" onsubmit="return enviar_formulario(this)">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button class="btn btn-primary">Guardar</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="module-card p-3 table-responsive">
+            <h2 class="h5">Indicadores actuales</h2>
+            <table class="table table-hover align-middle">
+                <thead><tr><th>Nombre</th><th>Codigo</th><th>V.Inicial</th><th>V.Min</th><th>V.Max</th><th>Optimo</th><th>Critico</th><th>Unidad</th><th>Acciones</th></tr></thead>
+                <tbody>{% for item in indicadores %}<tr><td>{{ item.nombre }}</td><td><code>{{ item.codigo }}</code></td><td>{{ item.valor_inicial }}</td><td>{{ item.valor_minimo }}</td><td>{{ item.valor_maximo }}</td><td>{{ item.get_direccion_optima_display }}</td><td>{% if item.es_critico %}<span class="badge text-bg-danger">Si</span>{% else %}<span class="badge text-bg-secondary">No</span>{% endif %}</td><td>{{ item.unidad }}</td><td class="text-nowrap"><button class="btn btn-sm btn-outline-primary" onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=edit_indicador&id={{ item.pk }}')">Editar</button><form method="post" action="{% url 'pro_simulaciones' %}?action=delete_indicador&id={{ item.pk }}" class="d-inline" onsubmit="return enviar_formulario(this)">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Eliminar</button></form></td></tr>{% empty %}<tr><td colspan="9" class="text-muted">Sin indicadores.</td></tr>{% endfor %}</tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

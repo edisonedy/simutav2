@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Criterios de evaluacion - {{ simulacion.titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div><div class="section-title">Configuracion</div><h1 class="h3 mb-0">Criterios orientativos</h1><div class="text-muted">{{ simulacion.titulo }}</div></div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}">← Volver</a>
+</div>
+<div class="alert alert-info">La calificacion automatica usa los conceptos esperados por ronda. Estos criterios documentan la intencion docente de la simulacion.</div>
+{% if suma_pesos is not None and suma_pesos != 100 %}<div class="alert alert-warning">La suma de los pesos orientativos es {{ suma_pesos }}%. Si los usas como guia formal, deberian sumar 100%.</div>{% endif %}
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="module-card p-3">
+            <h2 class="h5">Nuevo criterio</h2>
+            <form method="post" action="{% url 'pro_simulaciones' %}?action=add_criterio&id={{ simulacion.pk }}">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button class="btn btn-primary">Guardar</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="module-card p-3 table-responsive">
+            <h2 class="h5">Criterios{% if suma_pesos is not None %} (Total pesos: {{ suma_pesos }}%){% endif %}</h2>
+            <table class="table table-hover align-middle">
+                <thead><tr><th>Nombre</th><th>Descripcion</th><th>Peso(%)</th><th>Puntaje Maximo</th></tr></thead>
+                <tbody>{% for item in criterios %}<tr><td>{{ item.nombre }}</td><td>{{ item.descripcion }}</td><td>{{ item.peso }}</td><td>{{ item.puntaje_maximo }}</td></tr>{% empty %}<tr><td colspan="4" class="text-muted">Sin criterios.</td></tr>{% endfor %}</tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

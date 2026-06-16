@@ -1,0 +1,306 @@
+Eres un generador experto de simulaciones académicas universitarias para SimutaV2.
+
+Crea 2 simulaciones realistas para la materia:
+
+Materia: Gestión y Administración del Talento Humano
+Carrera: Administración de Empresas
+Nivel de dificultad: AVANZADA
+Rondas máximas por simulación: 3
+Tiempo estimado por simulación: 25 minutos
+
+OBJETIVO GENERAL:
+Crear dos simulaciones diferentes, reales y aplicadas de Talento Humano.
+
+Simulación 1:
+Tema: rotación, clima laboral, ausentismo y desempeño.
+
+Simulación 2:
+Tema: selección, evaluación y contratación de personal con 3 candidatos finalistas.
+
+REGLAS GENERALES:
+
+* No hagas preguntas teóricas.
+* Cada simulación debe ser un caso real distinto.
+* Cada simulación debe tener indicadores propios de Talento Humano.
+* No uses como indicadores principales: calidad_analisis, claridad, impacto, riesgo, viabilidad.
+* Esos son indicadores internos de evaluación, no indicadores del caso.
+* Cada simulación debe tener datos medibles.
+* Cada simulación debe tener 3 rondas:
+
+  1. Diagnóstico
+  2. Decisión
+  3. Implementación
+* Cada ronda debe tener una pregunta clara.
+* Cada ronda debe tener conceptos esperados.
+* Cada concepto debe tener palabras clave separadas por comas.
+* La suma de pesos por ronda debe ser 100.
+* Devuelve solo JSON válido.
+* No escribas explicación fuera del JSON.
+
+FORMATO JSON OBLIGATORIO:
+
+{
+"simulaciones": [
+{
+"titulo": "",
+"materia": "Gestión y Administración del Talento Humano",
+"tema": "",
+"nivel_dificultad": "AVANZADA",
+"tiempo_estimado": 25,
+"rol_estudiante": "Analista en Gestión y Administración del Talento Humano",
+"contexto": "",
+"objetivo": "",
+"resultado_aprendizaje": "",
+"situacion_inicial": "",
+
+"indicadores": [
+{
+"nombre": "",
+"codigo": "",
+"valor_inicial": 0,
+"valor_minimo": 0,
+"valor_maximo": 100,
+"unidad": "",
+"direccion_optima": "ALTO",
+"descripcion": ""
+}
+],
+
+"restricciones": [
+{
+"descripcion": "",
+"codigo_indicador": "",
+"operador": ">=",
+"valor_limite": 0,
+"penalizacion": 10
+}
+],
+
+"rondas": [
+{
+"numero": 1,
+"titulo": "Diagnóstico",
+"pregunta": "",
+"conceptos_esperados": [
+{
+"nombre": "",
+"descripcion": "",
+"peso": 35,
+"critico": true,
+"palabras_clave": ""
+},
+{
+"nombre": "",
+"descripcion": "",
+"peso": 25,
+"critico": true,
+"palabras_clave": ""
+},
+{
+"nombre": "",
+"descripcion": "",
+"peso": 20,
+"critico": false,
+"palabras_clave": ""
+},
+{
+"nombre": "",
+"descripcion": "",
+"peso": 20,
+"critico": false,
+"palabras_clave": ""
+}
+]
+},
+{
+"numero": 2,
+"titulo": "Decisión",
+"pregunta": "",
+"conceptos_esperados": [
+{
+"nombre": "",
+"descripcion": "",
+"peso": 30,
+"critico": true,
+"palabras_clave": ""
+},
+{
+"nombre": "",
+"descripcion": "",
+"peso": 30,
+"critico": true,
+"palabras_clave": ""
+},
+{
+"nombre": "",
+"descripcion": "",
+"peso": 20,
+"critico": false,
+"palabras_clave": ""
+},
+{
+"nombre": "",
+"descripcion": "",
+"peso": 20,
+"critico": false,
+"palabras_clave": ""
+}
+]
+},
+{
+"numero": 3,
+"titulo": "Implementación",
+"pregunta": "",
+"conceptos_esperados": [
+{
+"nombre": "",
+"descripcion": "",
+"peso": 30,
+"critico": true,
+"palabras_clave": ""
+},
+{
+"nombre": "",
+"descripcion": "",
+"peso": 20,
+"critico": false,
+"palabras_clave": ""
+},
+{
+"nombre": "",
+"descripcion": "",
+"peso": 25,
+"critico": true,
+"palabras_clave": ""
+},
+{
+"nombre": "",
+"descripcion": "",
+"peso": 25,
+"critico": false,
+"palabras_clave": ""
+}
+]
+}
+],
+
+"decisiones_sugeridas": [
+{
+"texto": "",
+"descripcion": "",
+"impacto_base": {}
+}
+]
+}
+
+]
+}
+
+SIMULACIÓN 1:
+Crea una simulación sobre rotación, clima laboral, ausentismo y desempeño.
+
+Contexto esperado:
+Una empresa presenta problemas críticos en la gestión del talento humano. Debe tener datos como:
+
+* rotación anual
+* ausentismo laboral
+* bajo desempeño
+* clima laboral
+* quejas laborales
+* capacitación pendiente
+
+Indicadores sugeridos para la simulación 1:
+
+* rotacion_anual, unidad %, dirección óptima BAJO
+* ausentismo_laboral, unidad %, dirección óptima BAJO
+* bajo_desempeno, unidad %, dirección óptima BAJO
+* clima_laboral, unidad pts, dirección óptima ALTO
+* quejas_laborales, unidad cantidad, dirección óptima BAJO
+* cumplimiento_plan_talento, unidad %, dirección óptima ALTO
+
+La simulación debe pedir:
+Ronda 1: diagnosticar el problema de talento humano.
+Ronda 2: comparar alternativas para reducir rotación, ausentismo y bajo desempeño.
+Ronda 3: implementar un plan con responsables, tiempos, indicadores y control.
+
+SIMULACIÓN 2:
+Crea una simulación sobre selección y contratación de personal con 3 candidatos finalistas.
+
+Contexto esperado:
+Una empresa de Ambato necesita contratar 1 persona para un cargo administrativo, comercial, financiero o de talento humano. Tiene 3 candidatos finalistas. Cada candidato debe tener datos medibles.
+
+El caso debe incluir una tabla o descripción clara de los 3 candidatos:
+
+Candidato A:
+
+* experiencia
+* prueba técnica
+* entrevista
+* competencias blandas
+* salario esperado
+* disponibilidad
+* riesgo de rotación
+
+Candidato B:
+
+* experiencia
+* prueba técnica
+* entrevista
+* competencias blandas
+* salario esperado
+* disponibilidad
+* riesgo de rotación
+
+Candidato C:
+
+* experiencia
+* prueba técnica
+* entrevista
+* competencias blandas
+* salario esperado
+* disponibilidad
+* riesgo de rotación
+
+Indicadores sugeridos para la simulación 2:
+
+* puntaje_prueba_tecnica, unidad pts, dirección óptima ALTO
+* puntaje_entrevista, unidad pts, dirección óptima ALTO
+* ajuste_cargo, unidad pts, dirección óptima ALTO
+* experiencia_laboral, unidad años, dirección óptima ALTO
+* pretension_salarial, unidad USD, dirección óptima BAJO
+* riesgo_rotacion, unidad pts, dirección óptima BAJO
+* disponibilidad_inicio, unidad días, dirección óptima BAJO
+
+La simulación debe pedir:
+Ronda 1: analizar el perfil de los 3 candidatos, identificar fortalezas, debilidades y criterios de selección.
+Ronda 2: comparar los 3 candidatos y decidir a quién contratar, justificando con indicadores.
+Ronda 3: definir plan de contratación, inducción, seguimiento y evaluación inicial del candidato elegido.
+
+REGLAS PARA LA SIMULACIÓN 2:
+
+* No debe escoger automáticamente al candidato perfecto.
+* Cada candidato debe tener ventajas y riesgos.
+* El estudiante debe justificar la contratación usando datos.
+* Debe evaluar competencias técnicas, competencias blandas, experiencia, salario, disponibilidad y riesgo de rotación.
+* La decisión no debe basarse solo en el puntaje más alto.
+* Debe considerar ajuste al cargo y viabilidad para la empresa.
+
+EJEMPLO DE CANDIDATOS PARA LA SIMULACIÓN 2:
+Puedes crear datos similares a estos, pero realistas:
+
+Candidato A:
+3 años de experiencia, prueba técnica 78/100, entrevista 82/100, competencias blandas 80/100, salario esperado USD 520, disponibilidad 15 días, riesgo de rotación 45/100.
+
+Candidato B:
+1 año de experiencia, prueba técnica 88/100, entrevista 76/100, competencias blandas 72/100, salario esperado USD 460, disponibilidad inmediata, riesgo de rotación 35/100.
+
+Candidato C:
+5 años de experiencia, prueba técnica 70/100, entrevista 90/100, competencias blandas 88/100, salario esperado USD 650, disponibilidad 30 días, riesgo de rotación 55/100.
+
+PALABRAS CLAVE PARA SIMULACIÓN 2:
+Usa términos como:
+seleccion, contratacion, candidato, perfil, competencias, experiencia, prueba tecnica, entrevista, ajuste cargo, salario, disponibilidad, riesgo rotacion, induccion, desempeno, seguimiento, decision.
+
+IMPORTANTE:
+Devuelve exactamente 2 simulaciones dentro del arreglo "simulaciones".
+No agregues texto fuera del JSON.

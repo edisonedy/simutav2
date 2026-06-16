@@ -1,0 +1,17 @@
+<form action="." method="post" onsubmit="return enviar_formulario(this)">
+    {% csrf_token %}
+    <input type="hidden" name="pk" value="{{ object.pk }}">
+    <input type="hidden" name="action" value="edit">
+    <div class="modal-header">
+        <h5 class="modal-title">Editar materia</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+        <p><strong>{{ object.nombre }}</strong></p>
+        {{ form.as_p }}
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary" onclick="enviar_formulario(this.form)">Guardar</button>
+    </div>
+</form>

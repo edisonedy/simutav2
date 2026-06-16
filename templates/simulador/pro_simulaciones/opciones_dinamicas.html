@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Opciones dinamicas - {{ simulacion.titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div><div class="section-title">Configuracion del caso</div><h1 class="h3 mb-0">Opciones dinamicas del caso</h1><div class="text-muted">{{ simulacion.titulo }}</div></div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}?action=configuracion&id={{ simulacion.pk }}">&larr; Volver</a>
+</div>
+
+<form method="post" action="{% url 'pro_simulaciones' %}?action=save_opciones_dinamicas&id={{ simulacion.pk }}" onsubmit="return guardar_opciones(this)">
+    {% csrf_token %}
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <div class="module-card p-3 mb-3">
+                <h2 class="h5">Configuracion general</h2>
+                <div class="mb-2">
+                    <label class="form-label">Tipo de dinamica</label>
+                    <select name="tipo_dinamica" class="form-select" id="tipoDinamica">
+                        <option value="comparacion_opciones" {% if tipo_dinamica == 'comparacion_opciones' %}selected{% endif %}>Comparacion de opciones</option>
+                        <option value="seleccion_alternativa" {% if tipo_dinamica == 'seleccion_alternativa' %}selected{% endif %}>Seleccion de alternativa</option>
+                        <option value="decision_estrategica" {% if tipo_dinamica == 'decision_estrategica' %}selected{% endif %}>Decision estrategica</option>
+                        <option value="solucion_tecnica" {% if tipo_dinamica == 'solucion_tecnica' %}selected{% endif %}>Solucion tecnica</option>
+                        <option value="asignacion_recursos" {% if tipo_dinamica == 'asignacion_recursos' %}selected{% endif %}>Asignacion de recursos</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Nombre de las opciones</label>
+                    <input type="text" name="nombre_opciones" class="form-control" value="{{ nombre_opciones }}" placeholder="ej: candidatos, estrategias, rutas">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Rondas donde aplica</label>
+                    <input type="text" name="rondas_aplica" class="form-control" value="{{ reglas_actualizacion.rondas_aplica|join:", " }}" placeholder="ej: 2 (separados por coma)">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Confianza minima</label>
+                    <input type="number" name="confianza_minima" class="form-control" value="{{ reglas_actualizacion.confianza_minima|default:"0.6" }}" min="0" max="1" step="0.05">
+                </div>
+            </div>
+
+            <div class="module-card p-3">
+                <h2 class="h5">Agregar opcion</h2>
+                <div class="mb-2">
+                    <label class="form-label">Codigo</label>
+                    <input type="text" id="optCodigo" class="form-control" placeholder="A">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Nombre</label>
+                    <input type="text" id="optNombre" class="form-control" placeholder="Candidato A">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Descripcion</label>
+                    <textarea id="optDescripcion" class="form-control" rows="2" placeholder="Perfil con experiencia..."></textarea>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Alias (separados por coma)</label>
+                    <input type="text" id="optAliases" class="form-control" placeholder="candidato a, opcion a, postulante a">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Indicadores (codigo=valor)</label>
+                    <div id="indicadoresOptions">
+                        {% for ind in indicadores %}
+                        <div class="input-group input-group-sm mb-1">
+                            <span class="input-group-text">{{ ind.codigo }}</span>
+                            <input type="number" class="form-control indicador-valor" data-codigo="{{ ind.codigo }}" step="0.1" placeholder="Valor">
+                        </div>
+                        {% empty %}
+                        <p class="text-muted small">No hay indicadores. Crea indicadores primero.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" onclick="agregarOpcion()">Agregar opcion</button>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="module-card p-3">
+                <h2 class="h5">Opciones configuradas</h2>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="tablaOpciones">
+                        <thead><tr><th>Codigo</th><th>Nombre</th><th>Descripcion</th><th>Alias</th><th>Indicadores</th><th>Acciones</th></tr></thead>
+                        <tbody id="opcionesBody">
+                        </tbody>
+                    </table>
+                </div>
+                <button class="btn btn-success">Guardar todas las opciones</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+let opciones = {{ opciones_dinamicas|safe }};
+
+function renderizarTabla() {
+    const tbody = document.getElementById('opcionesBody');
+    tbody.innerHTML = '';
+    opciones.forEach(function(o, i) {
+        const aliasStr = (o.aliases || []).join(', ');
+        const indsStr = Object.entries(o.indicadores || {}).map(function(e) { return e[0] + '=' + e[1]; }).join(', ');
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + (o.codigo || '') + '</td>' +
+            '<td><strong>' + (o.nombre || '') + '</strong></td>' +
+            '<td class="small">' + (o.descripcion || '') + '</td>' +
+            '<td class="small">' + aliasStr + '</td>' +
+            '<td class="small"><code>' + indsStr + '</code></td>' +
+            '<td class="text-nowrap">' +
+            '<button class="btn btn-sm btn-outline-primary me-1" onclick="editarOpcion(' + i + ')">Editar</button>' +
+            '<button class="btn btn-sm btn-outline-danger" onclick="eliminarOpcion(' + i + ')">Eliminar</button>' +
+            '</td>';
+        tbody.appendChild(tr);
+    });
+}
+
+function agregarOpcion() {
+    const codigo = document.getElementById('optCodigo').value.trim();
+    const nombre = document.getElementById('optNombre').value.trim();
+    if (!codigo || !nombre) { alert('Codigo y nombre obligatorios'); return; }
+    const indicadores = {};
+    document.querySelectorAll('.indicador-valor').forEach(function(inp) {
+        const val = inp.value.trim();
+        if (val !== '') { indicadores[inp.dataset.codigo] = parseFloat(val); }
+    });
+    const aliases = document.getElementById('optAliases').value.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+    opciones.push({
+        codigo: codigo,
+        nombre: nombre,
+        descripcion: document.getElementById('optDescripcion').value.trim(),
+        aliases: aliases,
+        indicadores: indicadores,
+    });
+    renderizarTabla();
+    document.getElementById('optCodigo').value = '';
+    document.getElementById('optNombre').value = '';
+    document.getElementById('optDescripcion').value = '';
+    document.getElementById('optAliases').value = '';
+    document.querySelectorAll('.indicador-valor').forEach(function(inp) { inp.value = ''; });
+}
+
+function editarOpcion(idx) {
+    const o = opciones[idx];
+    if (!o) return;
+    document.getElementById('optCodigo').value = o.codigo || '';
+    document.getElementById('optNombre').value = o.nombre || '';
+    document.getElementById('optDescripcion').value = o.descripcion || '';
+    document.getElementById('optAliases').value = (o.aliases || []).join(', ');
+    document.querySelectorAll('.indicador-valor').forEach(function(inp) {
+        inp.value = (o.indicadores || {})[inp.dataset.codigo] || '';
+    });
+    opciones.splice(idx, 1);
+    renderizarTabla();
+}
+
+function eliminarOpcion(idx) {
+    if (confirm('Eliminar opcion "' + (opciones[idx] || {}).nombre + '"?')) {
+        opciones.splice(idx, 1);
+        renderizarTabla();
+    }
+}
+
+function guardar_opciones(form) {
+    const reglas = {
+        modo: 'copiar_indicadores_opcion',
+        rondas_aplica: [],
+        confianza_minima: parseFloat(form.querySelector('[name=confianza_minima]').value) || 0.6,
+    };
+    const rondasStr = form.querySelector('[name=rondas_aplica]').value;
+    reglas.rondas_aplica = rondasStr.split(',').map(function(s) { return parseInt(s.trim()); }).filter(function(n) { return !isNaN(n); });
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'opciones_dinamicas_json';
+    input.value = JSON.stringify(opciones);
+    form.appendChild(input);
+
+    const input2 = document.createElement('input');
+    input2.type = 'hidden';
+    input2.name = 'reglas_actualizacion_json';
+    input2.value = JSON.stringify(reglas);
+    form.appendChild(input2);
+
+    return enviar_formulario(form);
+}
+
+renderizarTabla();
+</script>
+{% endblock %}

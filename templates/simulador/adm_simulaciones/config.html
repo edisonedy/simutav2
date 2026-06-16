@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Config: {{ simulacion.titulo }}{% endblock %}
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'adm_simulaciones' %}" class="btn btn-outline-dark btn-sm">&larr; Volver</a>
+    <span class="section-title ms-2">Configuracion completa</span>
+</div>
+
+<h1 class="h3 mb-3">{{ simulacion.titulo }}</h1>
+
+<div class="row g-3">
+    <!-- DATOS GENERALES -->
+    <div class="col-lg-6">
+        <div class="module-card p-3 mb-3">
+            <div class="section-title">Datos generales</div>
+            <table class="table table-sm mb-0 mt-2">
+                <tr><th>Materia</th><td>{{ simulacion.materia_malla.materia.nombre }}</td></tr>
+                <tr><th>Malla</th><td>{{ simulacion.materia_malla.malla.nombre }}</td></tr>
+                <tr><th>Nivel</th><td>{{ simulacion.materia_malla.nivel.nombre }}</td></tr>
+                <tr><th>Tema</th><td>{{ simulacion.tema|default:"-" }}</td></tr>
+                <tr><th>Estado</th><td>{{ simulacion.estado }}</td></tr>
+                <tr><th>Tipo</th><td>{{ simulacion.get_tipo_simulacion_display }}</td></tr>
+                <tr><th>Dificultad</th><td>{{ simulacion.nivel_dificultad }}</td></tr>
+                <tr><th>Max decisiones</th><td>{{ simulacion.maximo_decisiones }}</td></tr>
+                <tr><th>Tiempo estimado</th><td>{{ simulacion.tiempo_estimado }} min</td></tr>
+                <tr><th>Rol estudiante</th><td>{{ simulacion.rol_estudiante|default:"-" }}</td></tr>
+                <tr><th>Ayuda IA</th><td>{{ simulacion.nivel_ayuda_ia }}</td></tr>
+                <tr><th>Tono retroalimentacion</th><td>{{ simulacion.tono_retroalimentacion|default:"-" }}</td></tr>
+                <tr><th>IA habilitada</th><td>{{ simulacion.ia_habilitada }}</td></tr>
+                <tr><th>Profesor</th><td>{{ simulacion.profesor|default:"-" }}</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- TEXTOS LARGOS -->
+    <div class="col-lg-6">
+        <div class="module-card p-3 mb-3">
+            <div class="section-title">Contexto</div>
+            <pre class="mb-0 mt-2" style="white-space:pre-wrap;font-size:.88rem">{{ simulacion.contexto|default:"-" }}</pre>
+        </div>
+        <div class="module-card p-3 mb-3">
+            <div class="section-title">Objetivo</div>
+            <pre class="mb-0 mt-2" style="white-space:pre-wrap;font-size:.88rem">{{ simulacion.objetivo|default:"-" }}</pre>
+        </div>
+        <div class="module-card p-3 mb-3">
+            <div class="section-title">Resultado de aprendizaje</div>
+            <pre class="mb-0 mt-2" style="white-space:pre-wrap;font-size:.88rem">{{ simulacion.resultado_aprendizaje|default:"-" }}</pre>
+        </div>
+        <div class="module-card p-3 mb-3">
+            <div class="section-title">Situacion inicial</div>
+            <pre class="mb-0 mt-2" style="white-space:pre-wrap;font-size:.88rem">{{ simulacion.situacion_inicial|default:"-" }}</pre>
+        </div>
+        <div class="module-card p-3">
+            <div class="section-title">Instrucciones IA</div>
+            <pre class="mb-0 mt-2" style="white-space:pre-wrap;font-size:.88rem">{{ simulacion.instrucciones_ia|default:"-" }}</pre>
+        </div>
+    </div>
+</div>
+
+<!-- INDICADORES -->
+<div class="module-card p-3 my-3">
+    <div class="section-title">Indicadores ({{ indicadores|length }})</div>
+    <div class="table-responsive mt-2">
+        <table class="table table-sm table-bordered mb-0">
+            <thead><tr><th>Codigo</th><th>Nombre</th><th>Valor inicial</th><th>Min</th><th>Max</th><th>Direccion optima</th><th>Critico</th><th>Unidad</th></tr></thead>
+            <tbody>
+            {% for ind in indicadores %}
+                <tr>
+                    <td><code>{{ ind.codigo }}</code></td>
+                    <td>{{ ind.nombre }}</td>
+                    <td>{{ ind.valor_inicial }}</td>
+                    <td>{{ ind.valor_minimo }}</td>
+                    <td>{{ ind.valor_maximo }}</td>
+                    <td>{{ ind.direccion_optima }}</td>
+                    <td>{% if ind.es_critico %}<span class="badge text-bg-danger">Si</span>{% else %}No{% endif %}</td>
+                    <td>{{ ind.unidad|default:"-" }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8" class="text-muted">Sin indicadores</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- RESTRICCIONES -->
+<div class="module-card p-3 mb-3">
+    <div class="section-title">Restricciones ({{ restricciones|length }})</div>
+    <div class="table-responsive mt-2">
+        <table class="table table-sm table-bordered mb-0">
+            <thead><tr><th>Indicador</th><th>Operador</th><th>Limite</th><th>Penalizacion</th><th>Descripcion</th></tr></thead>
+            <tbody>
+            {% for r in restricciones %}
+                <tr>
+                    <td><code>{{ r.codigo_indicador }}</code></td>
+                    <td>{{ r.operador }}</td>
+                    <td>{{ r.valor_limite }}</td>
+                    <td>{{ r.penalizacion }}</td>
+                    <td>{{ r.descripcion }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5" class="text-muted">Sin restricciones</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- CRITERIOS -->
+<div class="module-card p-3 mb-3">
+    <div class="section-title">Criterios de evaluacion ({{ criterios|length }})</div>
+    <div class="table-responsive mt-2">
+        <table class="table table-sm table-bordered mb-0">
+            <thead><tr><th>Nombre</th><th>Descripcion</th><th>Peso</th><th>Puntaje max</th></tr></thead>
+            <tbody>
+            {% for c in criterios %}
+                <tr>
+                    <td>{{ c.nombre }}</td>
+                    <td>{{ c.descripcion|default:"-" }}</td>
+                    <td>{{ c.peso }}%</td>
+                    <td>{{ c.puntaje_maximo }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="4" class="text-muted">Sin criterios</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- CONCEPTOS POR RONDA -->
+<div class="module-card p-3 mb-3">
+    <div class="section-title">Conceptos esperados por ronda</div>
+    {% regroup conceptos by numero_ronda as rondas %}
+    {% for ronda in rondas %}
+        <div class="mt-3">
+            <h4 class="h5">Ronda {{ ronda.grouper }}</h4>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered mb-0">
+                    <thead><tr><th>Nombre</th><th>Descripcion</th><th>Peso</th><th>Critico</th><th>Palabras clave</th><th>Impacto si cumple</th><th>Impacto si falta</th><th>Retro si cumple</th><th>Retro si falta</th></tr></thead>
+                    <tbody>
+                    {% for c in ronda.list %}
+                        <tr>
+                            <td><strong>{{ c.nombre }}</strong></td>
+                            <td style="max-width:200px"><small>{{ c.descripcion|default:"-" }}</small></td>
+                            <td>{{ c.peso }}</td>
+                            <td>{% if c.es_critico %}<span class="badge text-bg-danger">Critico</span>{% else %}-{% endif %}</td>
+                            <td style="max-width:250px"><code style="font-size:.75rem">{{ c.palabras_clave|truncatechars:200 }}</code></td>
+                            <td><code style="font-size:.75rem">{{ c.impacto_si_cumple }}</code></td>
+                            <td><code style="font-size:.75rem">{{ c.impacto_si_falta }}</code></td>
+                            <td><small>{{ c.retroalimentacion_si_cumple|default:"-"|truncatechars:60 }}</small></td>
+                            <td><small>{{ c.retroalimentacion_si_falta|default:"-"|truncatechars:60 }}</small></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% empty %}
+        <p class="text-muted mt-2 mb-0">Sin conceptos esperados configurados.</p>
+    {% endfor %}
+</div>
+
+<!-- ESCENARIOS (ARBOL) -->
+{% if escenarios %}
+<div class="module-card p-3 mb-3">
+    <div class="section-title">Escenarios (arbol de decisiones) ({{ escenarios|length }})</div>
+    {% for esc in escenarios %}
+        <div class="border rounded p-3 mt-2">
+            <div class="d-flex justify-content-between">
+                <h5 class="mb-1">{{ esc.titulo }}</h5>
+                <div>
+                    {% if esc.es_inicial %}<span class="badge text-bg-success">Inicial</span>{% endif %}
+                    {% if esc.es_final %}<span class="badge text-bg-warning">Final</span>{% endif %}
+                    <span class="badge text-bg-secondary">Orden {{ esc.orden }}</span>
+                </div>
+            </div>
+            <pre class="mb-2 mt-1" style="white-space:pre-wrap;font-size:.85rem">{{ esc.situacion|truncatechars:300 }}</pre>
+            {% if esc.retroalimentacion_final %}
+                <div class="small text-muted">Retro final: {{ esc.retroalimentacion_final|truncatechars:100 }}</div>
+            {% endif %}
+
+            {% with decisiones=esc.decisiones.all %}
+                {% if decisiones %}
+                    <div class="mt-2">
+                        <strong>Decisiones ({{ decisiones|length }}):</strong>
+                        <div class="table-responsive mt-1">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead><tr><th>Texto</th><th>Descripcion</th><th>Impacto</th><th>Puntaje base</th><th>Siguiente escenario</th></tr></thead>
+                                <tbody>
+                                {% for d in decisiones %}
+                                    <tr>
+                                        <td>{{ d.texto }}</td>
+                                        <td><small>{{ d.descripcion|default:"-"|truncatechars:100 }}</small></td>
+                                        <td><code style="font-size:.75rem">{{ d.impacto }}</code></td>
+                                        <td>{{ d.puntaje_base }}</td>
+                                        <td>{{ d.siguiente_escenario.titulo|default:"-" }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<p class="text-muted small">
+    <strong>Parametros adicionales:</strong> <code>{{ simulacion.parametros }}</code>
+</p>
+{% endblock %}

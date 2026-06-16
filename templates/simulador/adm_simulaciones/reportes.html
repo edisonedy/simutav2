@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Reportes basicos de simulaciones</h1>
+<div class="row g-3">
+    <div class="col-md-3"><div class="module-card metric-card p-3"><div class="text-muted">Simulaciones</div><div class="metric-value">{{ total_simulaciones }}</div></div></div>
+    <div class="col-md-3"><div class="module-card metric-card p-3"><div class="text-muted">Publicadas</div><div class="metric-value">{{ total_publicadas }}</div></div></div>
+    <div class="col-md-3"><div class="module-card metric-card p-3"><div class="text-muted">Intentos</div><div class="metric-value">{{ total_intentos }}</div></div></div>
+    <div class="col-md-3"><div class="module-card metric-card p-3"><div class="text-muted">Finalizados</div><div class="metric-value">{{ total_finalizados }}</div></div></div>
+</div>
+{% endblock %}

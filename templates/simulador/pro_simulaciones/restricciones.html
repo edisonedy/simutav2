@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Restricciones - {{ simulacion.titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div><div class="section-title">Configuracion</div><h1 class="h3 mb-0">Restricciones</h1><div class="text-muted">{{ simulacion.titulo }}</div></div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}">← Volver</a>
+</div>
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="module-card p-3">
+            <h2 class="h5">Nueva restriccion</h2>
+            <form method="post" action="{% url 'pro_simulaciones' %}?action=add_restriccion&id={{ simulacion.pk }}">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button class="btn btn-primary">Guardar</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="module-card p-3 table-responsive">
+            <h2 class="h5">Restricciones actuales</h2>
+            <table class="table table-hover align-middle">
+                <thead><tr><th>Descripcion</th><th>Indicador</th><th>Operador</th><th>Valor Limite</th><th>Penalizacion</th></tr></thead>
+                <tbody>{% for item in restricciones %}<tr><td>{{ item.descripcion }}</td><td><code>{{ item.codigo_indicador }}</code></td><td>{{ item.operador }}</td><td>{{ item.valor_limite }}</td><td>{{ item.penalizacion }}</td></tr>{% empty %}<tr><td colspan="5" class="text-muted">Sin restricciones.</td></tr>{% endfor %}</tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

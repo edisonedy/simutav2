@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Revisar intentos{% if simulacion %} - {{ simulacion.titulo }}{% endif %}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div><div class="section-title">Profesor</div><h1 class="h3 mb-0">Revisar intentos{% if simulacion %}: {{ simulacion.titulo }}{% endif %}</h1></div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}">← Volver</a>
+</div>
+{% if intentos %}
+<div class="module-card p-3 table-responsive">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Estudiante</th><th>Fecha inicio</th><th>Puntaje</th><th>Nivel</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+        {% for intento in intentos %}
+        <tr>
+            <td>{{ intento.estudiante.get_full_name|default:intento.estudiante.username }}{% if not simulacion %}<br><span class="text-muted small">{{ intento.simulacion.titulo }}</span>{% endif %}</td>
+            <td>{{ intento.fecha_inicio|date:"d/m/Y H:i" }}</td>
+            <td>{% if intento.finalizado %}{{ intento.puntuacion_final|default:"-" }}{% else %}-{% endif %}</td>
+            <td>{{ intento.nivel_resultado|default:"-" }}</td>
+            <td><span class="badge text-bg-{% if intento.finalizado %}success{% else %}secondary{% endif %}">{{ intento.finalizado|yesno:"Finalizado,En curso" }}</span></td>
+            <td><button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#detalle-{{ intento.pk }}">Ver</button></td>
+        </tr>
+        <tr class="collapse" id="detalle-{{ intento.pk }}">
+            <td colspan="6" class="bg-light">
+                <h3 class="h6">Pasos</h3>
+                <table class="table table-sm table-bordered mb-2">
+                    <thead><tr><th>Numero</th><th>Decision</th><th>Justificacion</th><th>Puntaje</th><th>Penalizacion</th></tr></thead>
+                    <tbody>{% for paso in intento.pasos.all %}<tr><td>{{ paso.numero }}</td><td>{{ paso.decision_estudiante }}</td><td>{{ paso.justificacion_estudiante }}</td><td>{{ paso.puntaje_paso }}</td><td>{{ paso.penalizacion_aplicada|default:"-" }}</td></tr>{% empty %}<tr><td colspan="5" class="text-muted">Sin pasos registrados.</td></tr>{% endfor %}</tbody>
+                </table>
+                {% if intento.retroalimentacion_final %}<div class="mt-2"><strong>Retroalimentacion:</strong><p class="mb-0">{{ intento.retroalimentacion_final }}</p></div>{% endif %}
+                {% if intento.debriefing_final %}<div class="mt-2"><strong>Debriefing:</strong><pre class="border rounded bg-white p-2 mt-1 mb-0">{{ intento.debriefing_final }}</pre></div>{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="module-card p-3 text-muted">No hay intentos para revisar.</div>
+{% endif %}
+{% endblock %}

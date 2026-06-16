@@ -1,0 +1,23 @@
+[
+  {
+    "materia_malla_id": 34,
+    "materia": "N3M1_ADMINISTRACION_FINANCI - Administracion Financiera",
+    "malla": "Administracion de Empresas - Malla Administracion UTA 2026",
+    "nivel": "Administracion de Empresas - Malla Administracion UTA 2026 / Nivel 3",
+    "orden": 1
+  },
+  {
+    "materia_malla_id": 32,
+    "materia": "WEB-DJANGO - Programacion Web con Django",
+    "malla": "Ingenieria de Software - Malla Demo Django 2026",
+    "nivel": "Ingenieria de Software - Malla Demo Django 2026 / Nivel 5",
+    "orden": 1
+  },
+  {
+    "materia_malla_id": 33,
+    "materia": "COMP-DEC - Toma de decisiones tecnicas",
+    "malla": "Tecnologia de la Informacion - Malla Demo Computadoras 2026",
+    "nivel": "Tecnologia de la Informacion - Malla Demo Computadoras 2026 / Nivel 1",
+    "orden": 1
+  }
+]

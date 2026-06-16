@@ -1,0 +1,16 @@
+<form action="." method="post" onsubmit="return enviar_formulario(this)">
+    {% csrf_token %}
+    <input type="hidden" name="pk" value="{{ object.pk }}">
+    <input type="hidden" name="action" value="delete">
+    <div class="modal-header">
+        <h5 class="modal-title">Eliminar registro</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+        Esta seguro de eliminar {{ object }}?
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger">Eliminar</button>
+    </div>
+</form>

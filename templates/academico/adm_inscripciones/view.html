@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+    <h1 class="h3">Inscripciones</h1>
+    <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_inscripciones' %}?action=add')">Nueva inscripcion</button>
+</div>
+<div class="module-card p-3 table-responsive">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Estudiante</th><th>Malla</th><th>Periodo</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+        {% for item in list %}
+            <tr>
+                <td>{{ item.estudiante }}</td>
+                <td>{{ item.malla }}</td>
+                <td>{{ item.periodo }}</td>
+                <td>{{ item.estado }}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary btn-action" onclick="abrir_modal('{% url 'adm_inscripciones' %}?action=edit&pk={{ item.pk }}')">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger btn-action" onclick="abrir_modal('{% url 'adm_inscripciones' %}?action=delete&pk={{ item.pk }}')">Eliminar</button>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="text-muted">No hay registros</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+<div class="modal-header">
+    <h5 class="modal-title">Editar malla</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+    <p><strong>{{ malla.nombre }}</strong></p>
+
+    <form id="mallaForm" action="." method="post" onsubmit="return enviar_formulario(this)">
+        {% csrf_token %}
+        <input type="hidden" name="pk" value="{{ malla.pk }}">
+        <input type="hidden" name="action" value="edit">
+        {{ form.as_p }}
+    </form>
+
+    <hr>
+    <h6>Niveles</h6>
+    <table class="table table-sm">
+        <thead><tr><th>Numero</th><th>Nombre</th></tr></thead>
+        <tbody>
+        {% for nivel in niveles %}
+            <tr><td>{{ nivel.numero }}</td><td>{{ nivel.nombre }}</td></tr>
+        {% empty %}
+            <tr><td colspan="2" class="text-muted">Sin niveles</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <form action="." method="post" onsubmit="return enviar_formulario(this)" class="row g-2 mb-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_nivel">
+        <input type="hidden" name="malla_id" value="{{ malla.pk }}">
+        {{ nivel_form.as_p }}
+        <div class="col-12"><button class="btn btn-sm btn-outline-success" type="submit">Agregar nivel</button></div>
+    </form>
+
+    <hr>
+    <h6>Materias de la malla</h6>
+    <table class="table table-sm">
+        <thead><tr><th>Nivel</th><th>Materia</th><th>Orden</th><th>Obligatoria</th></tr></thead>
+        <tbody>
+        {% for mm in materias_malla %}
+            <tr><td>{{ mm.nivel }}</td><td>{{ mm.materia }}</td><td>{{ mm.orden }}</td><td>{{ mm.obligatoria|yesno:"Si,No" }}</td></tr>
+        {% empty %}
+            <tr><td colspan="4" class="text-muted">Sin materias</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <form action="." method="post" onsubmit="return enviar_formulario(this)" class="row g-2 mb-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_materia">
+        <input type="hidden" name="malla_id" value="{{ malla.pk }}">
+        {{ materia_form.as_p }}
+        <div class="col-12"><button class="btn btn-sm btn-outline-success" type="submit">Agregar materia</button></div>
+    </form>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" form="mallaForm" class="btn btn-primary">Guardar</button>
+</div>

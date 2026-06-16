@@ -1,0 +1,15 @@
+<form method="post" action="{% url 'pro_simulaciones' %}?action=add_concepto" onsubmit="return enviar_formulario(this)">
+    {% csrf_token %}
+    <input type="hidden" name="simulacion_id" value="{{ simulacion.pk }}">
+    <div class="modal-header">
+        <h5 class="modal-title">Nuevo concepto esperado</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+        {% include "simulador/pro_simulaciones/_form_concepto.html" %}
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary">Guardar concepto</button>
+    </div>
+</form>

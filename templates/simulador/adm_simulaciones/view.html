@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+    <div><div class="section-title">Administrador</div><h1 class="h3 mb-0">Simulaciones</h1></div>
+    <div><button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_simulaciones' %}?action=add')">Nueva</button></div>
+</div>
+<div class="module-card p-3 table-responsive">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Titulo</th><th>Materia</th><th>Profesor</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+        {% for simulacion in list %}
+            <tr>
+                <td>{{ simulacion.titulo }}</td>
+                <td>{{ simulacion.materia_malla.materia.nombre }}</td>
+                <td>{{ simulacion.profesor|default:"-" }}</td>
+                <td>
+                    <span class="badge text-bg-{% if simulacion.estado == 'PUBLICADA' %}success{% elif simulacion.estado == 'BORRADOR' %}warning{% else %}secondary{% endif %}">
+                        {{ simulacion.estado }}
+                    </span>
+                </td>
+                <td class="text-nowrap">
+                    <a class="btn btn-sm btn-outline-info btn-action" href="{% url 'adm_simulaciones' %}?action=config&pk={{ simulacion.pk }}">Config</a>
+                    <button class="btn btn-sm btn-outline-secondary btn-action" onclick="abrir_modal('{% url 'adm_simulaciones' %}?action=edit&pk={{ simulacion.pk }}')">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger btn-action" onclick="abrir_modal('{% url 'adm_simulaciones' %}?action=delete&pk={{ simulacion.pk }}')">Eliminar</button>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="text-muted">No hay simulaciones.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

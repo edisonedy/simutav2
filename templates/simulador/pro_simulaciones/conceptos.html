@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Conceptos esperados - {{ simulacion.titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <div class="section-title">Evaluacion configurable</div>
+        <h1 class="h3 mb-0">Conceptos esperados</h1>
+        <div class="text-muted">{{ simulacion.titulo }}</div>
+    </div>
+    <div>
+        <button class="btn btn-primary btn-sm" onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=add_concepto&id={{ simulacion.pk }}{% if ronda %}&ronda={{ ronda }}{% endif %}')">Nuevo concepto</button>
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}">Volver</a>
+    </div>
+</div>
+
+<div class="module-card p-3 mb-3">
+    <div class="section-title mb-2">Estado de la rubrica</div>
+    <div class="row g-2 mb-3">
+        {% for item in resumen_rubrica %}
+            <div class="col-md-3">
+                <div class="border rounded p-2">
+                    <div class="text-muted small">Ronda {{ item.ronda }}</div>
+                    <div class="fw-semibold">
+                        {{ item.total }} / 100 puntos
+                        {% if item.completa %}
+                            <span class="badge text-bg-success">Completa</span>
+                        {% else %}
+                            <span class="badge text-bg-danger">Incompleta (debe sumar 100)</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small">{{ item.conceptos }} conceptos / {{ item.criticos }} criticos</div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    <form method="get" class="row g-2 align-items-end">
+        <input type="hidden" name="action" value="conceptos">
+        <input type="hidden" name="id" value="{{ simulacion.pk }}">
+        <div class="col-md-3">
+            <label class="form-label">Ronda</label>
+            <input type="number" name="ronda" value="{{ ronda }}" min="1" class="form-control">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Escenario</label>
+            <select name="escenario" class="form-select">
+                <option value="">Todos</option>
+                {% for escenario in escenarios %}
+                    <option value="{{ escenario.pk }}" {% if escenario_id == escenario.pk|stringformat:"s" %}selected{% endif %}>{{ escenario.titulo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-primary w-100">Filtrar</button>
+        </div>
+    </form>
+</div>
+
+<div class="vstack gap-2">
+{% for concepto in conceptos %}
+    <div class="module-card p-3">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+            <div>
+                <span class="chip chip-soft">Ronda {{ concepto.numero_ronda|default:"-" }}</span>
+                <span class="chip chip-media">Peso {{ concepto.peso }}</span>
+                {% if concepto.es_critico %}<span class="chip chip-down">Critico</span>{% endif %}
+                <div class="fw-semibold mt-2">{{ concepto.nombre }}</div>
+                {% if concepto.descripcion %}<div class="text-muted small">{{ concepto.descripcion }}</div>{% endif %}
+            </div>
+            <div class="text-nowrap">
+                <button class="btn btn-sm btn-outline-primary" onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=edit_concepto&id={{ concepto.pk }}')">Editar</button>
+                <form method="post" action="{% url 'pro_simulaciones' %}?action=delete_concepto&id={{ concepto.pk }}" class="d-inline" onsubmit="return enviar_formulario(this)">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-dark" title="Eliminar">&times;</button>
+                </form>
+            </div>
+        </div>
+        <div class="mt-2 small">
+            <span class="text-muted">Se cumple con <strong>{{ concepto.modo_legible }}</strong> de:</span>
+            {% for palabra in concepto.palabras_legibles %}
+                <span class="chip chip-soft">{{ palabra }}</span>
+            {% empty %}
+                <span class="text-danger">Sin palabras clave (no se podra evaluar)</span>
+            {% endfor %}
+        </div>
+        {% if concepto.impacto_cumple_legible or concepto.impacto_falta_legible %}
+        <div class="mt-2 small d-flex flex-wrap gap-3">
+            {% if concepto.impacto_cumple_legible %}
+            <div>
+                <span class="text-muted">Si cumple:</span>
+                {% for nombre, valor in concepto.impacto_cumple_legible %}
+                    <span class="chip {% if valor >= 0 %}chip-up{% else %}chip-down{% endif %}">{{ nombre }} {% if valor >= 0 %}+{% endif %}{{ valor }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if concepto.impacto_falta_legible %}
+            <div>
+                <span class="text-muted">Si falta:</span>
+                {% for nombre, valor in concepto.impacto_falta_legible %}
+                    <span class="chip {% if valor >= 0 %}chip-up{% else %}chip-down{% endif %}">{{ nombre }} {% if valor >= 0 %}+{% endif %}{{ valor }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+{% empty %}
+    <div class="module-card p-3 text-muted">Sin conceptos esperados configurados.</div>
+{% endfor %}
+</div>
+
+{% if resumen_rubrica %}
+<div class="module-card p-3">
+    <div class="section-title mb-2">Advertencias de rubrica</div>
+    <ul class="mb-0">
+        {% for item in resumen_rubrica %}
+            {% if not item.completa %}
+                <li class="text-danger">Ronda {{ item.ronda }}: los pesos suman {{ item.total }} (debe ser 100).</li>
+            {% endif %}
+        {% endfor %}
+        {% for concepto in conceptos %}
+            {% if concepto.es_critico and concepto.palabras_clave|length < 15 %}
+                <li class="text-warning">Concepto critico "{{ concepto.nombre }}" tiene pocas palabras clave.</li>
+            {% endif %}
+        {% endfor %}
+        {% if resumen_rubrica|length == 0 %}
+            <li class="text-muted">Sin observaciones.</li>
+        {% endif %}
+    </ul>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - SimutaV2{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <div class="section-title">Panel principal</div>
+        <h1 class="h3 mb-1">SimutaV2</h1>
+        <div class="text-muted">Rol: {{ rol|default:"Sin perfil asignado" }}</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-primary" href="{% url 'adm_simulaciones' %}">Simulaciones</a>
+        <a class="btn btn-primary" href="{% url 'alu_simulaciones' %}">Probar como estudiante</a>
+    </div>
+</div>
+
+{% if rol == "ESTUDIANTE" %}
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="module-card p-3 h-100">
+                <div class="section-title mb-2">Academico</div>
+                <h2 class="h5">Mallas inscritas</h2>
+                {% for inscripcion in inscripciones %}
+                    <div class="border-top py-2">{{ inscripcion.malla }} <span class="text-muted">{{ inscripcion.periodo }}</span></div>
+                {% empty %}
+                    <p class="text-muted mb-0">No tienes inscripciones activas.</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="module-card p-3 h-100">
+                <div class="section-title mb-2">Simulador</div>
+                <h2 class="h5">Ultimos intentos</h2>
+                {% for intento in intentos %}
+                    <div class="border-top py-2">{{ intento.simulacion }} <span class="badge text-bg-secondary">{{ intento.finalizado|yesno:"Finalizado,En curso" }}</span></div>
+                {% empty %}
+                    <p class="text-muted mb-0">Aun no tienes intentos.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% elif rol == "PROFESOR" %}
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="module-card p-3">
+                <div class="section-title mb-2">Docencia</div>
+                <h2 class="h5">Materias asignadas</h2>
+                {% for asignacion in asignaciones %}
+                    <div class="border-top py-2">{{ asignacion.materia_malla.materia }} <span class="text-muted">{{ asignacion.periodo }}</span></div>
+                {% empty %}
+                    <p class="text-muted mb-0">No tienes materias asignadas.</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="module-card p-3">
+                <div class="section-title mb-2">Acciones</div>
+                <a class="btn btn-primary w-100 mb-2" href="{% url 'pro_simulaciones' %}">Crear simulacion</a>
+                <a class="btn btn-outline-primary w-100" href="{% url 'pro_simulaciones' %}">Revisar intentos</a>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><div class="text-muted">Carreras</div><div class="metric-value">{{ total_carreras|default:0 }}</div></div></div>
+        <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><div class="text-muted">Mallas</div><div class="metric-value">{{ total_mallas|default:0 }}</div></div></div>
+        <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><div class="text-muted">Materias</div><div class="metric-value">{{ total_materias|default:0 }}</div></div></div>
+        <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><div class="text-muted">Periodos</div><div class="metric-value">{{ total_periodos|default:0 }}</div></div></div>
+        <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><div class="text-muted">Profesores</div><div class="metric-value">{{ total_profesores|default:0 }}</div></div></div>
+        <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><div class="text-muted">Estudiantes</div><div class="metric-value">{{ total_estudiantes|default:0 }}</div></div></div>
+        <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><div class="text-muted">Simulaciones</div><div class="metric-value">{{ total_simulaciones|default:0 }}</div></div></div>
+        <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><div class="text-muted">Intentos</div><div class="metric-value">{{ total_intentos|default:0 }}</div></div></div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-xl-7">
+            <div class="module-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <div class="section-title">Contenido</div>
+                        <h2 class="h5 mb-0">Simulaciones recientes</h2>
+                    </div>
+                    <span class="badge text-bg-primary">{{ total_escenarios|default:0 }} escenarios</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th>Simulacion</th><th>Materia</th><th>Nivel</th><th>Estado</th></tr></thead>
+                        <tbody>
+                        {% for simulacion in simulaciones_recientes %}
+                            <tr>
+                                <td>{{ simulacion.titulo }}</td>
+                                <td>{{ simulacion.materia_malla.materia.nombre }}</td>
+                                <td>{{ simulacion.materia_malla.nivel.numero }}</td>
+                                <td><span class="badge text-bg-success">{{ simulacion.get_estado_display }}</span></td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="4" class="text-muted">No hay simulaciones cargadas.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-5">
+            <div class="module-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <div class="section-title">Actividad</div>
+                        <h2 class="h5 mb-0">Intentos recientes</h2>
+                    </div>
+                    <span class="badge text-bg-secondary">{{ total_decisiones_tomadas|default:0 }} decisiones</span>
+                </div>
+                {% for intento in intentos_recientes %}
+                    <div class="border-top py-2">
+                        <div class="fw-semibold">{{ intento.estudiante.get_full_name|default:intento.estudiante.username }}</div>
+                        <div class="text-muted small">{{ intento.simulacion }} - {{ intento.finalizado|yesno:"Finalizado,En curso" }}</div>
+                    </div>
+                {% empty %}
+                    <p class="text-muted mb-0">Aun no hay intentos registrados.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

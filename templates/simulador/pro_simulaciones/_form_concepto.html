@@ -1,0 +1,92 @@
+{# Formulario amigable de concepto esperado: sin JSON, todo guiado. #}
+{{ form.simulacion }}
+
+<div class="alert alert-info py-2 small">
+    Un <strong>concepto</strong> es algo que esperas que el estudiante demuestre en su respuesta.
+    Defines <strong>cómo se reconoce</strong> (palabras clave), <strong>cuánto vale</strong> (peso) y
+    <strong>cómo afecta a los indicadores</strong>. La nota sale de estos conceptos.
+</div>
+
+<div class="mb-2">
+    <label class="form-label">Ronda</label>
+    {{ form.numero_ronda }}
+    <div class="form-text">1 = Diagnóstico · 2 = Decisión · 3 = Plan.</div>
+</div>
+
+<div class="mb-2">
+    <label class="form-label">Nombre del concepto</label>
+    {{ form.nombre }}
+    <div class="form-text">Ej: "Analiza el punto de equilibrio" o "Propone control de inventario".</div>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Descripción (opcional)</label>
+    {{ form.descripcion }}
+</div>
+
+<div class="mb-2">
+    <label class="form-label">Palabras o frases clave</label>
+    <input type="text" name="palabras" class="form-control" value="{{ palabras_texto }}"
+           placeholder="Ej: punto de equilibrio, costos fijos, margen">
+    <div class="form-text">
+        Sepáralas con <strong>comas</strong>. El sistema reconoce variantes (plurales, tildes y sinónimos),
+        no hace falta escribir todas las formas.
+    </div>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">¿Cuándo se considera cumplido?</label>
+    <select name="modo_palabras" class="form-select">
+        <option value="any" {% if modo_palabras == 'any' %}selected{% endif %}>Si menciona AL MENOS UNA de las palabras (recomendado)</option>
+        <option value="all" {% if modo_palabras == 'all' %}selected{% endif %}>Solo si menciona TODAS las palabras</option>
+    </select>
+</div>
+
+<div class="mb-2">
+    <label class="form-label">Peso (cuánto vale en la ronda)</label>
+    {{ form.peso }}
+    <div class="form-text">En puntos. Los conceptos de una misma ronda deben sumar <strong>100</strong>.</div>
+</div>
+
+<label class="d-block mb-3">
+    {{ form.es_critico }} <span class="ms-1">Es un concepto crítico</span>
+    <span class="form-text d-block">Si es crítico y el estudiante no lo cumple, la nota de la ronda se limita.</span>
+</label>
+
+<div class="mb-3">
+    <label class="form-label mb-1">Efecto en los indicadores</label>
+    <div class="form-text mb-2">Positivo sube, negativo baja, en blanco = sin cambio. No escribas código.</div>
+    {% if indicadores_impacto %}
+    <div class="row gx-2 small text-muted fw-semibold mb-1">
+        <div class="col-6">Indicador</div>
+        <div class="col-3 text-center">Si lo cumple</div>
+        <div class="col-3 text-center">Si le falta</div>
+    </div>
+    {% for ind in indicadores_impacto %}
+    <div class="row gx-2 align-items-center mb-1">
+        <div class="col-6"><span class="small fw-semibold">{{ ind.nombre }}</span></div>
+        <div class="col-3">
+            <input type="number" step="1" class="form-control form-control-sm text-center"
+                   name="cumple_{{ ind.codigo }}" value="{{ ind.cumple }}" placeholder="0">
+        </div>
+        <div class="col-3">
+            <input type="number" step="1" class="form-control form-control-sm text-center"
+                   name="falta_{{ ind.codigo }}" value="{{ ind.falta }}" placeholder="0">
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="text-muted small">Configura primero los indicadores de la simulación.</div>
+    {% endif %}
+</div>
+
+<div class="mb-2">
+    <label class="form-label">Mensaje si lo cumple (opcional)</label>
+    {{ form.retroalimentacion_si_cumple }}
+</div>
+<div class="mb-2">
+    <label class="form-label">Mensaje si le falta (opcional)</label>
+    {{ form.retroalimentacion_si_falta }}
+</div>
+
+<label class="d-block">{{ form.activo }} <span class="ms-1">Visible / activo</span></label>

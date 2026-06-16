@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Mis simulaciones{% endblock %}
+{% block content %}
+<div class="hero-panel mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <div class="section-title text-light-emphasis">Panel del estudiante</div>
+            <h1 class="h3 mb-1 text-white">Ruta de simulaciones</h1>
+            <p class="mb-0 hero-sub">Practica tomando decisiones reales, nivel por nivel.</p>
+        </div>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-value">{{ niveles|length }}</div>
+                <div class="hero-stat-label">Niveles</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">{{ total_materias }}</div>
+                <div class="hero-stat-label">Materias</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">{{ total_simulaciones }}</div>
+                <div class="hero-stat-label">Simulaciones</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for nivel in niveles %}
+<section class="level-block">
+    <div class="level-head">
+        <span class="level-badge">{{ nivel.numero }}</span>
+        <div>
+            <div class="level-name">{{ nivel.nombre|default:"Nivel" }}</div>
+            <div class="level-meta">{{ nivel.materias|length }} materia(s) · {{ nivel.total_simulaciones }} simulacion(es)</div>
+        </div>
+    </div>
+    <div class="row g-3">
+    {% for materia_malla in nivel.materias %}
+        <div class="col-md-6 col-xl-4">
+            <div class="sim-card h-100">
+                <div class="sim-card-top">
+                    <h2 class="h6 mb-0">{{ materia_malla.materia.nombre }}</h2>
+                </div>
+                <div class="exam-list">
+                {% for sim in materia_malla.simulaciones_disponibles %}
+                    <div class="sim-row">
+                        <div class="sim-row-info">
+                            <div class="exam-title">{{ sim.titulo }}</div>
+                            <div class="sim-tags">
+                                {% if sim.nivel_dificultad == 'BASICA' %}
+                                    <span class="chip chip-basica">Basica</span>
+                                {% elif sim.nivel_dificultad == 'AVANZADA' %}
+                                    <span class="chip chip-avanzada">Avanzada</span>
+                                {% else %}
+                                    <span class="chip chip-media">Media</span>
+                                {% endif %}
+                                <span class="chip chip-soft">{{ sim.tiempo_estimado }} min</span>
+                                <span class="chip chip-soft">{{ sim.maximo_decisiones }} rondas</span>
+                            </div>
+                        </div>
+                        <a class="btn btn-sm btn-primary sim-go" href="?action=iniciar&simulacion_id={{ sim.pk }}">Iniciar &rarr;</a>
+                    </div>
+                {% empty %}
+                    <p class="text-muted small mb-0">Sin simulaciones publicadas aun.</p>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+</section>
+{% empty %}
+<div class="sim-card p-4 text-muted">No tienes materias inscritas todavia.</div>
+{% endfor %}
+{% endblock %}
