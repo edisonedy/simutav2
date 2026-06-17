@@ -452,6 +452,7 @@ class IntentoSimulacion(ModeloBase):
     nivel_resultado = models.CharField(max_length=50, blank=True, default='')
     retroalimentacion_final = models.TextField(blank=True, default='')
     debriefing_final = models.TextField(blank=True, default='')
+    juego_contabilizado = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-fecha_inicio']
@@ -499,3 +500,35 @@ class PasoSimulacion(ModeloBase):
 
     def __str__(self):
         return f'{self.intento} / Paso {self.numero}'
+
+
+class PerfilJuego(models.Model):
+    """Progresion persistente del estudiante (capa de juego): XP acumulada,
+    nivel, racha e insignias coleccionadas a lo largo de todas las simulaciones."""
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='perfil_juego',
+    )
+    xp_total = models.PositiveIntegerField(default=0)
+    nivel = models.PositiveIntegerField(default=1)
+    simulaciones_completadas = models.PositiveIntegerField(default=0)
+    racha_actual = models.PositiveIntegerField(default=0)
+    mejor_racha = models.PositiveIntegerField(default=0)
+    mejor_nota = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    insignias = models.JSONField(default=list, blank=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    XP_POR_NIVEL = 500
+
+    class Meta:
+        ordering = ['-xp_total']
+
+    def __str__(self):
+        return f'{self.usuario} - Nivel {self.nivel} ({self.xp_total} XP)'
+
+    @property
+    def xp_en_nivel(self):
+        return self.xp_total % self.XP_POR_NIVEL
+
+    @property
+    def progreso_nivel_pct(self):
+        return round(self.xp_en_nivel / self.XP_POR_NIVEL * 100, 1)

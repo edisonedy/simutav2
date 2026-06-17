@@ -441,6 +441,11 @@
         .game-delta.up { background: rgba(14,110,122,.16); color: var(--forest); }
         .game-delta.down { background: rgba(158,27,52,.14); color: var(--accent); }
         .game-crit { font-size: .62rem; background: var(--ink); color: #fff; padding: .05rem .4rem; border-radius: 999px; }
+        .evento-banner {
+            margin: .3rem 0 .6rem; padding: .6rem .85rem; border-radius: .5rem; font-weight: 600; font-size: .9rem;
+            color: #fff; background: linear-gradient(100deg, var(--gold) 0%, var(--accent) 100%);
+            box-shadow: 0 6px 16px rgba(184,134,42,.3);
+        }
 
         .play-option {
             display: block; border: 1.5px solid var(--line); border-radius: .55rem; padding: .85rem 1rem;
@@ -480,6 +485,43 @@
         .mission-ind { padding: .45rem .6rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--paper); }
         .mission-ind-val { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 700; }
         .mission-start { border-top: 3px solid var(--cyan); }
+
+        /* Mi carrera: insignias, historial, ranking */
+        .badge-card {
+            display: flex; align-items: center; gap: .45rem; padding: .4rem .7rem; border-radius: 999px;
+            background: var(--field); border: 1px solid var(--line); font-size: .78rem; font-weight: 600;
+        }
+        .badge-card.badge-locked { opacity: .5; filter: grayscale(1); }
+        .badge-ico { font-size: 1.1rem; }
+        .hist-row, .rank-row { display: flex; align-items: center; gap: .6rem; padding: .5rem .7rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--paper); text-decoration: none; color: var(--ink); }
+        .hist-row:hover { border-color: var(--cyan); }
+        .hist-mat { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .68rem; color: var(--accent); text-transform: uppercase; flex: 0 0 auto; }
+        .hist-sim { flex: 1 1 auto; min-width: 0; font-weight: 600; font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hist-nota { flex: 0 0 auto; }
+        .rank-row { gap: .7rem; }
+        .rank-me { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(158,27,52,.15); }
+        .rank-pos { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: .8rem; flex: 0 0 auto; }
+        .rank-name { flex: 1 1 auto; font-weight: 600; }
+        .rank-xp { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .76rem; color: var(--muted); }
+
+        /* Tarjetas de seleccion de malla */
+        .malla-card {
+            display: block; height: 100%; text-decoration: none; color: var(--ink);
+            border: 1px solid var(--line); border-radius: .7rem; background: var(--card);
+            padding: 1.1rem; position: relative; overflow: hidden;
+            box-shadow: 0 7px 20px rgba(22,32,42,.06);
+        }
+        .malla-card::before { content: ""; position: absolute; inset: 0 0 auto 0; height: .25rem; background: linear-gradient(90deg, var(--accent) 0%, var(--cyan) 100%); }
+        .malla-card-top { display: flex; align-items: center; gap: .7rem; margin-bottom: .8rem; }
+        .malla-ico { font-size: 2rem; }
+        .malla-carrera { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .68rem; text-transform: uppercase; color: var(--accent); }
+        .malla-nombre { font-weight: 700; font-size: 1.05rem; line-height: 1.15; }
+        .malla-stats { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
+        .malla-go { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; color: var(--accent); }
+        @media (prefers-reduced-motion: no-preference) {
+            .malla-card { transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
+            .malla-card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(22,32,42,.12); border-color: var(--cyan); }
+        }
         @media (prefers-reduced-motion: no-preference) {
             .bar-anim { width: 0; animation: barGrow .9s cubic-bezier(.2,.8,.2,1) forwards; }
             @keyframes barGrow { to { width: var(--w); } }

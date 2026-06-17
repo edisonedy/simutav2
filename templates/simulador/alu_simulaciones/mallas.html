@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Elige tu malla{% endblock %}
+{% block content %}
+<div class="game-screen">
+    <div class="hero-panel mb-4">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <div class="section-title text-light-emphasis">Panel del estudiante</div>
+                <h1 class="h3 mb-1 text-white">Elige tu malla</h1>
+                <p class="mb-2 hero-sub">Selecciona una carrera/malla para ver sus materias y misiones.</p>
+                <a class="btn btn-sm btn-light" href="?action=carrera">🏅 Mi carrera</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+    {% for item in mallas %}
+        <div class="col-md-6 col-xl-4">
+            <a class="malla-card" href="?malla={{ item.malla.pk }}">
+                <div class="malla-card-top">
+                    <span class="malla-ico">🎓</span>
+                    <div>
+                        <div class="malla-carrera">{{ item.malla.carrera.nombre }}</div>
+                        <div class="malla-nombre">{{ item.malla.nombre }}</div>
+                    </div>
+                </div>
+                <div class="malla-stats">
+                    <span class="chip chip-soft">{{ item.materias }} materias</span>
+                    <span class="chip chip-up">{{ item.simulaciones }} misiones</span>
+                </div>
+                <div class="malla-go">Entrar &rarr;</div>
+            </a>
+        </div>
+    {% empty %}
+        <div class="col"><div class="game-card text-muted">No estás inscrito en ninguna malla todavía.</div></div>
+    {% endfor %}
+    </div>
+</div>
+{% endblock %}

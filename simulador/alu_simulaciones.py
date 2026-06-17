@@ -129,6 +129,42 @@ def _pasos_stepper(simulacion, numero_actual):
     return pasos
 
 
+INSIGNIAS_CATALOGO = {
+    'primera_mision': ('Primera misión', '🚀'),
+    'mision_aprobada': ('Misión aprobada', '✅'),
+    'maestria': ('Maestría (90+)', '🏆'),
+    'racha_imparable': ('Racha imparable (x3)', '🔥'),
+    'veterano': ('Veterano (5 misiones)', '🎖'),
+    'explorador': ('Explorador (3 materias)', '🧭'),
+}
+
+
+def _carrera_contexto(user):
+    """Datos de la pantalla 'Mi carrera': perfil de juego, insignias, ranking e historial."""
+    from simulador.models import PerfilJuego
+
+    perfil, _ = PerfilJuego.objects.get_or_create(usuario=user)
+    ganadas = set(perfil.insignias or [])
+    insignias_catalogo = [
+        {'codigo': c, 'nombre': n, 'icono': ic, 'ganada': c in ganadas}
+        for c, (n, ic) in INSIGNIAS_CATALOGO.items()
+    ]
+    ranking = PerfilJuego.objects.select_related('usuario').order_by('-xp_total')[:10]
+    historial = (
+        user.intentos_simulacion.filter(finalizado=True)
+        .select_related('simulacion__materia_malla__materia')
+        .order_by('-fecha_fin')[:8]
+    )
+    mi_posicion = PerfilJuego.objects.filter(xp_total__gt=perfil.xp_total).count() + 1
+    return {
+        'perfil': perfil,
+        'insignias_catalogo': insignias_catalogo,
+        'ranking': ranking,
+        'historial': historial,
+        'mi_posicion': mi_posicion,
+    }
+
+
 def _calcular_gamificacion(intento):
     """Capa de juego sobre el resultado: XP, rango con icono, progreso al
     siguiente rango e insignias ganadas, para una experiencia mas motivadora."""
@@ -370,18 +406,42 @@ def view(request):
             data['gamificacion'] = _calcular_gamificacion(intento)
             return render(request, 'simulador/alu_simulaciones/resultado.html', data)
 
+        elif action == 'carrera':
+            data.update(_carrera_contexto(request.user))
+            return render(request, 'simulador/alu_simulaciones/carrera.html', data)
+
+        from academico.models import Malla
         inscripciones = InscripcionMalla.objects.filter(
             estudiante=request.user,
             estado=InscripcionMalla.ACTIVA,
         ).select_related('malla')
-        mallas_ids = inscripciones.values_list('malla_id', flat=True)
+        mallas_ids = list(inscripciones.values_list('malla_id', flat=True))
+        malla_sel = request.GET.get('malla')
+
+        # Paso 1: el estudiante elige primero la malla (para no mezclar materias).
+        if not malla_sel:
+            mallas_cards = []
+            for malla in Malla.objects.filter(id__in=mallas_ids, activo=True).select_related('carrera'):
+                mm_list = list(
+                    MateriaMalla.objects.filter(malla=malla, activo=True).prefetch_related('simulaciones')
+                )
+                n_sims = sum(
+                    1 for mm in mm_list for s in mm.simulaciones.all()
+                    if s.estado == Simulacion.PUBLICADA and s.activo
+                )
+                mallas_cards.append({'malla': malla, 'materias': len(mm_list), 'simulaciones': n_sims})
+            data['mallas'] = mallas_cards
+            return render(request, 'simulador/alu_simulaciones/mallas.html', data)
+
+        # Paso 2: ya eligio una malla -> mostrar solo SUS materias por nivel.
         materias = (
             MateriaMalla.objects
-            .filter(malla_id__in=mallas_ids, activo=True)
-            .select_related('materia', 'nivel', 'malla')
+            .filter(malla_id=malla_sel, malla_id__in=mallas_ids, activo=True)
+            .select_related('materia', 'nivel', 'malla__carrera')
             .prefetch_related('simulaciones')
             .order_by('nivel__numero', 'orden', 'materia__nombre')
         )
+        data['malla_sel'] = materias[0].malla if materias else None
         # Agrupar por nivel en orden (primero -> ultimo) para el dashboard.
         niveles = OrderedDict()
         total_simulaciones = 0

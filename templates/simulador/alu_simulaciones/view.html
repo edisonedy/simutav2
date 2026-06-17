@@ -4,9 +4,13 @@
 <div class="hero-panel mb-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
         <div>
-            <div class="section-title text-light-emphasis">Panel del estudiante</div>
-            <h1 class="h3 mb-1 text-white">Ruta de simulaciones</h1>
-            <p class="mb-0 hero-sub">Practica tomando decisiones reales, nivel por nivel.</p>
+            <div class="section-title text-light-emphasis">{% if malla_sel %}{{ malla_sel.carrera.nombre }}{% else %}Panel del estudiante{% endif %}</div>
+            <h1 class="h3 mb-1 text-white">{% if malla_sel %}{{ malla_sel.nombre }}{% else %}Ruta de simulaciones{% endif %}</h1>
+            <p class="mb-2 hero-sub">Practica tomando decisiones reales, nivel por nivel.</p>
+            <div class="d-flex gap-2 flex-wrap">
+                <a class="btn btn-sm btn-light" href="{% url 'alu_simulaciones' %}">&larr; Cambiar malla</a>
+                <a class="btn btn-sm btn-outline-light" href="?action=carrera">🏅 Mi carrera</a>
+            </div>
         </div>
         <div class="hero-stats">
             <div class="hero-stat">

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Mi carrera{% endblock %}
+{% block content %}
+<div class="game-screen">
+
+    <div class="hud mb-3">
+        <div class="hud-mission">
+            <div class="hud-label">Mi carrera</div>
+            <div class="hud-title">{{ user.get_full_name|default:user.username }}</div>
+            <div class="hud-role">▶ Nivel {{ perfil.nivel }} · puesto #{{ mi_posicion }} en el ranking</div>
+        </div>
+        <div class="hud-stats">
+            <div class="hud-stat"><div class="hud-stat-label">XP total</div><div class="hud-stat-value">{{ perfil.xp_total }}</div></div>
+            <div class="hud-stat"><div class="hud-stat-label">Misiones</div><div class="hud-stat-value">{{ perfil.simulaciones_completadas }}</div></div>
+            <div class="hud-stat"><div class="hud-stat-label">Racha</div><div class="hud-stat-value">🔥{{ perfil.racha_actual }}</div></div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="game-card mb-3">
+                <div class="game-card-head"><span class="game-tag">⬆ Progreso de nivel</span><span class="game-points">Nivel {{ perfil.nivel }}</span></div>
+                <div class="d-flex justify-content-between small text-muted"><span>{{ perfil.xp_en_nivel }} / {{ perfil.XP_POR_NIVEL }} XP</span><span>{{ perfil.progreso_nivel_pct }}%</span></div>
+                <div class="game-progress" style="background: var(--field);"><div class="game-progress-bar" style="width: {{ perfil.progreso_nivel_pct }}%;"></div></div>
+                <div class="small text-muted mt-2">Mejor nota: <strong>{{ perfil.mejor_nota }}</strong> · Mejor racha: <strong>{{ perfil.mejor_racha }}</strong></div>
+            </div>
+
+            <div class="game-card mb-3">
+                <div class="game-card-head"><span class="game-tag">🏅 Insignias</span><span class="text-muted small">{{ perfil.insignias|length }} de {{ insignias_catalogo|length }}</span></div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for ins in insignias_catalogo %}
+                        <span class="badge-card {% if not ins.ganada %}badge-locked{% endif %}" title="{{ ins.nombre }}">
+                            <span class="badge-ico">{% if ins.ganada %}{{ ins.icono }}{% else %}🔒{% endif %}</span>
+                            <span class="badge-name">{{ ins.nombre }}</span>
+                        </span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="game-card">
+                <div class="game-card-head"><span class="game-tag">📜 Historial de misiones</span></div>
+                {% if historial %}
+                <div class="vstack gap-2">
+                    {% for it in historial %}
+                    <a class="hist-row" href="?action=resultado&intento_id={{ it.pk }}">
+                        <span class="hist-mat">{{ it.simulacion.materia_malla.materia.nombre }}</span>
+                        <span class="hist-sim">{{ it.simulacion.titulo|truncatechars:42 }}</span>
+                        <span class="hist-nota chip {% if it.puntuacion_final >= 70 %}chip-up{% elif it.puntuacion_final >= 40 %}chip-media{% else %}chip-down{% endif %}">{{ it.puntuacion_final }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Aún no has completado misiones. <a href="{% url 'alu_simulaciones' %}">¡Empieza una!</a></p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="game-card">
+                <div class="game-card-head"><span class="game-tag">🏆 Ranking</span></div>
+                <div class="vstack gap-1">
+                    {% for r in ranking %}
+                    <div class="rank-row {% if r.usuario_id == user.id %}rank-me{% endif %}">
+                        <span class="rank-pos">{{ forloop.counter }}</span>
+                        <span class="rank-name">{{ r.usuario.get_full_name|default:r.usuario.username }}</span>
+                        <span class="rank-xp">Nv {{ r.nivel }} · {{ r.xp_total }} XP</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted mb-0">Sin jugadores todavía.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            <a class="btn btn-primary btn-play w-100 mt-3" href="{% url 'alu_simulaciones' %}">▶ Jugar una misión</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

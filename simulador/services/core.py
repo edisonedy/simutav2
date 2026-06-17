@@ -656,6 +656,50 @@ def _hubo_movimiento(antes, despues):
     return False
 
 
+def _cumple_condicion(estado, cond):
+    valor = estado.get(cond.get('indicador'))
+    if not isinstance(valor, (int, float)):
+        return False
+    v, limite = float(valor), float(cond.get('valor', 0))
+    op = cond.get('operador', '<')
+    return {
+        '<': v < limite, '<=': v <= limite, '>': v > limite,
+        '>=': v >= limite, '=': v == limite,
+    }.get(op, False)
+
+
+def aplicar_eventos(simulacion, estado_despues, ronda_actual):
+    """Fase B - eventos dinamicos. Configurados en simulacion.parametros['eventos']:
+    cada evento = {id, ronda?, condicion?{indicador,operador,valor}, mensaje, efecto{codigo:delta}}.
+    Se dispara si coincide la ronda (o no se especifica) y se cumple la condicion sobre
+    el estado (o no hay), UNA sola vez por intento (se rastrea en estado['__eventos__'])."""
+    eventos = (simulacion.parametros or {}).get('eventos') or []
+    estado = dict(estado_despues or {})
+    if not eventos:
+        return estado, []
+    disparados = list(estado.get('__eventos__', []))
+    mensajes = []
+    for idx, ev in enumerate(eventos):
+        ev_id = str(ev.get('id', idx))
+        if ev_id in disparados:
+            continue
+        ronda_ev = ev.get('ronda')
+        if ronda_ev is not None and int(ronda_ev) != int(ronda_actual):
+            continue
+        cond = ev.get('condicion')
+        if cond and not _cumple_condicion(estado, cond):
+            continue
+        efecto = {k: v for k, v in (ev.get('efecto') or {}).items() if isinstance(v, (int, float))}
+        if efecto:
+            estado = limitar_estado_por_min_max(simulacion, aplicar_impacto(estado, efecto))
+        mensaje = str(ev.get('mensaje', '')).strip()
+        if mensaje:
+            mensajes.append(mensaje)
+        disparados.append(ev_id)
+    estado['__eventos__'] = disparados
+    return estado, mensajes
+
+
 def calcular_promedio_pasos(intento):
     puntajes = [
         float(p.puntaje_paso)
@@ -827,7 +871,52 @@ def finalizar_intento(intento):
         'puntuacion_final', 'nivel_resultado', 'retroalimentacion_final',
         'debriefing_final', 'finalizado', 'fecha_fin',
     ])
+    registrar_resultado_juego(intento)
     return intento
+
+
+def registrar_resultado_juego(intento):
+    """Suma XP, sube de nivel, actualiza racha y otorga insignias persistentes
+    al perfil del estudiante. Se cuenta una sola vez por intento."""
+    from simulador.models import PerfilJuego
+
+    if intento.juego_contabilizado:
+        return None
+    perfil, _ = PerfilJuego.objects.get_or_create(usuario=intento.estudiante)
+    nota = float(intento.puntuacion_final or 0)
+    xp = int(round(sum(float(p.puntaje_paso) for p in intento.pasos.filter(es_valido=True))))
+
+    perfil.xp_total += xp
+    perfil.simulaciones_completadas += 1
+    if nota >= 70:
+        perfil.racha_actual += 1
+        perfil.mejor_racha = max(perfil.mejor_racha, perfil.racha_actual)
+    else:
+        perfil.racha_actual = 0
+    perfil.mejor_nota = max(float(perfil.mejor_nota), nota)
+    perfil.nivel = 1 + perfil.xp_total // PerfilJuego.XP_POR_NIVEL
+
+    insignias = set(perfil.insignias or [])
+    insignias.add('primera_mision')
+    if nota >= 70:
+        insignias.add('mision_aprobada')
+    if nota >= 90:
+        insignias.add('maestria')
+    if perfil.racha_actual >= 3:
+        insignias.add('racha_imparable')
+    if perfil.simulaciones_completadas >= 5:
+        insignias.add('veterano')
+    materias = (intento.estudiante.intentos_simulacion
+                .filter(finalizado=True)
+                .values_list('simulacion__materia_malla__materia_id', flat=True).distinct().count())
+    if materias >= 3:
+        insignias.add('explorador')
+    perfil.insignias = sorted(insignias)
+    perfil.save()
+
+    intento.juego_contabilizado = True
+    intento.save(update_fields=['juego_contabilizado'])
+    return perfil
 
 
 def situacion_de_ronda(simulacion, numero_ronda):
@@ -1007,6 +1096,9 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion):
             if impacto:
                 estado_despues = limitar_estado_por_min_max(
                     intento.simulacion, aplicar_impacto(estado_antes, impacto))
+        # Fase B: eventos dinamicos -- la empresa reacciona con sucesos segun el
+        # estado/ronda (un cliente cancela, aparece una crisis, etc.).
+        estado_despues, eventos_msgs = aplicar_eventos(intento.simulacion, estado_despues, ronda_actual)
         # Solo se penaliza por indicadores que la decision del estudiante movio
         # este turno: no se castiga un estado inicial malo que el no causo. Ademas
         # se aplica un tope para que las restricciones nunca aplasten la nota.
@@ -1035,6 +1127,10 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion):
         tokens_salida = int(respuesta.get('tokens_salida') or 0)
         siguiente_situacion = respuesta.get('siguiente_situacion') or situacion_actual
         finalizar = bool(respuesta.get('finalizar', False))
+        if eventos_msgs:
+            texto_eventos = ' '.join(eventos_msgs)
+            evaluacion_detalle = {**evaluacion_detalle, 'evento_mensaje': texto_eventos}
+            siguiente_situacion = (siguiente_situacion + ' ⚡ ' + texto_eventos).strip()
 
     paso = intento.pasos.create(
         numero=numero,
