@@ -306,6 +306,9 @@ Reglas:
 - factor debe estar entre 0 y 1: 1 cumple completo, 0.5 evidencia parcial, 0 no hay evidencia.
 - No inventes conceptos, indicadores, puntajes ni impactos.
 - No menciones nota numerica; SimutaV2 la calcula.
+- No evalúes "redacción" o "justificación pobre" como criterio genérico.
+- Cada retroalimentación debe referirse a un concepto configurado o a un indicador configurado por código/nombre.
+- Si falta evidencia, explica qué indicador propio del caso quedó sin sustento; no uses comentarios vagos.
 - La siguiente_situacion debe ser una consecuencia breve y realista de la decision tomada, no una nueva pregunta de examen.
 - Si la decision es vaga o no ejecutable, marca factor parcial o cero en los conceptos correspondientes.
 - Si es la ultima ronda, finalizar debe ser true.
@@ -397,6 +400,22 @@ class IAServiceOpenAI(IAServiceLLM):
         )
         return json.loads(respuesta.output_text), getattr(respuesta, 'usage', None)
 
+    def completar_texto(self, prompt):
+        respuesta = self.client.responses.create(
+            model=self.model, input=prompt, reasoning={'effort': 'low'},
+            store=False, timeout=getattr(settings, 'OPENAI_TIMEOUT', 45),
+        )
+        return (respuesta.output_text or '').strip()
+
+    def completar_json(self, prompt):
+        respuesta = self.client.responses.create(
+            model=self.model, input=prompt,
+            text={'format': {'type': 'json_object'}},
+            reasoning={'effort': 'low'}, store=False,
+            timeout=getattr(settings, 'OPENAI_TIMEOUT', 90),
+        )
+        return json.loads(respuesta.output_text)
+
 
 class IAServiceDeepSeek(IAServiceLLM):
     """DeepSeek es compatible con el SDK de OpenAI (otro base_url) y usa la API
@@ -427,6 +446,28 @@ class IAServiceDeepSeek(IAServiceLLM):
             timeout=getattr(settings, 'DEEPSEEK_TIMEOUT', 45),
         )
         return json.loads(respuesta.choices[0].message.content), getattr(respuesta, 'usage', None)
+
+    def completar_texto(self, prompt):
+        respuesta = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{'role': 'user', 'content': prompt}],
+            temperature=0.5,
+            timeout=getattr(settings, 'DEEPSEEK_TIMEOUT', 45),
+        )
+        return (respuesta.choices[0].message.content or '').strip()
+
+    def completar_json(self, prompt):
+        respuesta = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {'role': 'system', 'content': 'Eres un disenador de simulaciones academicas. Responde SOLO con JSON valido.'},
+                {'role': 'user', 'content': prompt},
+            ],
+            response_format={'type': 'json_object'},
+            temperature=0.4,
+            timeout=getattr(settings, 'DEEPSEEK_TIMEOUT', 90),
+        )
+        return json.loads(respuesta.choices[0].message.content)
 
 
 PROVEEDORES_IA = {
@@ -471,6 +512,78 @@ def evaluar_ronda_con_proveedores(intento, decision, justificacion):
     if ultimo_error:
         raise ultimo_error
     raise RuntimeError('No hay proveedores de IA con API key configurada')
+
+
+def _prompt_pista(simulacion, situacion, conceptos_nombres, ronda):
+    conceptos = ', '.join(conceptos_nombres) if conceptos_nombres else 'los conceptos de la ronda'
+    return (
+        "Eres un tutor socratico. El estudiante esta atascado en una simulacion de decisiones.\n"
+        "Da UNA pista breve (maximo 2 frases) en forma de PREGUNTA orientadora.\n"
+        "REGLAS: NO des la respuesta ni la decision; NO menciones nota; guia a que el estudiante "
+        "considere los conceptos esperados y conecte su decision con un indicador del caso.\n\n"
+        f"Materia/tema: {simulacion.titulo} - {simulacion.tema}\n"
+        f"Ronda {ronda}. Situacion actual: {situacion}\n"
+        f"Conceptos que deberia abordar: {conceptos}\n\n"
+        "Pista (solo el texto, en espanol):"
+    )
+
+
+def generar_pista_ia(intento, conceptos_nombres, situacion):
+    """Genera una pista socratica con el primer proveedor disponible. Devuelve ''
+    si no hay proveedor o todos fallan (el llamador usa la pista de plantilla)."""
+    prompt = _prompt_pista(intento.simulacion, situacion, conceptos_nombres, intento.numero_ronda_actual)
+    for nombre in orden_proveedores():
+        try:
+            servicio = PROVEEDORES_IA[nombre]()
+            texto = servicio.completar_texto(prompt)
+            if texto:
+                return texto[:400]
+        except Exception as e:
+            logger.warning(f"Pista IA con '{nombre}' fallo: {e}")
+            continue
+    return ''
+
+
+def _prompt_generacion_caso(materia_nombre, nivel):
+    return (
+        "Disena una simulacion academica de TOMA DE DECISIONES para la materia indicada. "
+        "Debe ser un caso REAL de una empresa con datos concretos, con INDICADORES PROPIOS de la "
+        "materia (NO uses indicadores genericos como 'calidad_analisis', 'viabilidad', 'claridad'). "
+        "3 rondas: 1 Diagnostico, 2 Decision, 3 Plan. Devuelve SOLO JSON con esta estructura exacta:\n"
+        "{\n"
+        '  "empresa": "nombre ficticio",\n'
+        '  "tema": "...",\n'
+        '  "rol_estudiante": "...",\n'
+        '  "contexto": "caso real con datos concretos (numeros)",\n'
+        '  "objetivo": "...",\n'
+        '  "resultado_aprendizaje": "...",\n'
+        '  "situacion_inicial": "lo que lee el estudiante en la ronda 1",\n'
+        '  "indicadores": [ {"codigo":"snake_case","nombre":"...","valor_inicial":N,"valor_minimo":N,"valor_maximo":N,"direccion_optima":"ALTO|BAJO","unidad":"...","es_critico":true} ],\n'
+        '  "restricciones": [ {"descripcion":"...","codigo_indicador":"...","operador":"<=|>=|<|>|=","valor_limite":N,"penalizacion":N} ],\n'
+        '  "rondas": [ {"numero":1,"titulo":"Diagnostico","situacion":"...","conceptos":[ {"nombre":"...","peso":N,"es_critico":true,"palabras_clave":"palabra1, palabra2, frase clave","impacto_si_cumple":{"codigo_indicador":N},"impacto_si_falta":{"codigo_indicador":N}} ]} ],\n'
+        '  "acciones": [ {"texto":"decision de ejemplo","descripcion":"consecuencia","impacto":{"codigo_indicador":N}} ]\n'
+        "}\n\n"
+        "Reglas: 5 a 6 indicadores propios de la materia; en cada ronda 3-4 conceptos cuyos pesos SUMEN 100; "
+        "los impactos deben usar SOLO los codigos de los indicadores definidos; incluye 3-4 acciones (una mala/riesgosa); "
+        "palabras_clave separadas por comas (tecnicas de la materia). Todo en espanol.\n\n"
+        f"Materia: {materia_nombre}\nNivel: {nivel}\n"
+    )
+
+
+def generar_caso_ia(materia_nombre, nivel=1):
+    """Genera el spec de una simulacion bespoke (indicadores propios) con el primer
+    proveedor disponible (DeepSeek/OpenAI). Devuelve dict o None si falla."""
+    prompt = _prompt_generacion_caso(materia_nombre, nivel)
+    for nombre in orden_proveedores():
+        try:
+            data = PROVEEDORES_IA[nombre]().completar_json(prompt)
+            if isinstance(data, dict) and data.get('indicadores') and data.get('rondas'):
+                data['_proveedor'] = nombre
+                return data
+        except Exception as e:
+            logger.warning(f"Generacion de caso con '{nombre}' fallo: {e}")
+            continue
+    return None
 
 
 def evaluar_paso(intento, decision, justificacion):

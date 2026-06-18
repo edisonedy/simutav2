@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load simulador_extras %}
 {% block title %}Resultado - {{ intento.simulacion.titulo }}{% endblock %}
 {% block content %}
 {% if not intento.finalizado %}
@@ -6,6 +7,31 @@
 {% endif %}
 
 <h1 class="h3 mb-3">Resultado final</h1>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <form method="post" action="{% url 'alu_simulaciones' %}?action=iniciar" onsubmit="return enviar_formulario(this)">
+        {% csrf_token %}
+        <input type="hidden" name="simulacion_id" value="{{ intento.simulacion.pk }}">
+        <input type="hidden" name="intento_origen_id" value="{{ intento.pk }}">
+        <button class="btn btn-primary btn-sm">Reintentar mision</button>
+    </form>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'alu_simulaciones' %}">Volver a materias</a>
+</div>
+
+{% if comparacion_reintento %}
+<div class="module-card p-3 mb-3">
+    <div class="section-title">Comparacion con intento anterior</div>
+    <div class="d-flex flex-wrap gap-2 mt-2">
+        <span class="chip chip-soft">Anterior: {{ comparacion_reintento.origen.puntuacion_final }}</span>
+        <span class="chip chip-soft">Actual: {{ intento.puntuacion_final }}</span>
+        {% if comparacion_reintento.delta_puntaje is not None %}
+            <span class="chip {% if comparacion_reintento.mejoro %}chip-up{% else %}chip-down{% endif %}">
+                Cambio: {% if comparacion_reintento.delta_puntaje > 0 %}+{% endif %}{{ comparacion_reintento.delta_puntaje }}
+            </span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 
 {% if gamificacion %}
 <div class="game-panel mb-3">
@@ -41,7 +67,7 @@
     <div class="col-lg-4">
         <div class="module-card p-3 mb-3">
             <h2 class="h5">Puntuacion</h2>
-            <div class="display-6">{{ intento.puntuacion_final|default:"-" }}</div>
+            <div class="display-6">{{ intento.puntuacion_final|floatformat:2 }}</div>
             {% with nivel=intento.nivel_resultado %}
             <p class="mb-0">
                 <strong>Nivel:</strong>
@@ -69,14 +95,14 @@
             <p class="mb-0"><strong>Fin:</strong> {{ intento.fecha_fin|date:"d/m/Y H:i" }}</p>
         </div>
 
-        {% if intento.estado_actual %}
+        {% if indicadores_finales %}
         <div class="module-card p-3">
             <h2 class="h5">Estado final de indicadores</h2>
             <div class="state-grid">
-                {% for clave, valor in intento.estado_actual.items %}
+                {% for ind in indicadores_finales %}
                     <div class="border rounded p-2">
-                        <div class="text-muted small">{{ clave }}</div>
-                        <div class="h5 mb-0">{{ valor }}</div>
+                        <div class="text-muted small">{{ ind.nombre }}{% if ind.critico %} <span class="game-crit">crítico</span>{% endif %}</div>
+                        <div class="h5 mb-0">{{ ind.valor }}{% if ind.unidad %} <small class="text-muted">{{ ind.unidad }}</small>{% endif %}</div>
                     </div>
                 {% endfor %}
             </div>
@@ -131,11 +157,11 @@
                             </td>
                             <td>{{ paso.situacion_presentada|truncatewords:20 }}</td>
                             <td>{{ paso.decision_estudiante|truncatewords:15 }}</td>
-                            <td>{{ paso.justificacion_estudiante|truncatewords:10 }}</td>
+                            <td>{{ paso.justificacion_estudiante|default:"Sin justificación escrita"|truncatewords:10 }}</td>
                             <td>{{ paso.evaluacion_ia|truncatewords:10 }}</td>
-                            <td><code>{{ paso.impacto_calculado }}</code></td>
-                            <td><code>{{ paso.estado_antes }}</code></td>
-                            <td><code>{{ paso.estado_despues }}</code></td>
+                            <td class="small">{{ paso.impacto_calculado|dict_legible }}</td>
+                            <td class="small">{{ paso.estado_antes|dict_legible }}</td>
+                            <td class="small">{{ paso.estado_despues|dict_legible }}</td>
                             <td>{{ paso.puntaje_paso }}</td>
                             <td>{{ paso.penalizacion_aplicada }}</td>
                         </tr>
@@ -174,24 +200,24 @@
                                                     </td>
                                                     <td>{{ concepto.puntos_obtenidos }} / {{ concepto.puntos_maximos }}</td>
                                                     <td>
-                                                        <code>{{ concepto.palabras_detectadas }}</code>
+                                                        <span class="small">{{ concepto.palabras_detectadas|lista_legible }}</span>
                                                         {% if concepto.factor_coincidencia and concepto.factor_coincidencia < 1 and concepto.factor_coincidencia > 0 %}
                                                             <div class="small text-warning">Coincidencia parcial: {{ concepto.factor_coincidencia }}</div>
                                                         {% endif %}
                                                         {% if concepto.sinonimos_detectados %}
-                                                            <div class="small text-info">Sinonimos: {{ concepto.sinonimos_detectados }}</div>
+                                                            <div class="small text-info">Sinónimos: {{ concepto.sinonimos_detectados|lista_legible }}</div>
                                                         {% endif %}
                                                     </td>
                                                     <td>
                                                         {{ concepto.retroalimentacion|default:"-" }}
                                                         {% if concepto.obligatorias_faltantes %}
-                                                            <div class="small text-danger">Falta obligatorio: <code>{{ concepto.obligatorias_faltantes }}</code></div>
+                                                            <div class="small text-danger">Falta mencionar: {{ concepto.obligatorias_faltantes|lista_legible }}</div>
                                                         {% endif %}
                                                         {% if concepto.alternativas_faltantes %}
-                                                            <div class="small text-danger">Debe incluir una opcion valida: <code>{{ concepto.alternativas_faltantes }}</code></div>
+                                                            <div class="small text-danger">Debe incluir alguno de: {{ concepto.alternativas_faltantes|lista_legible }}</div>
                                                         {% endif %}
                                                         {% if concepto.prohibidas_detectadas %}
-                                                            <div class="small text-danger">No recomendado detectado: <code>{{ concepto.prohibidas_detectadas }}</code></div>
+                                                            <div class="small text-danger">No recomendado: {{ concepto.prohibidas_detectadas|lista_legible }}</div>
                                                         {% endif %}
                                                     </td>
                                                 </tr>

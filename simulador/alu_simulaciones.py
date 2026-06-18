@@ -12,9 +12,11 @@ from simulador.models import Simulacion, IntentoSimulacion
 from simulador.forms import PasoSimulacionForm
 from simulador.services import (
     construir_estado_inicial,
+    construir_recursos_iniciales,
     ejecutar_decision_arbol,
     ejecutar_ronda_ia_dinamica,
     obtener_escenario_inicial,
+    obtener_conceptos_esperados_ronda,
 )
 from simulador.generator_service import serializar_configuracion_simulacion
 
@@ -90,6 +92,161 @@ def _estado_indicadores(intento):
             'spark_points': spark_points,
         })
     return indicadores
+
+
+def _recursos_estado(intento):
+    recursos_actuales = intento.recursos_actuales or {}
+    items = []
+    for recurso in intento.simulacion.recursos.filter(activo=True):
+        valor = recursos_actuales.get(recurso.codigo)
+        if not isinstance(valor, (int, float)):
+            valor = float(recurso.valor_inicial)
+        minimo = float(recurso.valor_minimo)
+        maximo = float(recurso.valor_maximo)
+        rango = maximo - minimo or 1
+        pct = max(0.0, min(100.0, (float(valor) - minimo) / rango * 100))
+        if pct >= 50:
+            color = 'success'
+        elif pct >= 25:
+            color = 'warning'
+        else:
+            color = 'danger'
+        items.append({
+            'codigo': recurso.codigo,
+            'nombre': recurso.nombre,
+            'valor': round(float(valor), 1),
+            'unidad': recurso.unidad,
+            'pct': round(pct, 1),
+            'color': color,
+            'critico': recurso.es_critico,
+        })
+    return items
+
+
+def _datos_visibles_caso(simulacion):
+    """Datos de apoyo que ve el estudiante para decidir.
+
+    Primero lee las tablas nuevas. Si un caso antiguo aun usa parametros JSON,
+    mantiene compatibilidad.
+    """
+    opciones = list(simulacion.opciones_caso.filter(activo=True).order_by('orden', 'nombre'))
+    matriz = list(simulacion.matriz_caso.filter(activo=True).order_by('orden', 'criterio'))
+    parametros = simulacion.parametros or {}
+
+    if opciones:
+        candidatos = [
+            {
+                'nombre': item.nombre,
+                'experiencia': item.subtitulo,
+                'salario_pretendido': item.valor_referencia,
+                'valor_display': item.valor_referencia,
+                'fortalezas': item.fortaleza,
+                'debilidades': item.riesgo,
+                'resultados': item.resultados or [],
+            }
+            for item in opciones
+        ]
+    else:
+        candidatos = []
+        for item in parametros.get('candidatos', []) or []:
+            normalizado = dict(item or {})
+            normalizado['valor_display'] = normalizado.get('valor_display') or normalizado.get('salario_pretendido', '')
+            candidatos.append(normalizado)
+
+    if matriz:
+        prueba_tecnica = [
+            {'criterio': item.criterio, 'peso': item.peso, 'evalua': item.evalua}
+            for item in matriz
+        ]
+    else:
+        prueba_tecnica = parametros.get('prueba_tecnica', []) or []
+
+    columnas = parametros.get('columnas_resultados', []) or []
+    if not columnas and candidatos:
+        for item in candidatos:
+            resultados = item.get('resultados') or []
+            if resultados:
+                columnas = [str(r.get('criterio') or '') for r in resultados]
+                break
+
+    return {
+        'candidatos': candidatos,
+        'prueba_tecnica': prueba_tecnica,
+        'caso_labels': parametros.get('caso_labels', {}),
+        'columnas_resultados': columnas,
+    }
+
+
+def _costo_accion_legible(simulacion, costo):
+    recursos = {
+        recurso.codigo: f'{recurso.nombre} ({recurso.unidad})' if recurso.unidad else recurso.nombre
+        for recurso in simulacion.recursos.filter(activo=True)
+    }
+    return [
+        (recursos.get(codigo, codigo), valor)
+        for codigo, valor in (costo or {}).items()
+        if isinstance(valor, (int, float)) and float(valor) != 0
+    ]
+
+
+def _comparacion_reintento(intento):
+    origen = intento.intento_origen
+    if not origen:
+        return None
+    delta = None
+    if intento.finalizado and origen.finalizado:
+        delta = round(float(intento.puntuacion_final) - float(origen.puntuacion_final), 2)
+    return {
+        'origen': origen,
+        'delta_puntaje': delta,
+        'mejoro': delta is not None and delta > 0,
+    }
+
+
+def _crear_pista_tutor(intento):
+    from simulador.models import PistaTutor
+
+    numero = intento.numero_ronda_actual
+    conceptos = obtener_conceptos_esperados_ronda(intento.simulacion, numero)
+    usados = list(
+        intento.pistas_tutor.filter(numero_ronda=numero).values_list('conceptos_referidos', flat=True)
+    )
+    usados_ids = {str(cid) for grupo in usados for cid in (grupo or [])}
+    concepto = next((c for c in conceptos if str(c.pk) not in usados_ids), None)
+    if not concepto and conceptos:
+        concepto = conceptos[0]
+    if concepto:
+        pista = (
+            f'Revisa el criterio "{concepto.nombre}". Antes de responder, conecta tu decision '
+            f'con un indicador del caso y explica que riesgo reduces o que trade-off aceptas.'
+        )
+        conceptos_ref = [concepto.pk]
+    else:
+        pista = (
+            'Antes de responder, identifica un indicador del caso, una restriccion y una consecuencia medible. '
+            'Luego justifica por que tu decision mejora el estado sin ignorar sus costos.'
+        )
+        conceptos_ref = []
+
+    # Tutor IA: intenta una pista socratica real (DeepSeek/OpenAI); si no hay
+    # proveedor o falla, se queda con la pista de plantilla de arriba.
+    try:
+        from simulador.ia_service import generar_pista_ia
+        situacion = intento.situacion_actual or intento.simulacion.situacion_inicial or intento.simulacion.contexto
+        nombres = [c.nombre for c in conceptos] if conceptos else []
+        pista_ia = generar_pista_ia(intento, nombres, situacion)
+        if pista_ia:
+            pista = pista_ia
+    except Exception:
+        pass
+
+    return PistaTutor.objects.create(
+        intento=intento,
+        numero_ronda=numero,
+        pista=pista,
+        conceptos_referidos=conceptos_ref,
+        usuario_creacion=intento.estudiante,
+    )
 
 
 def _sparkline_points(serie_pct, ancho=120, alto=28, pad=2):
@@ -264,6 +421,58 @@ def _hud_simulacion(intento):
     }
 
 
+def _indicadores_finales(intento):
+    estado = intento.estado_actual or {}
+    indicadores = []
+    for ind in intento.simulacion.indicadores.filter(activo=True).order_by('nombre'):
+        valor = estado.get(ind.codigo)
+        if not isinstance(valor, (int, float)):
+            continue
+        indicadores.append({
+            'codigo': ind.codigo,
+            'nombre': ind.nombre,
+            'valor': round(float(valor), 2),
+            'unidad': ind.unidad,
+            'critico': ind.es_critico,
+        })
+    return indicadores
+
+
+def _modo_ronda(simulacion, numero, hay_acciones):
+    """Modo de interaccion de la ronda, PARAMETRIZABLE por el profesor en
+    parametros['rondas'][n]['modo']: 'hibrido' (elegir + justificar),
+    'elegir' (solo elegir opcion) o 'escribir' (solo texto libre).
+    Default 'hibrido'. Si no hay opciones configuradas, cae a 'escribir'."""
+    modo = 'hibrido'
+    rondas = (simulacion.parametros or {}).get('rondas') or []
+    idx = numero - 1
+    if 0 <= idx < len(rondas) and isinstance(rondas[idx], dict):
+        modo = (rondas[idx].get('modo') or 'hibrido').lower()
+    if modo not in ('hibrido', 'elegir', 'escribir'):
+        modo = 'hibrido'
+    if modo in ('hibrido', 'elegir') and not hay_acciones:
+        modo = 'escribir'
+    return modo
+
+
+def _etiquetas_ronda(simulacion, numero):
+    """Etiquetas configurables por el profesor: usa etiqueta_decision /
+    etiqueta_justificacion definidas en parametros['rondas'][n] si existen;
+    si no, cae a un valor por defecto segun la ronda."""
+    defaults = {
+        1: ('Diagnóstico', 'Justificación del diagnóstico'),
+        2: ('Decisión', 'Justificación de la decisión'),
+        3: ('Plan de implementación', 'Justificación, control y seguimiento'),
+    }
+    dec, jus = defaults.get(numero, ('Decisión', 'Justificación'))
+    rondas = (simulacion.parametros or {}).get('rondas') or []
+    idx = numero - 1
+    if 0 <= idx < len(rondas) and isinstance(rondas[idx], dict):
+        dec = rondas[idx].get('etiqueta_decision') or dec
+        jus = rondas[idx].get('etiqueta_justificacion') or jus
+    return dec, jus
+
+
 def _es_ajax(request):
     return request.headers.get('x-requested-with') == 'XMLHttpRequest'
 
@@ -289,6 +498,16 @@ def view(request):
                 estado=Simulacion.PUBLICADA,
                 activo=True,
             )
+            intento_origen = None
+            origen_id = request.POST.get('intento_origen_id')
+            if origen_id:
+                intento_origen = get_object_or_404(
+                    IntentoSimulacion,
+                    pk=origen_id,
+                    estudiante=request.user,
+                    simulacion=simulacion,
+                    finalizado=True,
+                )
             periodo = PeriodoAcademico.objects.filter(activo_matricula=True).first()
             escenario_inicial = None
             situacion_actual = simulacion.situacion_inicial or simulacion.contexto
@@ -298,8 +517,10 @@ def view(request):
             intento = IntentoSimulacion.objects.create(
                 estudiante=request.user,
                 simulacion=simulacion,
+                intento_origen=intento_origen,
                 periodo=periodo,
                 estado_actual=construir_estado_inicial(simulacion),
+                recursos_actuales=construir_recursos_iniciales(simulacion),
                 configuracion_snapshot=simulacion.configuracion_snapshot or serializar_configuracion_simulacion(simulacion),
                 escenario_actual=escenario_inicial,
                 situacion_actual=situacion_actual,
@@ -310,6 +531,19 @@ def view(request):
                 f'?action=simular&intento_id={intento.pk}',
                 'Intento iniciado correctamente.',
             )
+
+        elif action == 'pedir_pista':
+            intento = get_object_or_404(
+                IntentoSimulacion.objects.select_related('simulacion'),
+                pk=request.POST.get('intento_id'),
+                estudiante=request.user,
+                finalizado=False,
+            )
+            pista = _crear_pista_tutor(intento)
+            if _es_ajax(request):
+                return ok_json(data={'pista': pista.pista}, mensaje='Pista generada.')
+            messages.info(request, pista.pista)
+            return HttpResponseRedirect(f'?action=simular&intento_id={intento.pk}')
 
         elif action == 'ejecutar_paso':
             intento = get_object_or_404(
@@ -329,10 +563,15 @@ def view(request):
                 )
                 paso = ejecutar_decision_arbol(intento, decision)
             else:
+                accion = None
+                accion_id = request.POST.get('accion_id')
+                if accion_id:
+                    accion = intento.simulacion.acciones_sugeridas.filter(pk=accion_id, activo=True).first()
                 paso = ejecutar_ronda_ia_dinamica(
                     intento,
                     request.POST.get('decision', ''),
                     request.POST.get('justificacion', ''),
+                    accion=accion,
                 )
             intento.refresh_from_db()
             if intento.finalizado:
@@ -362,8 +601,7 @@ def view(request):
             data['simulacion'] = simulacion
             indicadores = simulacion.indicadores.filter(activo=True)
             data['indicadores'] = indicadores
-            candidatos = (simulacion.parametros or {}).get('candidatos', [])
-            data['candidatos'] = candidatos
+            data.update(_datos_visibles_caso(simulacion))
             return render(request, 'simulador/alu_simulaciones/iniciar.html', data)
 
         elif action == 'simular':
@@ -380,18 +618,28 @@ def view(request):
             data['situacion'] = intento.situacion_actual or _situacion_actual(intento, numero)
             data['numero'] = numero
             data['form'] = PasoSimulacionForm(ronda=numero)
+            data.update(_datos_visibles_caso(intento.simulacion))
+            etq_dec, etq_jus = _etiquetas_ronda(intento.simulacion, numero)
+            data['etiqueta_decision'] = etq_dec
+            data['etiqueta_justificacion'] = etq_jus
             data['ultimo_paso'] = intento.pasos.order_by('-numero').first()
             if intento.simulacion.tipo_simulacion == Simulacion.TIPO_SIN_IA_ARBOL:
                 data['escenario'] = intento.escenario_actual
                 data['decisiones'] = intento.escenario_actual.decisiones.filter(activo=True) if intento.escenario_actual else []
             else:
-                data['acciones_sugeridas'] = intento.simulacion.acciones_sugeridas.filter(
+                acciones_sugeridas = list(intento.simulacion.acciones_sugeridas.filter(
                     Q(numero_ronda=numero) | Q(numero_ronda__isnull=True),
                     activo=True,
-                )
+                ))
+                for accion in acciones_sugeridas:
+                    accion.costo_legible = _costo_accion_legible(intento.simulacion, accion.costo_recursos)
+                data['acciones_sugeridas'] = acciones_sugeridas
+                data['modo_ronda'] = _modo_ronda(intento.simulacion, numero, bool(acciones_sugeridas))
                 indicadores_estado = _estado_indicadores(intento)
                 data['indicadores_estado'] = indicadores_estado
                 data['cambios_indicadores'] = [i for i in indicadores_estado if i['flecha']]
+                data['recursos_estado'] = _recursos_estado(intento)
+                data['pistas_tutor'] = intento.pistas_tutor.filter(numero_ronda=numero)
                 data['pasos_stepper'] = _pasos_stepper(intento.simulacion, numero)
                 data['hud'] = _hud_simulacion(intento)
             return render(request, 'simulador/alu_simulaciones/simular.html', data)
@@ -404,6 +652,8 @@ def view(request):
             )
             data['intento'] = intento
             data['gamificacion'] = _calcular_gamificacion(intento)
+            data['comparacion_reintento'] = _comparacion_reintento(intento)
+            data['indicadores_finales'] = _indicadores_finales(intento)
             return render(request, 'simulador/alu_simulaciones/resultado.html', data)
 
         elif action == 'carrera':

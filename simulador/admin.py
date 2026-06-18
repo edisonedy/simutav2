@@ -7,8 +7,11 @@ from .models import (
     CriterioEvaluacion,
     DecisionConfigurada,
     EscenarioSimulacion,
+    EventoSimulacion,
     IndicadorSimulacion,
     IntentoSimulacion,
+    MatrizEvaluacionCaso,
+    OpcionCasoSimulacion,
     PasoSimulacion,
     PerfilMateriaIA,
     PlantillaConcepto,
@@ -16,6 +19,8 @@ from .models import (
     PlantillaRestriccion,
     PlantillaRonda,
     PlantillaSimulacion,
+    PistaTutor,
+    RecursoSimulacion,
     RestriccionSimulacion,
     Simulacion,
 )
@@ -28,12 +33,17 @@ admin.site.register(PlantillaIndicador)
 admin.site.register(PlantillaRestriccion)
 admin.site.register(PlantillaConcepto)
 admin.site.register(IndicadorSimulacion)
+admin.site.register(RecursoSimulacion)
 admin.site.register(RestriccionSimulacion)
 admin.site.register(CriterioEvaluacion)
+admin.site.register(MatrizEvaluacionCaso)
+admin.site.register(OpcionCasoSimulacion)
 admin.site.register(AccionSugeridaSimulacion)
 admin.site.register(CondicionExitoSimulacion)
+admin.site.register(EventoSimulacion)
 admin.site.register(ConceptoEsperadoRonda)
 admin.site.register(EscenarioSimulacion)
 admin.site.register(DecisionConfigurada)
 admin.site.register(IntentoSimulacion)
 admin.site.register(PasoSimulacion)
+admin.site.register(PistaTutor)

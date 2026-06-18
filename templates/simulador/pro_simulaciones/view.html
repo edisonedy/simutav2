@@ -34,6 +34,7 @@
                                 <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=escenarios&id={{ s.pk }}">Arbol</a>
                             {% else %}
                                 <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=restricciones&id={{ s.pk }}">Restricciones</a>
+                                <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=datos_caso&id={{ s.pk }}">Datos caso</a>
                                 <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=criterios&id={{ s.pk }}">Criterios</a>
                                 <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=conceptos&id={{ s.pk }}">Conceptos</a>
                                 <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=acciones&id={{ s.pk }}">Acciones</a>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load simulador_extras %}
 {% block title %}Misión {{ numero }} - {{ simulacion.titulo }}{% endblock %}
 {% block content %}
 <div class="game-screen">
@@ -59,6 +60,21 @@
                 {% if ultimo_paso.evaluacion_detalle.evento_mensaje %}
                 <div class="evento-banner">⚡ {{ ultimo_paso.evaluacion_detalle.evento_mensaje }}</div>
                 {% endif %}
+                {% if ultimo_paso.costo_recursos %}
+                <div class="alert alert-info py-2 small mb-2">
+                    <strong>Recursos consumidos:</strong> {{ ultimo_paso.costo_recursos|dict_legible }}
+                </div>
+                {% endif %}
+                {% if ultimo_paso.evaluacion_detalle.alertas_recursos %}
+                    <div class="alert alert-warning mt-2 mb-0 py-2 small">
+                        <strong>Recursos al limite:</strong>
+                        <ul class="mb-0 mt-1">
+                        {% for a in ultimo_paso.evaluacion_detalle.alertas_recursos %}
+                            <li>{{ a.descripcion }} (actual {{ a.valor_actual }}, minimo {{ a.minimo }})</li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
                 {% if cambios_indicadores %}
                 <div class="hud-label mb-1">Cómo reaccionó la empresa</div>
                 <div class="d-flex flex-wrap gap-2">
@@ -93,6 +109,82 @@
                 <p class="briefing-text mb-0">{{ situacion }}</p>
             </div>
 
+            {% if candidatos or prueba_tecnica %}
+            <div class="game-card mb-3">
+                <div class="game-card-head">
+                    <span class="game-tag">🧾 Datos del caso</span>
+                    {% if numero == 1 %}<span class="game-phase">{{ caso_labels.fase_criterios|default:"Criterios de evaluación" }}</span>
+                    {% elif numero == 2 %}<span class="game-phase">{{ caso_labels.fase_resultados|default:"Resultados de candidatos" }}</span>
+                    {% else %}<span class="game-phase">{{ caso_labels.fase_plan|default:"Base para onboarding" }}</span>{% endif %}
+                </div>
+
+                {% if prueba_tecnica %}
+                <div class="case-mini-grid mb-3">
+                    {% for p in prueba_tecnica %}
+                    <div class="case-mini">
+                        <div class="d-flex justify-content-between gap-2">
+                            <span class="fw-semibold">{{ p.criterio }}</span>
+                            <span class="mission-ind-val">{{ p.peso }}%</span>
+                        </div>
+                        <div class="small text-muted">{{ p.evalua }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if candidatos %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0 case-table">
+                        <thead>
+                            <tr>
+                                <th>{{ caso_labels.participante_col|default:"Candidato" }}</th>
+                                <th>{{ caso_labels.valor_col|default:"Salario" }}</th>
+                                <th>{{ caso_labels.fortalezas_col|default:"Fortaleza" }}</th>
+                                <th>{{ caso_labels.riesgo_col|default:"Riesgo" }}</th>
+                                {% if numero >= 2 and columnas_resultados %}
+                                {% for col in columnas_resultados %}
+                                <th>{{ col }}</th>
+                                {% endfor %}
+                                {% elif numero >= 2 %}
+                                <th>Mini</th>
+                                <th>Review</th>
+                                <th>Testing</th>
+                                <th>ORM</th>
+                                <th>DRF</th>
+                                <th>Com.</th>
+                                <th>Rot.</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in candidatos %}
+                            <tr>
+                                <td class="fw-semibold">{{ c.nombre }}</td>
+                                <td>{{ c.valor_display|default:c.salario_pretendido }}</td>
+                                <td>{{ c.fortalezas }}</td>
+                                <td>{{ c.debilidades }}</td>
+                                {% if numero >= 2 and c.resultados %}
+                                {% for item in c.resultados %}
+                                <td>{{ item.valor }}</td>
+                                {% endfor %}
+                                {% elif numero >= 2 %}
+                                <td>{{ c.prueba.mini_feature }}</td>
+                                <td>{{ c.prueba.code_review }}</td>
+                                <td>{{ c.prueba.testing }}</td>
+                                <td>{{ c.prueba.orm }}</td>
+                                <td>{{ c.prueba.drf }}</td>
+                                <td>{{ c.prueba.comunicacion }}</td>
+                                <td>{{ c.prueba.riesgo_rotacion }}</td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
             {% if simulacion.tipo_simulacion == 'CON_IA_DINAMICA' and intento.intentos_invalidos_actuales %}
                 <div class="alert alert-warning py-2">Intentos inválidos en esta ronda: {{ intento.intentos_invalidos_actuales }} de {{ intento.max_intentos_invalidos_por_ronda }}.</div>
             {% endif %}
@@ -111,7 +203,7 @@
                             <div class="vstack gap-2">
                                 {% for decision in decisiones %}
                                     <label class="play-option">
-                                        <input type="radio" name="decision_id" value="{{ decision.pk }}" required>
+                                        <input type="radio" name="decision_id" value="{{ decision.pk }}" class="play-option-control" required>
                                         <span class="fw-semibold">{{ decision.texto }}</span>
                                         {% if decision.descripcion %}<span class="d-block text-muted small mt-1">{{ decision.descripcion }}</span>{% endif %}
                                     </label>
@@ -123,33 +215,99 @@
                         {% endif %}
                     </form>
                 {% else %}
-                    {% if numero == 1 %}
-                    <p class="play-hint">Aún no elijas una solución: <strong>diagnostica</strong> el problema principal, sus causas y los indicadores que usarías. Luego justifícalo.</p>
-                    {% endif %}
                     <form method="post" action="?action=ejecutar_paso" onsubmit="return enviar_formulario(this)">
                         {% csrf_token %}
                         <input type="hidden" name="intento_id" value="{{ intento.pk }}">
-                        <div class="mb-3">
-                            <label class="play-label" for="id_decision">{{ form.decision.label }}</label>
-                            {{ form.decision }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="play-label" for="id_justificacion">{{ form.justificacion.label }}</label>
-                            {{ form.justificacion }}
-                        </div>
+                        {% if modo_ronda == 'escribir' %}
+                            {# Solo escribir: texto libre + justificacion #}
+                            <div class="mb-3">
+                                <label class="play-label" for="id_decision">{{ etiqueta_decision }}</label>
+                                {{ form.decision }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="play-label" for="id_justificacion">{{ etiqueta_justificacion }}</label>
+                                {{ form.justificacion }}
+                            </div>
+                        {% elif modo_ronda == 'elegir' %}
+                            {# Solo elegir: opciones de la lista, sin escribir #}
+                            <div class="mb-3">
+                                <label class="play-label">{{ etiqueta_decision }}</label>
+                                <div class="vstack gap-2">
+                                    {% for accion in acciones_sugeridas %}
+                                    <label class="play-option">
+                                        <input type="radio" name="accion_id" value="{{ accion.pk }}" class="opt-accion play-option-control" required>
+                                        <span class="fw-semibold">{{ accion.texto }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                <div class="form-text">Decide sin ver los efectos; luego observa cómo reacciona la empresa.</div>
+                            </div>
+                        {% else %}
+                            {# Hibrido: elegir de la lista O escribir la propia + justificar #}
+                            <div class="mb-3">
+                                <label class="play-label">{{ etiqueta_decision }}</label>
+                                <div class="vstack gap-2">
+                                    {% for accion in acciones_sugeridas %}
+                                    <label class="play-option">
+                                        <input type="radio" name="accion_id" value="{{ accion.pk }}" class="opt-accion play-option-control" required>
+                                        <span class="fw-semibold">{{ accion.texto }}</span>
+                                    </label>
+                                    {% endfor %}
+                                    <label class="play-option play-option-propia">
+                                        <input type="radio" name="accion_id" value="" class="opt-accion play-option-control" id="opt_propia">
+                                        <span class="fw-semibold">✍️ Escribir la mía</span>
+                                    </label>
+                                </div>
+                                <div class="form-text">Decide sin ver los efectos; luego observa cómo reacciona la empresa.</div>
+                            </div>
+                            <div class="mb-3" id="bloque_propia" style="display:none;">
+                                <label class="play-label" for="id_decision">Tu decisión</label>
+                                {{ form.decision }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="play-label" for="id_justificacion">{{ etiqueta_justificacion }}</label>
+                                {{ form.justificacion }}
+                            </div>
+                        {% endif %}
                         <button class="btn btn-primary btn-play">Ejecutar jugada ▶</button>
                     </form>
+                    <form method="post" action="?action=pedir_pista" onsubmit="return enviar_formulario(this)" class="mt-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="intento_id" value="{{ intento.pk }}">
+                        <button class="btn btn-outline-info btn-sm" type="submit">Pedir pista</button>
+                    </form>
+                    {% if pistas_tutor %}
+                    <div class="mt-3">
+                        {% for pista in pistas_tutor %}
+                            <div class="alert alert-info py-2 small mb-2">{{ pista.pista }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
 
         <!-- Panel lateral: HUD de indicadores -->
         <div class="col-lg-4">
+            {% if recursos_estado %}
+            <div class="game-card mb-3">
+                <div class="game-card-head"><span class="game-tag">💼 Recursos del caso</span></div>
+                <div class="resource-grid">
+                {% for rec in recursos_estado %}
+                <div class="resource-pill">
+                    <div class="resource-name">{{ rec.nombre }}</div>
+                    <div class="resource-value">{{ rec.valor }} <span>{{ rec.unidad }}</span></div>
+                </div>
+                {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <div class="game-card mb-3">
                 <div class="game-card-head"><span class="game-tag">📊 Estado de la empresa</span></div>
                 {% if indicadores_estado %}
                     {% for ind in indicadores_estado %}
-                    <div class="hud-ind mb-3">
+                    <div class="hud-ind hud-ind-compact mb-3">
                         <div class="d-flex justify-content-between small">
                             <span class="fw-semibold">{{ ind.nombre }}{% if ind.critico %} <span class="game-crit">crítico</span>{% endif %}</span>
                             <span>
@@ -161,11 +319,10 @@
                             <div class="progress flex-grow-1" style="height: 9px;">
                                 <div class="progress-bar bar-anim bg-{{ ind.color }}" role="progressbar" style="--w: {{ ind.pct }}%;"></div>
                             </div>
-                            <svg class="spark" viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true">
+                            <svg class="spark spark-compact" viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true">
                                 <polyline points="{{ ind.spark_points }}" fill="none" stroke="var(--bs-{{ ind.color }}, var(--cyan))" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
                             </svg>
                         </div>
-                        <div class="text-muted" style="font-size:.7rem;">{% if ind.direccion == 'BAJO' %}mejor cuando es bajo{% else %}mejor cuando es alto{% endif %}</div>
                     </div>
                     {% endfor %}
                 {% else %}
@@ -180,4 +337,31 @@
         </div>
     </div>
 </div>
+<script>
+function syncPlayOptions(name) {
+    var radios = document.querySelectorAll('input[type="radio"][name="' + name + '"]');
+    radios.forEach(function(radio) {
+        var option = radio.closest('.play-option');
+        if (option) option.classList.toggle('is-selected', radio.checked);
+    });
+}
+document.querySelectorAll('.play-option input[type="radio"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        syncPlayOptions(this.name);
+    });
+    syncPlayOptions(radio.name);
+});
+// Modo hibrido: mostrar el campo de texto solo si el alumno elige "escribir mi propia decision".
+document.querySelectorAll('.opt-accion').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        var bloque = document.getElementById('bloque_propia');
+        var decision = document.getElementById('id_decision');
+        var esPropia = (this.id === 'opt_propia');
+        if (bloque) bloque.style.display = esPropia ? 'block' : 'none';
+        if (decision) {
+            if (esPropia) { decision.focus(); } else { decision.value = ''; }
+        }
+    });
+});
+</script>
 {% endblock %}

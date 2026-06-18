@@ -448,11 +448,25 @@
         }
 
         .play-option {
-            display: block; border: 1.5px solid var(--line); border-radius: .55rem; padding: .85rem 1rem;
-            cursor: pointer; background: var(--paper);
+            position: relative; display: block; border: 1.5px solid var(--line); border-radius: .55rem;
+            padding: .85rem 1rem; cursor: pointer; background: var(--paper); user-select: none;
+            transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
         }
-        .play-option:hover { border-color: var(--cyan); }
-        .play-option:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(31,182,207,.22); background: #fff; }
+        .play-option-control,
+        .play-option input[type="radio"],
+        .play-option input[type="checkbox"] {
+            position: absolute !important; width: 1px; height: 1px; margin: 0; padding: 0;
+            opacity: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
+            white-space: nowrap; pointer-events: none;
+        }
+        .play-option:hover, .play-option:focus-within { border-color: var(--cyan); }
+        .play-option:focus-within { box-shadow: 0 0 0 3px rgba(31,182,207,.16); }
+        .play-option:has(input:checked), .play-option.is-selected {
+            border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(31,182,207,.18); background: #fff;
+        }
+        .hud-ind-compact { margin-bottom: .7rem !important; }
+        .hud-ind-compact .progress { height: 7px !important; }
+        .spark-compact { width: 54px; height: 18px; }
         .play-label { font-weight: 700; margin-bottom: .3rem; display: block; color: var(--ink); }
         .play-hint { font-size: .9rem; color: var(--muted); background: var(--field); border-radius: .5rem; padding: .6rem .8rem; }
         .btn-play { font-family: "IBM Plex Mono", ui-monospace, monospace; letter-spacing: .03em; padding: .55rem 1.3rem; }
@@ -485,6 +499,15 @@
         .mission-ind { padding: .45rem .6rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--paper); }
         .mission-ind-val { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 700; }
         .mission-start { border-top: 3px solid var(--cyan); }
+        .case-mini-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .45rem; }
+        .case-mini { padding: .55rem .65rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--field); }
+        .case-table { font-size: .82rem; }
+        .case-table th { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .68rem; color: var(--muted); }
+        .resource-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem; }
+        .resource-pill { padding: .55rem .6rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--field); }
+        .resource-name { color: var(--muted); font-size: .72rem; line-height: 1.15; min-height: 1.7rem; }
+        .resource-value { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .95rem; font-weight: 700; color: var(--ink); }
+        .resource-value span { font-size: .68rem; color: var(--muted); }
 
         /* Mi carrera: insignias, historial, ranking */
         .badge-card {

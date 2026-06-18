@@ -17,9 +17,12 @@
     <div class="flow-rail">
         <span class="flow-step">1. Caso</span><span class="flow-arrow">&rarr;</span>
         <span class="flow-step">2. Indicadores</span><span class="flow-arrow">&rarr;</span>
-        <span class="flow-step">3. Restricciones</span><span class="flow-arrow">&rarr;</span>
-        <span class="flow-step flow-key">4. Conceptos = NOTA</span><span class="flow-arrow">&rarr;</span>
-        <span class="flow-step">5. Decisiones</span><span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">3. Opciones</span><span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">4. Recursos</span><span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">5. Restricciones</span><span class="flow-arrow">&rarr;</span>
+        <span class="flow-step flow-key">6. Conceptos = NOTA</span><span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">7. Decisiones</span><span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">8. Eventos</span><span class="flow-arrow">&rarr;</span>
         <span class="flow-step flow-ia">IA evalua</span>
     </div>
 </div>
@@ -66,9 +69,9 @@
             <h2 class="h5">Como lo vive el estudiante</h2>
             <ol class="small ps-3 mb-0">
                 <li class="mb-1">Lee la <strong>situacion</strong> de la ronda (el caso real).</li>
-                <li class="mb-1"><strong>Elige una decision sugerida</strong> (paso 5) <em>o escribe la suya</em>, y siempre <strong>la justifica</strong>.</li>
-                <li class="mb-1">La <strong>IA evalua</strong> la respuesta contra tus <strong>conceptos</strong> (paso 4) y devuelve evidencia y retroalimentacion.</li>
-                <li class="mb-1">Sus decisiones <strong>mueven los indicadores</strong> (paso 2); si rompe una <strong>restriccion</strong> (paso 3), pierde puntos.</li>
+                <li class="mb-1"><strong>Elige una decision sugerida</strong> (paso 7) <em>o escribe la suya</em>, y siempre <strong>la justifica</strong>.</li>
+                <li class="mb-1">La <strong>IA evalua</strong> la respuesta contra tus <strong>conceptos</strong> (paso 6) y devuelve evidencia y retroalimentacion.</li>
+                <li class="mb-1">Sus decisiones <strong>mueven indicadores</strong> (paso 2), consumen <strong>recursos</strong> (paso 4) y pueden activar <strong>eventos</strong> (paso 8).</li>
                 <li>Al final, la <strong>nota</strong> es el promedio de las rondas y se muestra el debriefing.</li>
             </ol>
             <div class="alert alert-info py-2 small mt-3 mb-0">
@@ -126,6 +129,7 @@
                     <span class="chip chip-down">&#9888; Rubrica incompleta</span>
                 {% endif %}
             </div>
+            <a class="btn btn-sm btn-outline-info mt-3" href="{% url 'pro_simulaciones' %}?action=analitica&id={{ simulacion.pk }}">Ver analitica del caso</a>
         </div>
     </div>
 </div>

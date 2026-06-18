@@ -7,14 +7,18 @@ from .models import (
     CriterioEvaluacion,
     DecisionConfigurada,
     EscenarioSimulacion,
+    EventoSimulacion,
     IndicadorSimulacion,
     IntentoSimulacion,
+    MatrizEvaluacionCaso,
+    OpcionCasoSimulacion,
     PerfilMateriaIA,
     PlantillaConcepto,
     PlantillaIndicador,
     PlantillaRestriccion,
     PlantillaRonda,
     PlantillaSimulacion,
+    RecursoSimulacion,
     RestriccionSimulacion,
     Simulacion,
 )
@@ -132,6 +136,12 @@ class IndicadorSimulacionForm(forms.ModelForm):
         fields = ['simulacion', 'nombre', 'codigo', 'valor_inicial', 'valor_minimo', 'valor_maximo', 'direccion_optima', 'es_critico', 'unidad', 'activo']
 
 
+class RecursoSimulacionForm(forms.ModelForm):
+    class Meta:
+        model = RecursoSimulacion
+        fields = ['simulacion', 'nombre', 'codigo', 'valor_inicial', 'valor_minimo', 'valor_maximo', 'unidad', 'es_critico', 'activo']
+
+
 class RestriccionSimulacionForm(forms.ModelForm):
     class Meta:
         model = RestriccionSimulacion
@@ -144,6 +154,65 @@ class CriterioEvaluacionForm(forms.ModelForm):
         model = CriterioEvaluacion
         fields = ['simulacion', 'nombre', 'descripcion', 'peso', 'puntaje_maximo', 'activo']
         widgets = {'descripcion': forms.Textarea(attrs={'rows': 2})}
+
+
+class MatrizEvaluacionCasoForm(forms.ModelForm):
+    class Meta:
+        model = MatrizEvaluacionCaso
+        fields = ['simulacion', 'criterio', 'peso', 'evalua', 'orden', 'activo']
+        widgets = {'evalua': forms.Textarea(attrs={'rows': 2})}
+
+
+class OpcionCasoSimulacionForm(forms.ModelForm):
+    resultados_texto = forms.CharField(
+        required=False,
+        label='Resultados visibles',
+        help_text='Una linea por dato. Ej: TCO=34000 o Garantia=3 anios.',
+        widget=forms.Textarea(attrs={'rows': 4}),
+    )
+
+    class Meta:
+        model = OpcionCasoSimulacion
+        fields = [
+            'simulacion', 'nombre', 'subtitulo', 'valor_referencia',
+            'fortaleza', 'riesgo', 'orden', 'activo',
+        ]
+        widgets = {
+            'fortaleza': forms.Textarea(attrs={'rows': 2}),
+            'riesgo': forms.Textarea(attrs={'rows': 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            lineas = []
+            for item in self.instance.resultados or []:
+                criterio = str(item.get('criterio', '')).strip()
+                valor = str(item.get('valor', '')).strip()
+                if criterio or valor:
+                    lineas.append(f'{criterio}={valor}' if criterio else valor)
+            self.fields['resultados_texto'].initial = '\n'.join(lineas)
+
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+        resultados = []
+        texto = self.cleaned_data.get('resultados_texto') or ''
+        for linea in texto.splitlines():
+            linea = linea.strip()
+            if not linea:
+                continue
+            if '=' in linea:
+                criterio, valor = linea.split('=', 1)
+            elif ':' in linea:
+                criterio, valor = linea.split(':', 1)
+            else:
+                criterio, valor = '', linea
+            resultados.append({'criterio': criterio.strip(), 'valor': valor.strip()})
+        obj.resultados = resultados
+        if commit:
+            obj.save()
+            self.save_m2m()
+        return obj
 
 
 class AccionSugeridaForm(forms.ModelForm):
@@ -161,6 +230,48 @@ class CondicionExitoForm(forms.ModelForm):
     class Meta:
         model = CondicionExitoSimulacion
         fields = ['simulacion', 'descripcion', 'codigo_indicador', 'operador', 'valor_objetivo', 'bonificacion', 'activo']
+
+
+class EventoSimulacionForm(forms.ModelForm):
+    codigo_indicador_condicion = forms.ChoiceField(required=False, choices=[])
+
+    class Meta:
+        model = EventoSimulacion
+        fields = [
+            'simulacion', 'nombre', 'mensaje', 'ronda',
+            'codigo_indicador_condicion', 'operador_condicion', 'valor_condicion',
+            'prioridad', 'activo',
+        ]
+        widgets = {
+            'mensaje': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        simulacion = kwargs.pop('simulacion_obj', None)
+        super().__init__(*args, **kwargs)
+        if simulacion is None:
+            simulacion = getattr(self.instance, 'simulacion', None)
+        opciones = [('', 'Sin condicion por indicador')]
+        if simulacion:
+            opciones.extend(
+                (ind.codigo, f'{ind.nombre} ({ind.codigo})')
+                for ind in simulacion.indicadores.filter(activo=True).order_by('nombre')
+            )
+        self.fields['codigo_indicador_condicion'].choices = opciones
+
+    def clean(self):
+        cleaned = super().clean()
+        codigo = cleaned.get('codigo_indicador_condicion')
+        operador = cleaned.get('operador_condicion')
+        valor = cleaned.get('valor_condicion')
+        if codigo and not operador:
+            cleaned['operador_condicion'] = '>='
+        if codigo and valor is None:
+            raise forms.ValidationError('Si eliges un indicador de condicion, debes ingresar el valor limite.')
+        if not codigo:
+            cleaned['operador_condicion'] = ''
+            cleaned['valor_condicion'] = None
+        return cleaned
 
 
 class EscenarioSimulacionForm(forms.ModelForm):
@@ -242,10 +353,14 @@ class PasoSimulacionForm(forms.Form):
         3: ('Plan de implementación', 'Justificación, control y seguimiento'),
     }
 
+    # required=False para que el campo (oculto en modo hibrido cuando se elige una
+    # opcion) no bloquee el envio por validacion HTML. El servidor valida igual.
     decision = forms.CharField(
+        required=False,
         widget=forms.Textarea(attrs={'rows': 4}),
     )
     justificacion = forms.CharField(
+        required=False,
         widget=forms.Textarea(attrs={'rows': 4}),
     )
 

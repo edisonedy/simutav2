@@ -341,6 +341,13 @@ def construir_estado_inicial(simulacion):
     return estado
 
 
+def construir_recursos_iniciales(simulacion):
+    recursos = {}
+    for recurso in simulacion.recursos.filter(activo=True):
+        recursos[recurso.codigo] = float(recurso.valor_inicial)
+    return recursos
+
+
 def aplicar_impacto(estado_actual, impacto):
     estado = dict(estado_actual or {})
     for clave, valor in (impacto or {}).items():
@@ -350,6 +357,83 @@ def aplicar_impacto(estado_actual, impacto):
         else:
             estado[clave] = valor
     return estado
+
+
+def limitar_recursos_por_min_max(simulacion, recursos):
+    recursos_limitados = dict(recursos or {})
+    recursos_cfg = {
+        recurso.codigo: recurso
+        for recurso in simulacion.recursos.filter(activo=True)
+    }
+    for codigo, recurso in recursos_cfg.items():
+        valor = recursos_limitados.get(codigo)
+        if not isinstance(valor, (int, float)):
+            continue
+        minimo = float(recurso.valor_minimo)
+        maximo = float(recurso.valor_maximo)
+        recursos_limitados[codigo] = max(minimo, min(maximo, float(valor)))
+    return recursos_limitados
+
+
+def aplicar_costo_recursos(recursos_actuales, costo):
+    recursos = dict(recursos_actuales or {})
+    for clave, valor in (costo or {}).items():
+        if not isinstance(valor, (int, float)):
+            continue
+        actual = recursos.get(clave, 0)
+        if isinstance(actual, (int, float)):
+            recursos[clave] = float(actual) - float(valor)
+    return recursos
+
+
+def validar_recursos(simulacion, recursos):
+    alertas = []
+    for recurso in simulacion.recursos.filter(activo=True):
+        valor = recursos.get(recurso.codigo)
+        if not isinstance(valor, (int, float)):
+            continue
+        minimo = float(recurso.valor_minimo)
+        if float(valor) <= minimo:
+            alertas.append({
+                'recurso': recurso.codigo,
+                'nombre': recurso.nombre,
+                'valor_actual': round(float(valor), 2),
+                'minimo': minimo,
+                'descripcion': f'{recurso.nombre} se agoto o llego a su minimo.',
+            })
+    return alertas
+
+
+def _costos_numericos(costo):
+    return {
+        clave: float(valor)
+        for clave, valor in (costo or {}).items()
+        if isinstance(valor, (int, float)) and float(valor) != 0
+    }
+
+
+def detectar_accion_sugerida(simulacion, decision):
+    texto = _normalizar_texto(decision)
+    if not texto:
+        return None
+    acciones = simulacion.acciones_sugeridas.filter(activo=True).order_by('numero_ronda', 'texto')
+    mejor = None
+    mejor_score = 0
+    tokens_texto = set(texto.split())
+    for accion in acciones:
+        accion_norm = _normalizar_texto(accion.texto)
+        if not accion_norm:
+            continue
+        if accion_norm in texto:
+            return accion
+        tokens_accion = set(accion_norm.split())
+        if not tokens_accion:
+            continue
+        score = len(tokens_texto & tokens_accion) / len(tokens_accion)
+        if score > mejor_score:
+            mejor = accion
+            mejor_score = score
+    return mejor if mejor_score >= 0.45 else None
 
 
 def limitar_estado_por_min_max(simulacion, estado):
@@ -486,11 +570,10 @@ def evaluar_conceptos_esperados(simulacion, numero_ronda, decision, justificacio
             'prohibidas_detectadas': regla['prohibidas_detectadas'],
             'sinonimos_detectados': regla['sinonimos_detectados'],
             'evidencia_ia': evaluacion_ia.get('evidencia', '') if evaluacion_ia else '',
-            'retroalimentacion': (
-                evaluacion_ia.get('retroalimentacion', '') if evaluacion_ia and evaluacion_ia.get('retroalimentacion') else (
-                    concepto.retroalimentacion_si_cumple
-                    if cumple else concepto.retroalimentacion_si_falta
-                )
+            'retroalimentacion': _retroalimentacion_concepto(
+                concepto,
+                cumple,
+                evaluacion_ia.get('retroalimentacion', '') if evaluacion_ia else '',
             ),
             'impacto': impacto_concepto,
         })
@@ -525,14 +608,17 @@ def evaluar_conceptos_esperados(simulacion, numero_ronda, decision, justificacio
         partes.append('Conceptos faltantes: ' + ', '.join(c.nombre for c in faltantes) + '.')
     if criticos_faltantes:
         partes.append('Advertencia crítica: falta ' + ', '.join(c.nombre for c in criticos_faltantes) + '.')
+    resumen_indicadores = _resumen_impacto_indicadores(simulacion, impacto_total)
+    if resumen_indicadores:
+        partes.append(resumen_indicadores)
     partes.extend(retro_cumple)
     partes.extend(retro_falta)
     if criticos_faltantes:
-        partes.append('Recomendación: atiende primero los conceptos críticos antes de avanzar la solución.')
+        partes.append(_recomendacion_por_indicadores(simulacion, criticos_faltantes))
     elif faltantes:
-        partes.append('Recomendación: completa los conceptos faltantes para mejorar la decisión.')
+        partes.append(_recomendacion_por_indicadores(simulacion, faltantes))
     else:
-        partes.append('Recomendación: la decisión cubre los conceptos esperados de la ronda.')
+        partes.append('Recomendación: la decisión cubre la evidencia esperada y mueve indicadores configurados del caso.')
 
     return {
         'tiene_conceptos': bool(conceptos),
@@ -549,6 +635,53 @@ def evaluar_conceptos_esperados(simulacion, numero_ronda, decision, justificacio
         'evaluacion': ' '.join(partes),
         'metodo_evaluacion': 'ia_semantica_rubrica' if evaluaciones_ia else 'rubrica_palabras_clave',
     }
+
+
+def _retroalimentacion_concepto(concepto, cumple, retro_ia=''):
+    """Evita retroalimentacion generica: cada comentario debe apuntar al
+    concepto configurado por el docente, no a "calidad" abstracta del texto."""
+    retro = (retro_ia or '').strip()
+    if retro:
+        return retro
+    if cumple and concepto.retroalimentacion_si_cumple:
+        return concepto.retroalimentacion_si_cumple
+    if not cumple and concepto.retroalimentacion_si_falta:
+        return concepto.retroalimentacion_si_falta
+    accion = 'Evidencia suficiente' if cumple else 'Falta evidencia'
+    return f'{accion} sobre: {concepto.nombre}.'
+
+
+def _resumen_impacto_indicadores(simulacion, impacto):
+    if not impacto:
+        return ''
+    indicadores = {
+        ind.codigo: ind
+        for ind in simulacion.indicadores.filter(activo=True)
+    }
+    partes = []
+    for codigo, delta in (impacto or {}).items():
+        ind = indicadores.get(codigo)
+        if not ind or not isinstance(delta, (int, float)):
+            continue
+        es_bajo = ind.direccion_optima == ind.DIRECCION_BAJO
+        mejora = (delta < 0) if es_bajo else (delta > 0)
+        signo = '+' if delta > 0 else ''
+        estado = 'mejora' if mejora else 'empeora'
+        partes.append(f'{ind.nombre} {signo}{round(float(delta), 2)} ({estado})')
+    if not partes:
+        return ''
+    return 'Indicadores propios afectados: ' + '; '.join(partes) + '.'
+
+
+def _recomendacion_por_indicadores(simulacion, conceptos_faltantes):
+    criticos = list(simulacion.indicadores.filter(activo=True, es_critico=True).values_list('nombre', flat=True)[:3])
+    conceptos = ', '.join(c.nombre for c in conceptos_faltantes[:2])
+    if criticos:
+        return (
+            f'Recomendación: refuerza "{conceptos}" conectándolo con indicadores del caso: '
+            f'{", ".join(criticos)}.'
+        )
+    return f'Recomendación: refuerza "{conceptos}" usando evidencia del caso configurado.'
 
 
 def validar_restricciones(simulacion, estado):
@@ -669,11 +802,37 @@ def _cumple_condicion(estado, cond):
 
 
 def aplicar_eventos(simulacion, estado_despues, ronda_actual):
-    """Fase B - eventos dinamicos. Configurados en simulacion.parametros['eventos']:
+    """Fase B - eventos dinamicos.
+
+    Lee eventos desde la tabla EventoSimulacion. Si la simulacion aun no tiene
+    eventos en tabla, conserva compatibilidad con simulacion.parametros['eventos']:
     cada evento = {id, ronda?, condicion?{indicador,operador,valor}, mensaje, efecto{codigo:delta}}.
     Se dispara si coincide la ronda (o no se especifica) y se cumple la condicion sobre
     el estado (o no hay), UNA sola vez por intento (se rastrea en estado['__eventos__'])."""
-    eventos = (simulacion.parametros or {}).get('eventos') or []
+    eventos = []
+    try:
+        for evento in simulacion.eventos.filter(activo=True).order_by('prioridad', 'ronda', 'nombre'):
+            condicion = None
+            if evento.codigo_indicador_condicion and evento.valor_condicion is not None:
+                condicion = {
+                    'indicador': evento.codigo_indicador_condicion,
+                    'operador': evento.operador_condicion or '>=',
+                    'valor': float(evento.valor_condicion),
+                }
+            eventos.append({
+                'id': f'db:{evento.pk}',
+                'ronda': evento.ronda,
+                'condicion': condicion,
+                'mensaje': evento.mensaje,
+                'efecto': evento.efecto or {},
+            })
+    except Exception:
+        eventos = []
+    if not eventos:
+        for idx, evento_json in enumerate((simulacion.parametros or {}).get('eventos') or []):
+            item = dict(evento_json or {})
+            item['id'] = f'json:{item.get("id", idx)}'
+            eventos.append(item)
     estado = dict(estado_despues or {})
     if not eventos:
         return estado, []
@@ -943,9 +1102,11 @@ def obtener_escenario_inicial(simulacion):
 
 def ejecutar_decision_arbol(intento, decision):
     estado_antes = dict(intento.estado_actual or {})
+    recursos_antes = dict(intento.recursos_actuales or {})
     impacto = dict(decision.impacto or {})
     estado_despues = aplicar_impacto(estado_antes, impacto)
     estado_despues = limitar_estado_por_min_max(intento.simulacion, estado_despues)
+    recursos_despues = limitar_recursos_por_min_max(intento.simulacion, recursos_antes)
     alertas = validar_restricciones(intento.simulacion, estado_despues)
     penalizacion = calcular_penalizaciones(alertas)
     puntaje_paso = calcular_puntaje_paso(float(decision.puntaje_base), penalizacion)
@@ -971,6 +1132,9 @@ def ejecutar_decision_arbol(intento, decision):
         impacto_calculado=impacto,
         estado_antes=estado_antes,
         estado_despues=estado_despues,
+        costo_recursos={},
+        recursos_antes=recursos_antes,
+        recursos_despues=recursos_despues,
         puntaje_ia_sugerido=float(decision.puntaje_base),
         puntaje_paso=puntaje_paso,
         alertas_restricciones=alertas,
@@ -979,6 +1143,7 @@ def ejecutar_decision_arbol(intento, decision):
     )
 
     intento.estado_actual = estado_despues
+    intento.recursos_actuales = recursos_despues
     intento.numero_ronda_actual = numero + 1
     if siguiente:
         intento.escenario_actual = siguiente
@@ -986,7 +1151,10 @@ def ejecutar_decision_arbol(intento, decision):
     else:
         intento.escenario_actual = None
         intento.situacion_actual = ''
-    intento.save(update_fields=['estado_actual', 'numero_ronda_actual', 'escenario_actual', 'situacion_actual'])
+    intento.save(update_fields=[
+        'estado_actual', 'recursos_actuales', 'numero_ronda_actual',
+        'escenario_actual', 'situacion_actual',
+    ])
 
     if not siguiente or siguiente.es_final:
         if siguiente and siguiente.retroalimentacion_final:
@@ -997,8 +1165,18 @@ def ejecutar_decision_arbol(intento, decision):
     return paso
 
 
-def ejecutar_ronda_ia_dinamica(intento, decision, justificacion):
+def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None):
+    # Modo hibrido: si el estudiante ELIGIO una decision (accion), su texto se
+    # suma a la decision (la IA evalua la justificacion) y su impacto_base es la
+    # CONSECUENCIA real sobre los indicadores. Si no elige, es texto libre.
+    accion_impacto = {}
+    accion_costo = {}
+    if accion is not None:
+        decision = (f'{accion.texto}. {decision}').strip() if decision else accion.texto
+        accion_impacto = {k: v for k, v in (accion.impacto_base or {}).items() if isinstance(v, (int, float))}
+        accion_costo = dict(getattr(accion, 'costo_recursos', {}) or {})
     estado_antes = dict(intento.estado_actual or {})
+    recursos_antes = dict(intento.recursos_actuales or construir_recursos_iniciales(intento.simulacion))
     numero = intento.pasos.count() + 1
     ronda_actual = intento.numero_ronda_actual
     situacion_actual = intento.situacion_actual or intento.simulacion.situacion_inicial or intento.simulacion.contexto
@@ -1029,6 +1207,9 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion):
             impacto_calculado={},
             estado_antes=estado_antes,
             estado_despues=dict(estado_antes),
+            costo_recursos={},
+            recursos_antes=recursos_antes,
+            recursos_despues=dict(recursos_antes),
             puntaje_ia_sugerido=puntaje_sugerido,
             puntaje_paso=puntaje_sugerido,
             alertas_restricciones=[],
@@ -1077,6 +1258,20 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion):
         estado_motor, impacto_motor, opcion_detectada, confianza_opcion = aplicar_opcion_dinamica(
             intento.simulacion, estado_antes, decision, justificacion, ronda_actual,
         )
+        accion_detectada = accion or detectar_accion_sugerida(intento.simulacion, decision)
+        impacto_accion = {}
+        costo_recursos = {}
+        if accion_detectada:
+            impacto_accion = {
+                k: v for k, v in (accion_detectada.impacto_base or {}).items()
+                if isinstance(v, (int, float))
+            }
+            costo_recursos = _costos_numericos(accion_detectada.costo_recursos)
+        # Modo hibrido: la decision ELEGIDA por el estudiante manda sobre lo detectado por texto.
+        if accion_impacto:
+            impacto_accion = accion_impacto
+        if accion_costo:
+            costo_recursos = _costos_numericos(accion_costo)
 
         impacto = respuesta.get('impacto_sugerido', {})
         errores_impacto = validar_impacto(intento.simulacion, impacto)
@@ -1085,9 +1280,15 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion):
 
         if impacto_motor:
             impacto = {**impacto, **impacto_motor}
+        if impacto_accion:
+            impacto = {**impacto, **impacto_accion}
         puntaje_sugerido = max(0, min(100, float(respuesta.get('puntaje_sugerido', 0))))
-        estado_despues = estado_motor if estado_motor else aplicar_impacto(estado_antes, impacto)
+        estado_despues = estado_motor if impacto_motor else aplicar_impacto(estado_antes, impacto)
         estado_despues = limitar_estado_por_min_max(intento.simulacion, estado_despues)
+        recursos_despues = limitar_recursos_por_min_max(
+            intento.simulacion,
+            aplicar_costo_recursos(recursos_antes, costo_recursos),
+        )
         # Si la decision no movio ningun indicador (sin impactos configurados y el
         # motor no detecto una opcion), la empresa reacciona a la CALIDAD de la
         # decision, para que la simulacion se sienta viva ronda a ronda.
@@ -1103,9 +1304,11 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion):
         # este turno: no se castiga un estado inicial malo que el no causo. Ademas
         # se aplica un tope para que las restricciones nunca aplasten la nota.
         alertas = validar_restricciones(intento.simulacion, estado_despues)
+        alertas_recursos = validar_recursos(intento.simulacion, recursos_despues)
         indicadores_movidos = set(impacto.keys())
         alertas = [a for a in alertas if a.get('indicador') in indicadores_movidos]
-        penalizacion = min(PENALIZACION_MAX_PASO, calcular_penalizaciones(alertas))
+        penalizacion_recursos = min(15, len(alertas_recursos) * 5)
+        penalizacion = min(PENALIZACION_MAX_PASO, calcular_penalizaciones(alertas) + penalizacion_recursos)
         puntaje_paso = calcular_puntaje_paso(puntaje_sugerido, penalizacion)
         # Tope de calidad: una respuesta valida pero debil (corta/generica/sin
         # justificacion) avanza, pero su nota se limita segun el nivel detectado.
@@ -1113,11 +1316,22 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion):
         if tope_calidad < 100:
             puntaje_paso = min(puntaje_paso, tope_calidad)
         evaluacion = respuesta.get('evaluacion', '')
+        resumen_impacto_real = _resumen_impacto_indicadores(intento.simulacion, impacto)
+        if resumen_impacto_real and resumen_impacto_real not in evaluacion:
+            evaluacion = f'{evaluacion} Impacto real de la jugada: {resumen_impacto_real}'.strip()
         evaluacion_detalle = respuesta.get('evaluacion_detalle') or {
             'tipo': 'mock',
             'puntaje_sugerido': puntaje_sugerido,
             'evaluacion': evaluacion,
         }
+        if accion_detectada or costo_recursos or alertas_recursos:
+            evaluacion_detalle = {
+                **evaluacion_detalle,
+                'accion_sugerida_detectada': accion_detectada.texto if accion_detectada else '',
+                'costo_recursos': costo_recursos,
+                'alertas_recursos': alertas_recursos,
+                'penalizacion_recursos': penalizacion_recursos,
+            }
         respuesta_ia_estructurada = respuesta.get('respuesta_ia_estructurada') or {}
         modelo_ia = respuesta.get('modelo_ia', '')
         api_ia = respuesta.get('api_ia', '')
@@ -1151,6 +1365,9 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion):
         impacto_calculado=impacto,
         estado_antes=estado_antes,
         estado_despues=estado_despues,
+        costo_recursos=costo_recursos,
+        recursos_antes=recursos_antes,
+        recursos_despues=recursos_despues,
         puntaje_ia_sugerido=puntaje_sugerido,
         puntaje_paso=max(0, min(100, float(puntaje_paso))),
         alertas_restricciones=alertas,
@@ -1159,11 +1376,12 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion):
     )
 
     intento.estado_actual = estado_despues
+    intento.recursos_actuales = recursos_despues
     intento.situacion_actual = siguiente_situacion
     intento.numero_ronda_actual = ronda_actual + 1
     intento.intentos_invalidos_actuales = 0
     intento.save(update_fields=[
-        'estado_actual', 'situacion_actual', 'numero_ronda_actual',
+        'estado_actual', 'recursos_actuales', 'situacion_actual', 'numero_ronda_actual',
         'intentos_invalidos_actuales',
     ])
 

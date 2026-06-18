@@ -104,7 +104,18 @@ def serializar_configuracion_simulacion(simulacion):
         ),
         'acciones_sugeridas': list(
             simulacion.acciones_sugeridas.filter(activo=True).values(
-                'numero_ronda', 'texto', 'descripcion', 'impacto_base',
+                'numero_ronda', 'texto', 'descripcion', 'impacto_base', 'costo_recursos',
+            )
+        ),
+        'matriz_caso': list(
+            simulacion.matriz_caso.filter(activo=True).values(
+                'criterio', 'peso', 'evalua', 'orden',
+            )
+        ),
+        'opciones_caso': list(
+            simulacion.opciones_caso.filter(activo=True).values(
+                'nombre', 'subtitulo', 'valor_referencia',
+                'fortaleza', 'riesgo', 'resultados', 'orden',
             )
         ),
     }

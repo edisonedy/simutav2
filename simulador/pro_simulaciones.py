@@ -15,12 +15,14 @@ from academico.models import MateriaMalla, ProfesorMateria
 from simulador.models import (
     Simulacion, IndicadorSimulacion, RestriccionSimulacion,
     ConceptoEsperadoRonda, CriterioEvaluacion, AccionSugeridaSimulacion, CondicionExitoSimulacion,
-    DecisionConfigurada, EscenarioSimulacion, IntentoSimulacion,
+    DecisionConfigurada, EscenarioSimulacion, EventoSimulacion, IntentoSimulacion, RecursoSimulacion,
+    MatrizEvaluacionCaso, OpcionCasoSimulacion,
 )
 from simulador.forms import (
     SimulacionForm, IndicadorSimulacionForm, RestriccionSimulacionForm,
     ConceptoEsperadoRondaForm, CriterioEvaluacionForm, AccionSugeridaForm, CondicionExitoForm,
-    DecisionConfiguradaForm, EscenarioSimulacionForm,
+    DecisionConfiguradaForm, EscenarioSimulacionForm, EventoSimulacionForm, RecursoSimulacionForm,
+    MatrizEvaluacionCasoForm, OpcionCasoSimulacionForm,
 )
 from simulador.generator_service import generar_simulacion_desde_plantilla, serializar_configuracion_simulacion
 
@@ -69,6 +71,22 @@ def _impacto_desde_post(post, simulacion, prefijo='impacto'):
     return impacto
 
 
+def _recursos_desde_post(post, simulacion, prefijo='costo'):
+    costos = {}
+    for recurso in simulacion.recursos.filter(activo=True):
+        raw = (post.get(f'{prefijo}_{recurso.codigo}') or '').strip().replace(',', '.')
+        if not raw:
+            continue
+        try:
+            valor = float(raw)
+        except ValueError:
+            continue
+        if valor == 0:
+            continue
+        costos[recurso.codigo] = int(valor) if valor == int(valor) else round(valor, 2)
+    return costos
+
+
 def _palabras_clave_desde_post(post):
     """El profesor escribe palabras/frases separadas por comas y elige el modo
     (cualquiera / todas). Se guarda como regla simple, sin que el escriba JSON."""
@@ -114,14 +132,31 @@ def _impacto_legible(simulacion, impacto):
     return [(nombres.get(k, k), v) for k, v in (impacto or {}).items()]
 
 
+def _costo_recursos_legible(simulacion, costo):
+    nombres = {r.codigo: f'{r.nombre} ({r.unidad})' if r.unidad else r.nombre for r in simulacion.recursos.filter(activo=True)}
+    return [(nombres.get(k, k), v) for k, v in (costo or {}).items()]
+
+
+def _condicion_evento_legible(simulacion, evento):
+    if not evento.codigo_indicador_condicion or evento.valor_condicion is None:
+        return 'Sin condicion de indicador'
+    nombres = {i.codigo: i.nombre for i in simulacion.indicadores.filter(activo=True)}
+    nombre = nombres.get(evento.codigo_indicador_condicion, evento.codigo_indicador_condicion)
+    return f'{nombre} {evento.operador_condicion or ">="} {evento.valor_condicion}'
+
+
 def _pasos_configuracion(simulacion, rubrica_completa):
     """Arma los pasos de configuracion en orden, explicando que hace cada uno y
     como se conecta con el resto. Pensado para que el profesor entienda el flujo."""
     pid = simulacion.pk
     n_ind = simulacion.indicadores.filter(activo=True).count()
+    n_rec = simulacion.recursos.filter(activo=True).count()
     n_res = simulacion.restricciones.filter(activo=True).count()
     n_con = simulacion.conceptos_esperados.filter(activo=True).count()
     n_acc = simulacion.acciones_sugeridas.filter(activo=True).count()
+    n_evt = simulacion.eventos.filter(activo=True).count()
+    n_opc_caso = simulacion.opciones_caso.filter(activo=True).count()
+    n_mat_caso = simulacion.matriz_caso.filter(activo=True).count()
     caso_ok = all([simulacion.contexto, simulacion.objetivo, simulacion.situacion_inicial])
 
     def url(accion):
@@ -151,14 +186,28 @@ def _pasos_configuracion(simulacion, rubrica_completa):
             'detalle': f'{len((simulacion.parametros or {}).get("opciones_dinamicas", []))} opcion(es)', 'url': url('opciones_dinamicas'),
         },
         {
-            'numero': 4, 'titulo': 'Restricciones',
+            'numero': 4, 'titulo': 'Datos visibles del caso',
+            'que_es': 'Alternativas y matriz que el estudiante ve para comparar (proveedores, candidatos, cotizaciones, criterios).',
+            'como_conecta': 'No da nota por si solo: entrega evidencia para que la respuesta pueda justificar bien los conceptos esperados.',
+            'ok': n_opc_caso > 0 or n_mat_caso > 0, 'opcional': True, 'aviso': False,
+            'detalle': f'{n_opc_caso} alternativa(s), {n_mat_caso} criterio(s)', 'url': url('datos_caso'),
+        },
+        {
+            'numero': 5, 'titulo': 'Presupuesto y recursos',
+            'que_es': 'Dinero, tiempo o capacidad limitada que se consume con las decisiones.',
+            'como_conecta': 'Hace que una buena decision tenga costo: no se puede arreglar todo sin sacrificar recursos.',
+            'ok': n_rec > 0, 'opcional': True, 'aviso': False,
+            'detalle': f'{n_rec} recurso(s)', 'url': url('recursos'),
+        },
+        {
+            'numero': 6, 'titulo': 'Restricciones',
             'que_es': 'Limites que, si el estudiante los incumple, le restan puntos (ej. riesgo <= 75).',
             'como_conecta': 'Usan los indicadores del paso 2: penalizan cuando una decision deja un indicador en zona mala.',
             'ok': n_res > 0, 'opcional': False, 'aviso': False,
             'detalle': f'{n_res} restriccion(es)', 'url': url('restricciones'),
         },
         {
-            'numero': 5, 'titulo': 'Conceptos esperados por ronda (rubrica)',
+            'numero': 7, 'titulo': 'Conceptos esperados por ronda (rubrica)',
             'que_es': 'Lo que el estudiante debe mencionar o aplicar en cada ronda. Esto define la NOTA.',
             'como_conecta': 'Es el corazon de la evaluacion: cada concepto tiene un peso y los pesos de cada ronda deben sumar 100.',
             'ok': rubrica_completa, 'opcional': False, 'aviso': n_con > 0 and not rubrica_completa,
@@ -166,11 +215,18 @@ def _pasos_configuracion(simulacion, rubrica_completa):
             'url': url('conceptos'),
         },
         {
-            'numero': 6, 'titulo': 'Decisiones sugeridas',
+            'numero': 8, 'titulo': 'Decisiones sugeridas',
             'que_es': 'Opciones reales que el estudiante puede elegir, cada una con su efecto en los indicadores.',
             'como_conecta': 'Al elegir una, sus numeros cambian. El estudiante igual puede escribir su propia decision.',
             'ok': n_acc > 0, 'opcional': True, 'aviso': False,
             'detalle': f'{n_acc} decision(es) de ejemplo', 'url': url('acciones'),
+        },
+        {
+            'numero': 9, 'titulo': 'Eventos dinamicos',
+            'que_es': 'Sorpresas que se disparan por ronda o por estado de indicadores.',
+            'como_conecta': 'Despues de una decision, la empresa puede reaccionar y mover indicadores con un mensaje visible.',
+            'ok': n_evt > 0, 'opcional': True, 'aviso': False,
+            'detalle': f'{n_evt} evento(s)', 'url': url('eventos'),
         },
     ]
 
@@ -240,6 +296,49 @@ def _resumen_rubrica(simulacion):
             'completa': total == Decimal('100') and conceptos.exists(),
         })
     return resumen
+
+
+def _analitica_simulacion(simulacion):
+    intentos = IntentoSimulacion.objects.filter(simulacion=simulacion)
+    finalizados = intentos.filter(finalizado=True)
+    promedio = finalizados.aggregate(prom=models.Avg('puntuacion_final')).get('prom')
+    pasos = simulacion.intentos.filter(pasos__es_valido=True).values(
+        'pasos__numero'
+    ).annotate(
+        promedio=models.Avg('pasos__puntaje_paso'),
+        total=models.Count('pasos__id'),
+    ).order_by('pasos__numero')
+
+    fallos = {}
+    alertas_recursos = 0
+    alertas_restricciones = 0
+    for paso in (
+        simulacion.intentos
+        .filter(pasos__isnull=False)
+        .values_list('pasos__evaluacion_detalle', 'pasos__alertas_restricciones')
+    ):
+        detalle, restricciones = paso
+        for concepto in (detalle or {}).get('conceptos', []):
+            if not concepto.get('cumple'):
+                nombre = concepto.get('nombre') or 'Concepto sin nombre'
+                item = fallos.setdefault(nombre, {'nombre': nombre, 'fallos': 0, 'parciales': 0})
+                item['fallos'] += 1
+                if concepto.get('parcial'):
+                    item['parciales'] += 1
+        alertas_recursos += len((detalle or {}).get('alertas_recursos') or [])
+        alertas_restricciones += len(restricciones or [])
+
+    conceptos_fallados = sorted(fallos.values(), key=lambda x: x['fallos'], reverse=True)[:10]
+    return {
+        'total_intentos': intentos.count(),
+        'finalizados': finalizados.count(),
+        'promedio': round(float(promedio), 2) if promedio is not None else None,
+        'promedio_rondas': list(pasos),
+        'conceptos_fallados': conceptos_fallados,
+        'alertas_recursos': alertas_recursos,
+        'alertas_restricciones': alertas_restricciones,
+        'alertas_total': alertas_recursos + alertas_restricciones,
+    }
 
 
 def _es_profesor(user):
@@ -418,6 +517,23 @@ def view(request):
             indicador.save(update_fields=['activo'])
             return ok_json(mensaje='Indicador eliminado correctamente.')
 
+        elif action == 'add_recurso':
+            simulacion = _get_simulacion_profesor(request.user, _request_id(request))
+            form = RecursoSimulacionForm(request.POST)
+            if form.is_valid():
+                recurso = form.save(commit=False)
+                recurso.simulacion = simulacion
+                recurso.usuario_creacion = request.user
+                recurso.save()
+                return ok_json(mensaje='Recurso agregado correctamente.')
+            return bad_json(mensaje=str(form.errors))
+
+        elif action == 'delete_recurso':
+            recurso = _get_objeto_de_simulacion(request.user, RecursoSimulacion, _request_id(request))
+            recurso.activo = False
+            recurso.save(update_fields=['activo'])
+            return ok_json(mensaje='Recurso desactivado correctamente.')
+
         elif action == 'add_restriccion':
             simulacion = _get_simulacion_profesor(request.user, _request_id(request))
             form = RestriccionSimulacionForm(request.POST)
@@ -465,6 +581,38 @@ def view(request):
             criterio.activo = False
             criterio.save(update_fields=['activo'])
             return ok_json(mensaje='Criterio eliminado correctamente.')
+
+        elif action == 'add_matriz_caso':
+            simulacion = _get_simulacion_profesor(request.user, _request_id(request))
+            form = MatrizEvaluacionCasoForm(request.POST)
+            if form.is_valid():
+                item = form.save(commit=False)
+                item.simulacion = simulacion
+                item.save()
+                return ok_json(mensaje='Criterio visible agregado correctamente.')
+            return bad_json(mensaje=str(form.errors))
+
+        elif action == 'delete_matriz_caso':
+            item = _get_objeto_de_simulacion(request.user, MatrizEvaluacionCaso, _request_id(request))
+            item.activo = False
+            item.save(update_fields=['activo'])
+            return ok_json(mensaje='Criterio visible eliminado correctamente.')
+
+        elif action == 'add_opcion_caso':
+            simulacion = _get_simulacion_profesor(request.user, _request_id(request))
+            form = OpcionCasoSimulacionForm(request.POST)
+            if form.is_valid():
+                item = form.save(commit=False)
+                item.simulacion = simulacion
+                item.save()
+                return ok_json(mensaje='Alternativa visible agregada correctamente.')
+            return bad_json(mensaje=str(form.errors))
+
+        elif action == 'delete_opcion_caso':
+            item = _get_objeto_de_simulacion(request.user, OpcionCasoSimulacion, _request_id(request))
+            item.activo = False
+            item.save(update_fields=['activo'])
+            return ok_json(mensaje='Alternativa visible eliminada correctamente.')
 
         elif action == 'save_opciones_dinamicas':
             simulacion = _get_simulacion_profesor(request.user, _request_id(request))
@@ -526,6 +674,7 @@ def view(request):
                 accion = form.save(commit=False)
                 accion.simulacion = simulacion
                 accion.impacto_base = _impacto_desde_post(request.POST, simulacion)
+                accion.costo_recursos = _recursos_desde_post(request.POST, simulacion)
                 accion.save()
                 return ok_json(mensaje='Accion agregada correctamente.')
             return bad_json(mensaje=str(form.errors))
@@ -536,6 +685,7 @@ def view(request):
             if form.is_valid():
                 accion = form.save(commit=False)
                 accion.impacto_base = _impacto_desde_post(request.POST, accion.simulacion)
+                accion.costo_recursos = _recursos_desde_post(request.POST, accion.simulacion)
                 accion.save()
                 return ok_json(mensaje='Accion actualizada correctamente.')
             return bad_json(mensaje=str(form.errors))
@@ -555,6 +705,40 @@ def view(request):
                 condicion.save()
                 return ok_json(mensaje='Condicion agregada correctamente.')
             return bad_json(mensaje=str(form.errors))
+
+        elif action == 'add_evento':
+            simulacion = _get_simulacion_profesor(request.user, _request_id(request))
+            form = EventoSimulacionForm(request.POST, simulacion_obj=simulacion)
+            if form.is_valid():
+                efecto = _impacto_desde_post(request.POST, simulacion, 'efecto')
+                if not efecto:
+                    return bad_json(mensaje='Configura al menos un efecto sobre un indicador.')
+                evento = form.save(commit=False)
+                evento.simulacion = simulacion
+                evento.efecto = efecto
+                evento.usuario_creacion = request.user
+                evento.save()
+                return ok_json(mensaje='Evento dinamico agregado correctamente.')
+            return bad_json(mensaje=str(form.errors))
+
+        elif action == 'edit_evento':
+            evento = _get_objeto_de_simulacion(request.user, EventoSimulacion, _request_id(request))
+            form = EventoSimulacionForm(request.POST, instance=evento, simulacion_obj=evento.simulacion)
+            if form.is_valid():
+                efecto = _impacto_desde_post(request.POST, evento.simulacion, 'efecto')
+                if not efecto:
+                    return bad_json(mensaje='Configura al menos un efecto sobre un indicador.')
+                evento = form.save(commit=False)
+                evento.efecto = efecto
+                evento.save()
+                return ok_json(mensaje='Evento dinamico actualizado correctamente.')
+            return bad_json(mensaje=str(form.errors))
+
+        elif action == 'delete_evento':
+            evento = _get_objeto_de_simulacion(request.user, EventoSimulacion, _request_id(request))
+            evento.activo = False
+            evento.save(update_fields=['activo'])
+            return ok_json(mensaje='Evento dinamico desactivado correctamente.')
 
         elif action == 'add_escenario':
             simulacion = _get_simulacion_profesor(request.user, _request_id(request))
@@ -693,6 +877,15 @@ def view(request):
         data['indicadores'] = IndicadorSimulacion.objects.filter(simulacion=simulacion)
         return render(request, 'simulador/pro_simulaciones/indicadores.html', data)
 
+    elif action == 'recursos':
+        simulacion = _get_simulacion_profesor(request.user, request.GET.get('id'))
+        form = RecursoSimulacionForm()
+        _hide_simulacion_field(form, simulacion)
+        data['simulacion'] = simulacion
+        data['form'] = form
+        data['recursos'] = RecursoSimulacion.objects.filter(simulacion=simulacion)
+        return render(request, 'simulador/pro_simulaciones/recursos.html', data)
+
     elif action == 'edit_indicador':
         indicador = _get_objeto_de_simulacion(request.user, IndicadorSimulacion, request.GET.get('id'))
         simulacion = indicador.simulacion
@@ -786,19 +979,64 @@ def view(request):
         data['suma_pesos'] = sum(item.peso for item in criterios if item.activo)
         return render(request, 'simulador/pro_simulaciones/criterios.html', data)
 
+    elif action == 'datos_caso':
+        simulacion = _get_simulacion_profesor(request.user, request.GET.get('id'))
+        form_matriz = MatrizEvaluacionCasoForm()
+        form_opcion = OpcionCasoSimulacionForm()
+        _hide_simulacion_field(form_matriz, simulacion)
+        _hide_simulacion_field(form_opcion, simulacion)
+        matriz = MatrizEvaluacionCaso.objects.filter(simulacion=simulacion)
+        opciones = OpcionCasoSimulacion.objects.filter(simulacion=simulacion)
+        data['simulacion'] = simulacion
+        data['form_matriz'] = form_matriz
+        data['form_opcion'] = form_opcion
+        data['matriz'] = matriz
+        data['opciones_caso'] = opciones
+        data['suma_matriz'] = sum(item.peso for item in matriz if item.activo)
+        return render(request, 'simulador/pro_simulaciones/datos_caso.html', data)
+
     elif action == 'acciones':
         simulacion = _get_simulacion_profesor(request.user, request.GET.get('id'))
         form = AccionSugeridaForm()
         _hide_simulacion_field(form, simulacion)
         indicadores = list(simulacion.indicadores.filter(activo=True))
+        recursos = list(simulacion.recursos.filter(activo=True))
         acciones = list(AccionSugeridaSimulacion.objects.filter(simulacion=simulacion, activo=True))
         for accion in acciones:
             accion.impacto_legible = _impacto_legible(simulacion, accion.impacto_base)
+            accion.costo_legible = _costo_recursos_legible(simulacion, accion.costo_recursos)
         data['simulacion'] = simulacion
         data['form'] = form
         data['indicadores'] = indicadores
+        data['recursos'] = recursos
         data['acciones'] = acciones
         return render(request, 'simulador/pro_simulaciones/acciones.html', data)
+
+    elif action == 'eventos':
+        simulacion = _get_simulacion_profesor(request.user, request.GET.get('id'))
+        form = EventoSimulacionForm(simulacion_obj=simulacion)
+        _hide_simulacion_field(form, simulacion)
+        indicadores = list(simulacion.indicadores.filter(activo=True))
+        eventos = list(EventoSimulacion.objects.filter(simulacion=simulacion, activo=True))
+        for evento in eventos:
+            evento.efecto_legible = _impacto_legible(simulacion, evento.efecto)
+            evento.condicion_legible = _condicion_evento_legible(simulacion, evento)
+        data['simulacion'] = simulacion
+        data['form'] = form
+        data['indicadores'] = indicadores
+        data['eventos'] = eventos
+        return render(request, 'simulador/pro_simulaciones/eventos.html', data)
+
+    elif action == 'edit_evento':
+        evento = _get_objeto_de_simulacion(request.user, EventoSimulacion, request.GET.get('id'))
+        simulacion = evento.simulacion
+        form = EventoSimulacionForm(instance=evento, simulacion_obj=simulacion)
+        _hide_simulacion_field(form, simulacion)
+        data['simulacion'] = simulacion
+        data['evento'] = evento
+        data['form'] = form
+        data['indicadores'] = _impacto_indicadores_form(simulacion, evento.efecto, {})
+        return render(request, 'simulador/pro_simulaciones/edit_evento.html', data)
 
     elif action == 'condiciones':
         simulacion = _get_simulacion_profesor(request.user, request.GET.get('id'))
@@ -835,6 +1073,12 @@ def view(request):
             simulacion=simulacion
         ).select_related('estudiante')
         return render(request, 'simulador/pro_simulaciones/revisar.html', data)
+
+    elif action == 'analitica':
+        simulacion = _get_simulacion_profesor(request.user, request.GET.get('id'))
+        data['simulacion'] = simulacion
+        data['analitica'] = _analitica_simulacion(simulacion)
+        return render(request, 'simulador/pro_simulaciones/analitica.html', data)
 
     if _tiene_acceso_global(request.user):
         data['list'] = _simulaciones_permitidas(request.user).select_related(

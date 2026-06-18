@@ -5,9 +5,12 @@ from datetime import date
 from academico.models import Carrera, Malla, Materia, MateriaMalla, NivelMalla, PeriodoAcademico, ProfesorMateria
 from core.models import Institucion
 from simulador.models import (
+    AccionSugeridaSimulacion,
     ConceptoEsperadoRonda,
+    EventoSimulacion,
     IndicadorSimulacion,
     IntentoSimulacion,
+    RecursoSimulacion,
     Simulacion,
 )
 from simulador.generator_service import generar_simulacion_desde_plantilla
@@ -17,8 +20,13 @@ from simulador.services import (
     TIPO_ERROR_OK,
     TIPO_ERROR_VACIA,
     _normalizar_texto,
+    aplicar_costo_recursos,
+    aplicar_eventos,
     calcular_puntaje_final,
+    construir_recursos_iniciales,
+    detectar_accion_sugerida,
     evaluar_conceptos_esperados,
+    validar_recursos,
     validar_respuesta_estudiante,
 )
 
@@ -315,3 +323,182 @@ class PermisosPanelProfesorTests(TestCase):
         response = client.get(f'/simulador/pro_simulaciones?action=configuracion&id={self.sim1.pk}')
 
         self.assertEqual(response.status_code, 302)
+
+
+class EventosDinamicosTests(TestCase):
+    def setUp(self):
+        self.profesor = User.objects.create_user(username='prof_eventos', is_staff=True)
+        institucion = Institucion.objects.create(nombre='Eventos Demo', usuario_creacion=self.profesor)
+        carrera = Carrera.objects.create(
+            institucion=institucion,
+            nombre='TI',
+            codigo='TI-EVT',
+            usuario_creacion=self.profesor,
+        )
+        malla = Malla.objects.create(
+            carrera=carrera,
+            nombre='Malla eventos',
+            codigo='EVT',
+            usuario_creacion=self.profesor,
+        )
+        nivel = NivelMalla.objects.create(
+            malla=malla,
+            numero=1,
+            nombre='Nivel 1',
+            usuario_creacion=self.profesor,
+        )
+        materia = Materia.objects.create(
+            institucion=institucion,
+            codigo='RED-EVT',
+            nombre='Redes',
+            usuario_creacion=self.profesor,
+        )
+        materia_malla = MateriaMalla.objects.create(
+            malla=malla,
+            nivel=nivel,
+            materia=materia,
+            usuario_creacion=self.profesor,
+        )
+        self.simulacion = Simulacion.objects.create(
+            materia_malla=materia_malla,
+            profesor=self.profesor,
+            tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Eventos de red',
+            maximo_decisiones=3,
+            usuario_creacion=self.profesor,
+        )
+        IndicadorSimulacion.objects.create(
+            simulacion=self.simulacion,
+            codigo='saturacion_wan',
+            nombre='Saturacion WAN',
+            valor_inicial=70,
+            valor_minimo=0,
+            valor_maximo=100,
+            direccion_optima=IndicadorSimulacion.DIRECCION_BAJO,
+            usuario_creacion=self.profesor,
+        )
+        self.evento = EventoSimulacion.objects.create(
+            simulacion=self.simulacion,
+            nombre='Trafico inesperado',
+            mensaje='La campana eleva el trafico WAN.',
+            ronda=2,
+            codigo_indicador_condicion='saturacion_wan',
+            operador_condicion='>=',
+            valor_condicion=60,
+            efecto={'saturacion_wan': 10},
+            usuario_creacion=self.profesor,
+        )
+
+    def test_evento_db_se_dispara_por_ronda_y_condicion(self):
+        estado, mensajes = aplicar_eventos(self.simulacion, {'saturacion_wan': 70}, 2)
+
+        self.assertEqual(estado['saturacion_wan'], 80)
+        self.assertEqual(mensajes, ['La campana eleva el trafico WAN.'])
+        self.assertIn(f'db:{self.evento.pk}', estado['__eventos__'])
+
+    def test_evento_db_no_se_repite(self):
+        estado, _ = aplicar_eventos(self.simulacion, {'saturacion_wan': 70}, 2)
+        estado_repetido, mensajes = aplicar_eventos(self.simulacion, estado, 2)
+
+        self.assertEqual(estado_repetido['saturacion_wan'], 80)
+        self.assertEqual(mensajes, [])
+
+    def test_evento_json_heredado_no_duplica_si_hay_evento_db(self):
+        self.simulacion.parametros = {
+            'eventos': [
+                {
+                    'id': 'legacy',
+                    'ronda': 2,
+                    'mensaje': 'Evento heredado',
+                    'efecto': {'saturacion_wan': 10},
+                },
+            ],
+        }
+        self.simulacion.save(update_fields=['parametros'])
+
+        estado, mensajes = aplicar_eventos(self.simulacion, {'saturacion_wan': 70}, 2)
+
+        self.assertEqual(estado['saturacion_wan'], 80)
+        self.assertEqual(mensajes, ['La campana eleva el trafico WAN.'])
+        self.assertEqual(estado['__eventos__'], [f'db:{self.evento.pk}'])
+
+
+class RecursosTradeOffTests(TestCase):
+    def setUp(self):
+        self.profesor = User.objects.create_user(username='prof_recursos', is_staff=True)
+        institucion = Institucion.objects.create(nombre='Recursos Demo', usuario_creacion=self.profesor)
+        carrera = Carrera.objects.create(
+            institucion=institucion,
+            nombre='Software',
+            codigo='SW-REC',
+            usuario_creacion=self.profesor,
+        )
+        malla = Malla.objects.create(
+            carrera=carrera,
+            nombre='Malla recursos',
+            codigo='REC',
+            usuario_creacion=self.profesor,
+        )
+        nivel = NivelMalla.objects.create(
+            malla=malla,
+            numero=1,
+            nombre='Nivel 1',
+            usuario_creacion=self.profesor,
+        )
+        materia = Materia.objects.create(
+            institucion=institucion,
+            codigo='ARQ-REC',
+            nombre='Arquitectura',
+            usuario_creacion=self.profesor,
+        )
+        materia_malla = MateriaMalla.objects.create(
+            malla=malla,
+            nivel=nivel,
+            materia=materia,
+            usuario_creacion=self.profesor,
+        )
+        self.simulacion = Simulacion.objects.create(
+            materia_malla=materia_malla,
+            profesor=self.profesor,
+            tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Trade-offs de arquitectura',
+            maximo_decisiones=3,
+            usuario_creacion=self.profesor,
+        )
+        RecursoSimulacion.objects.create(
+            simulacion=self.simulacion,
+            codigo='presupuesto',
+            nombre='Presupuesto',
+            valor_inicial=100,
+            valor_minimo=0,
+            valor_maximo=100,
+            unidad='pts',
+            usuario_creacion=self.profesor,
+        )
+        AccionSugeridaSimulacion.objects.create(
+            simulacion=self.simulacion,
+            numero_ronda=2,
+            texto='Refactorizar consultas criticas con cache',
+            descripcion='Mejora rendimiento con costo tecnico y de equipo.',
+            impacto_base={'rendimiento': 12},
+            costo_recursos={'presupuesto': 35},
+            usuario_creacion=self.profesor,
+        )
+
+    def test_recursos_iniciales_y_consumo(self):
+        recursos = construir_recursos_iniciales(self.simulacion)
+
+        self.assertEqual(recursos, {'presupuesto': 100.0})
+        recursos = aplicar_costo_recursos(recursos, {'presupuesto': 35})
+
+        self.assertEqual(recursos['presupuesto'], 65.0)
+        self.assertEqual(validar_recursos(self.simulacion, {'presupuesto': 0})[0]['recurso'], 'presupuesto')
+
+    def test_detecta_decision_sugerida_por_texto(self):
+        accion = detectar_accion_sugerida(
+            self.simulacion,
+            'Vamos a refactorizar consultas criticas con cache para estabilizar el sistema.',
+        )
+
+        self.assertIsNotNone(accion)
+        self.assertEqual(accion.costo_recursos, {'presupuesto': 35})

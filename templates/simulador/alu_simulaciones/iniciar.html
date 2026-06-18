@@ -60,6 +60,42 @@
                 <p class="mb-0">{{ simulacion.situacion_inicial }}</p>
             </div>
             {% endif %}
+
+            {% if candidatos %}
+            <div class="game-card mt-3">
+                <div class="game-card-head"><span class="game-tag">👥 {{ caso_labels.participantes_titulo|default:"Candidatos finalistas" }}</span></div>
+                <div class="row g-2">
+                    {% for c in candidatos %}
+                    <div class="col-md-4">
+                        <div class="mission-ind h-100">
+                            <div class="fw-bold">{{ c.nombre }}</div>
+                            <div class="small text-muted">{{ c.experiencia }}</div>
+                            <div class="small mt-2"><strong>{{ caso_labels.valor_titulo|default:"Salario" }}:</strong> {{ c.valor_display|default:c.salario_pretendido }}</div>
+                            <div class="small mt-1"><strong>{{ caso_labels.fortalezas_titulo|default:"Fortalezas" }}:</strong> {{ c.fortalezas }}</div>
+                            <div class="small mt-1"><strong>{{ caso_labels.riesgo_titulo|default:"Riesgo" }}:</strong> {{ c.debilidades }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if prueba_tecnica %}
+            <div class="game-card mt-3">
+                <div class="game-card-head"><span class="game-tag">🧪 {{ caso_labels.matriz_titulo|default:"Prueba técnica configurada" }}</span></div>
+                <div class="vstack gap-2">
+                    {% for p in prueba_tecnica %}
+                    <div class="mission-ind">
+                        <div class="d-flex justify-content-between gap-2">
+                            <span class="fw-semibold small">{{ p.criterio }}</span>
+                            <span class="mission-ind-val">{{ p.peso }}%</span>
+                        </div>
+                        <div class="small text-muted mt-1">{{ p.evalua }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <div class="col-lg-4">

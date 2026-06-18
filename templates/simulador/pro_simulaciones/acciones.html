@@ -14,7 +14,8 @@
     Estas son <strong>decisiones de ejemplo</strong> que el estudiante vera y podra elegir.
     Por cada decision, indica <strong>cuanto cambia cada indicador</strong> si el estudiante la toma:
     un numero <strong>positivo lo sube</strong> (ej. <code>+10</code>) y uno <strong>negativo lo baja</strong> (ej. <code>-8</code>).
-    Deja en blanco los indicadores que no cambian. <strong>No necesitas escribir codigo.</strong>
+    Tambien puedes configurar <strong>costos</strong> en presupuesto, tiempo o capacidad.
+    Deja en blanco lo que no cambie. <strong>No necesitas escribir codigo.</strong>
 </div>
 
 <div class="row g-3">
@@ -53,6 +54,23 @@
                     {% endfor %}
                 </div>
 
+                {% if recursos %}
+                <div class="mb-2 mt-3">
+                    <label class="form-label mb-1">Costo de la decision</label>
+                    <div class="text-muted small mb-2">Valor positivo = recurso consumido. En blanco = sin costo.</div>
+                    {% for rec in recursos %}
+                    <div class="impacto-row">
+                        <div class="impacto-label">
+                            <span class="fw-semibold">{{ rec.nombre }}</span>
+                            <span class="text-muted small d-block">{{ rec.valor_inicial }} {{ rec.unidad }}</span>
+                        </div>
+                        <input type="number" step="0.01" class="impacto-input" name="costo_{{ rec.codigo }}"
+                               placeholder="0" inputmode="decimal">
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
                 <label class="d-block mt-3 mb-3">
                     {{ form.activo }} <span class="ms-1">Visible para el estudiante</span>
                 </label>
@@ -85,6 +103,13 @@
                             </span>
                         {% empty %}
                             <span class="chip chip-soft">Sin efecto en indicadores</span>
+                        {% endfor %}
+                    </div>
+                    <div class="sim-tags mt-2">
+                        {% for nombre, valor in item.costo_legible %}
+                            <span class="chip chip-media">{{ nombre }} -{{ valor }}</span>
+                        {% empty %}
+                            <span class="chip chip-soft">Sin costo de recursos</span>
                         {% endfor %}
                     </div>
                 </div>
