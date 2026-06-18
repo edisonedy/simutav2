@@ -268,6 +268,24 @@ class IndicadorSimulacion(ModeloBase):
         return f'{self.nombre} ({self.valor_inicial})'
 
 
+class RecursoSimulacion(ModeloBase):
+    simulacion = models.ForeignKey(Simulacion, on_delete=models.CASCADE, related_name='recursos')
+    codigo = models.CharField(max_length=50)
+    nombre = models.CharField(max_length=150)
+    valor_inicial = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_minimo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_maximo = models.DecimalField(max_digits=12, decimal_places=2, default=100)
+    unidad = models.CharField(max_length=50, blank=True, default='')
+    es_critico = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['simulacion', 'nombre']
+        unique_together = [('simulacion', 'codigo')]
+
+    def __str__(self):
+        return f'{self.simulacion} / {self.nombre} ({self.valor_inicial})'
+
+
 class RestriccionSimulacion(ModeloBase):
     OPERADORES = [
         ('>', '>'),
@@ -304,12 +322,54 @@ class CriterioEvaluacion(ModeloBase):
         return f'{self.nombre} ({self.peso}%)'
 
 
+class OpcionCasoSimulacion(ModeloBase):
+    """Alternativa visible del caso: proveedor, candidato, estrategia, ruta, etc.
+
+    No califica por si sola. Sirve para que el estudiante tenga datos concretos
+    para comparar y justificar su decision.
+    """
+    simulacion = models.ForeignKey(Simulacion, on_delete=models.CASCADE, related_name='opciones_caso')
+    nombre = models.CharField(max_length=200)
+    subtitulo = models.CharField(max_length=200, blank=True, default='')
+    valor_referencia = models.CharField(max_length=80, blank=True, default='')
+    fortaleza = models.TextField(blank=True, default='')
+    riesgo = models.TextField(blank=True, default='')
+    resultados = models.JSONField(default=list, blank=True)
+    orden = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ['simulacion', 'orden', 'nombre']
+
+    def __str__(self):
+        return f'{self.simulacion} / {self.nombre}'
+
+
+class MatrizEvaluacionCaso(ModeloBase):
+    """Criterio visible para comparar alternativas del caso.
+
+    La nota formal sigue saliendo de ConceptoEsperadoRonda; esta matriz es el
+    material de apoyo que el estudiante debe usar en su respuesta.
+    """
+    simulacion = models.ForeignKey(Simulacion, on_delete=models.CASCADE, related_name='matriz_caso')
+    criterio = models.CharField(max_length=200)
+    peso = models.DecimalField(max_digits=5, decimal_places=2)
+    evalua = models.TextField(blank=True, default='')
+    orden = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ['simulacion', 'orden', 'criterio']
+
+    def __str__(self):
+        return f'{self.simulacion} / {self.criterio} ({self.peso}%)'
+
+
 class AccionSugeridaSimulacion(ModeloBase):
     simulacion = models.ForeignKey(Simulacion, on_delete=models.CASCADE, related_name='acciones_sugeridas')
     numero_ronda = models.PositiveIntegerField(null=True, blank=True)
     texto = models.CharField(max_length=300)
     descripcion = models.TextField(blank=True, default='')
     impacto_base = models.JSONField(default=dict, blank=True)
+    costo_recursos = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ['simulacion', 'numero_ronda', 'texto']
@@ -338,6 +398,33 @@ class CondicionExitoSimulacion(ModeloBase):
 
     def __str__(self):
         return f'{self.codigo_indicador} {self.operador} {self.valor_objetivo}'
+
+
+class EventoSimulacion(ModeloBase):
+    OPERADORES = [
+        ('', 'Sin condicion'),
+        ('>', '>'),
+        ('>=', '>='),
+        ('<', '<'),
+        ('<=', '<='),
+        ('=', '='),
+    ]
+
+    simulacion = models.ForeignKey(Simulacion, on_delete=models.CASCADE, related_name='eventos')
+    nombre = models.CharField(max_length=200)
+    mensaje = models.TextField()
+    ronda = models.PositiveIntegerField(null=True, blank=True)
+    codigo_indicador_condicion = models.CharField(max_length=50, blank=True, default='')
+    operador_condicion = models.CharField(max_length=5, choices=OPERADORES, blank=True, default='')
+    valor_condicion = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    efecto = models.JSONField(default=dict, blank=True)
+    prioridad = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ['simulacion', 'prioridad', 'ronda', 'nombre']
+
+    def __str__(self):
+        return f'{self.simulacion} / {self.nombre}'
 
 
 class EscenarioSimulacion(ModeloBase):
@@ -428,6 +515,13 @@ class IntentoSimulacion(ModeloBase):
         related_name='intentos_simulacion',
     )
     simulacion = models.ForeignKey(Simulacion, on_delete=models.PROTECT, related_name='intentos')
+    intento_origen = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reintentos',
+    )
     escenario_actual = models.ForeignKey(
         EscenarioSimulacion,
         on_delete=models.SET_NULL,
@@ -440,6 +534,7 @@ class IntentoSimulacion(ModeloBase):
         null=True, blank=True, related_name='intentos_simulacion',
     )
     estado_actual = models.JSONField(default=dict, blank=True)
+    recursos_actuales = models.JSONField(default=dict, blank=True)
     configuracion_snapshot = models.JSONField(default=dict, blank=True)
     situacion_actual = models.TextField(blank=True, default='')
     numero_ronda_actual = models.PositiveIntegerField(default=1)
@@ -488,6 +583,9 @@ class PasoSimulacion(ModeloBase):
     impacto_calculado = models.JSONField(default=dict, blank=True)
     estado_antes = models.JSONField(default=dict, blank=True)
     estado_despues = models.JSONField(default=dict, blank=True)
+    costo_recursos = models.JSONField(default=dict, blank=True)
+    recursos_antes = models.JSONField(default=dict, blank=True)
+    recursos_despues = models.JSONField(default=dict, blank=True)
     puntaje_ia_sugerido = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     puntaje_paso = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     alertas_restricciones = models.JSONField(default=list, blank=True)
@@ -500,6 +598,21 @@ class PasoSimulacion(ModeloBase):
 
     def __str__(self):
         return f'{self.intento} / Paso {self.numero}'
+
+
+class PistaTutor(ModeloBase):
+    intento = models.ForeignKey(IntentoSimulacion, on_delete=models.CASCADE, related_name='pistas_tutor')
+    numero_ronda = models.PositiveIntegerField(default=1)
+    pregunta_estudiante = models.TextField(blank=True, default='')
+    pista = models.TextField()
+    conceptos_referidos = models.JSONField(default=list, blank=True)
+    usada = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['intento', 'numero_ronda', 'fecha_creacion']
+
+    def __str__(self):
+        return f'{self.intento} / Pista ronda {self.numero_ronda}'
 
 
 class PerfilJuego(models.Model):
