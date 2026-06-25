@@ -20,3 +20,12 @@ staticfiles/
 .claude/
 .DS_Store
 Thumbs.db
+
+# Backups y dumps locales
+backups/
+dumps/
+*.dump
+*.sql
+*.sqlite3
+__pycache__/
+*.pyc
