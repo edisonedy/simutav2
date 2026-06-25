@@ -10,81 +10,141 @@
     <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}">&larr; Volver</a>
 </div>
 
-<!-- Como se conecta todo -->
 <div class="module-card p-3 mb-3">
-    <h2 class="h5 mb-1">Como funciona, paso a paso</h2>
-    <p class="text-muted small mb-3">Configura en este orden. Cada parte se apoya en la anterior.</p>
-    <div class="flow-rail">
-        <span class="flow-step">1. Caso</span><span class="flow-arrow">&rarr;</span>
-        <span class="flow-step">2. Indicadores</span><span class="flow-arrow">&rarr;</span>
-        <span class="flow-step">3. Opciones</span><span class="flow-arrow">&rarr;</span>
-        <span class="flow-step">4. Recursos</span><span class="flow-arrow">&rarr;</span>
-        <span class="flow-step">5. Restricciones</span><span class="flow-arrow">&rarr;</span>
-        <span class="flow-step flow-key">6. Conceptos = NOTA</span><span class="flow-arrow">&rarr;</span>
-        <span class="flow-step">7. Decisiones</span><span class="flow-arrow">&rarr;</span>
-        <span class="flow-step">8. Eventos</span><span class="flow-arrow">&rarr;</span>
-        <span class="flow-step flow-ia">IA evalua</span>
-    </div>
+    <h2 class="h5 mb-1">Configura solo lo necesario</h2>
+    <p class="text-muted small mb-0">
+        Para que la simulacion funcione con IA, primero completa el <strong>caso</strong> y luego la
+        <strong>evaluacion con IA</strong>. Lo demas puede agregarse despues como configuracion avanzada.
+    </p>
 </div>
 
 <div class="row g-3">
     <div class="col-lg-7">
-        <!-- Pasos -->
-        {% for paso in pasos_config %}
         <div class="module-card p-3 mb-3">
-            <div class="d-flex justify-content-between align-items-start gap-2">
-                <div class="d-flex gap-3">
-                    <span class="level-badge">{{ paso.numero }}</span>
-                    <div>
-                        <h2 class="h6 mb-1">
-                            {{ paso.titulo }}
-                            {% if paso.opcional %}<span class="chip chip-soft ms-1">opcional</span>{% endif %}
-                        </h2>
-                        <div class="small mb-1"><strong>Que es:</strong> {{ paso.que_es }}</div>
-                        <div class="small text-muted"><strong>Como conecta:</strong> {{ paso.como_conecta }}</div>
-                        <div class="mt-2">
-                            {% if paso.ok %}
-                                <span class="chip chip-up">&#10003; {{ paso.detalle }}</span>
-                            {% elif paso.aviso %}
-                                <span class="chip chip-media">&#9888; {{ paso.detalle }}</span>
-                            {% else %}
-                                <span class="chip chip-down">Falta configurar</span>
-                            {% endif %}
+            <div class="d-flex gap-3 align-items-start mb-3">
+                <span class="level-badge">1</span>
+                <div>
+                    <h2 class="h5 mb-1">Caso</h2>
+                    <div class="small text-muted">Define el problema que el estudiante va a resolver.</div>
+                    <div class="small mt-1"><strong>Pregunta guia:</strong> Que situacion va a leer el estudiante antes de decidir?</div>
+                </div>
+            </div>
+            <div class="vstack gap-2">
+                {% for paso in paneles_config.caso %}
+                <div class="border rounded p-2">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <h3 class="h6 mb-1">{{ paso.titulo }}</h3>
+                            <div class="small mb-1"><strong>Que llenas:</strong> {{ paso.que_es }}</div>
+                            <div class="small text-muted"><strong>Para que sirve:</strong> {{ paso.como_conecta }}</div>
+                            <div class="mt-2">
+                                {% if paso.ok %}
+                                    <span class="chip chip-up">&#10003; {{ paso.detalle }}</span>
+                                {% else %}
+                                    <span class="chip chip-down">Falta configurar</span>
+                                {% endif %}
+                            </div>
                         </div>
+                        {% if paso.es_modal %}
+                            <a class="btn btn-sm btn-primary sim-go" href="#" onclick="abrir_modal('{% url 'pro_simulaciones' %}{{ paso.url }}'); return false;">Editar</a>
+                        {% else %}
+                            <a class="btn btn-sm btn-primary sim-go" href="{% url 'pro_simulaciones' %}{{ paso.url }}">Editar</a>
+                        {% endif %}
                     </div>
                 </div>
-                {% if paso.es_modal %}
-                    <a class="btn btn-sm btn-primary sim-go" href="#" onclick="abrir_modal('{% url 'pro_simulaciones' %}{{ paso.url }}'); return false;">Configurar</a>
-                {% else %}
-                    <a class="btn btn-sm btn-primary sim-go" href="{% url 'pro_simulaciones' %}{{ paso.url }}">Configurar</a>
-                {% endif %}
+                {% endfor %}
             </div>
         </div>
-        {% endfor %}
+
+        <div class="module-card p-3 mb-3">
+            <div class="d-flex gap-3 align-items-start mb-3">
+                <span class="level-badge">2</span>
+                <div>
+                    <h2 class="h5 mb-1">Evaluacion con IA</h2>
+                    <div class="small text-muted">Define que revisa la IA y como se calcula la nota.</div>
+                    <div class="small mt-1"><strong>Pregunta guia:</strong> Que debe justificar bien el estudiante para obtener buena nota?</div>
+                </div>
+            </div>
+            <div class="vstack gap-2">
+                {% for paso in paneles_config.evaluacion %}
+                <div class="border rounded p-2">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <h3 class="h6 mb-1">{{ paso.titulo }}</h3>
+                            <div class="small mb-1"><strong>Que llenas:</strong> {{ paso.que_es }}</div>
+                            <div class="small text-muted"><strong>Para que sirve:</strong> {{ paso.como_conecta }}</div>
+                            <div class="mt-2">
+                                {% if paso.ok %}
+                                    <span class="chip chip-up">&#10003; {{ paso.detalle }}</span>
+                                {% elif paso.aviso %}
+                                    <span class="chip chip-media">&#9888; {{ paso.detalle }}</span>
+                                {% else %}
+                                    <span class="chip chip-down">Falta configurar</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <a class="btn btn-sm btn-primary sim-go" href="{% url 'pro_simulaciones' %}{{ paso.url }}">Configurar</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="alert alert-info py-2 small mt-3 mb-0">
+                La IA no inventa la nota. Solo compara la respuesta del estudiante con tu rubrica y tus indicadores.
+            </div>
+        </div>
+
+        <div class="module-card p-3 mb-3">
+            <h2 class="h5 mb-2">Opciones avanzadas</h2>
+            <p class="text-muted small mb-3">
+                Estas opciones enriquecen la simulacion, pero no son necesarias para empezar.
+            </p>
+            <div class="vstack gap-2">
+                {% for paso in paneles_config.avanzados %}
+                <div class="border rounded p-2">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <h3 class="h6 mb-1">
+                                {{ paso.titulo }}
+                                <span class="chip chip-soft ms-1">opcional</span>
+                            </h3>
+                            <div class="small mb-1"><strong>Que llenas:</strong> {{ paso.que_es }}</div>
+                            <div class="small text-muted"><strong>Para que sirve:</strong> {{ paso.como_conecta }}</div>
+                            <div class="mt-2">
+                                {% if paso.ok %}
+                                    <span class="chip chip-up">&#10003; {{ paso.detalle }}</span>
+                                {% else %}
+                                    <span class="chip chip-down">Falta configurar</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if paso.es_modal %}
+                            <a class="btn btn-sm btn-outline-primary sim-go" href="#" onclick="abrir_modal('{% url 'pro_simulaciones' %}{{ paso.url }}'); return false;">Abrir</a>
+                        {% else %}
+                            <a class="btn btn-sm btn-outline-primary sim-go" href="{% url 'pro_simulaciones' %}{{ paso.url }}">Abrir</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 
     <div class="col-lg-5">
-        <!-- Como lo vive el estudiante -->
         <div class="module-card p-3 mb-3">
-            <h2 class="h5">Como lo vive el estudiante</h2>
+            <h2 class="h5">Como corre una ronda</h2>
             <ol class="small ps-3 mb-0">
-                <li class="mb-1">Lee la <strong>situacion</strong> de la ronda (el caso real).</li>
-                <li class="mb-1"><strong>Elige una decision sugerida</strong> (paso 7) <em>o escribe la suya</em>, y siempre <strong>la justifica</strong>.</li>
-                <li class="mb-1">La <strong>IA evalua</strong> la respuesta contra tus <strong>conceptos</strong> (paso 6) y devuelve evidencia y retroalimentacion.</li>
-                <li class="mb-1">Sus decisiones <strong>mueven indicadores</strong> (paso 2), consumen <strong>recursos</strong> (paso 4) y pueden activar <strong>eventos</strong> (paso 8).</li>
-                <li>Al final, la <strong>nota</strong> es el promedio de las rondas y se muestra el debriefing.</li>
+                <li class="mb-1">Lee la situacion del caso.</li>
+                <li class="mb-1">Toma una decision y la justifica.</li>
+                <li class="mb-1">La IA compara la respuesta con tu rubrica.</li>
+                <li class="mb-1">El sistema mueve indicadores y aplica cambios si los configuraste.</li>
+                <li>La nota final sale del promedio de las rondas.</li>
             </ol>
-            <div class="alert alert-info py-2 small mt-3 mb-0">
-                El estudiante <strong>no necesita</strong> que existan decisiones sugeridas: puede escribir libremente.
-                Las sugeridas son ejemplos para guiarlo.
-            </div>
         </div>
 
-        <!-- IA / API -->
         {% if simulacion.tipo_simulacion == 'CON_IA_DINAMICA' %}
         <div class="module-card p-3 mb-3">
-            <h2 class="h5">Inteligencia artificial</h2>
-            <p class="small text-muted mb-2">Proveedores disponibles. Si el principal no responde o se queda sin cuota, se usa el siguiente automaticamente.</p>
+            <h2 class="h5">IA</h2>
+            <p class="small text-muted mb-2">Esta informacion es tecnica. Puedes ignorarla si solo estas configurando el caso.</p>
             <div class="vstack gap-2 mb-2">
                 {% for prov in ia_proveedores %}
                 <div class="d-flex justify-content-between align-items-center border rounded p-2">
@@ -103,20 +163,11 @@
             </div>
             {% if ia_orden %}
                 <div class="chip chip-soft mb-2">Orden: {{ ia_orden|join:" &rarr; " }} &rarr; rubrica local</div>
-            {% else %}
-                <div class="chip chip-media mb-2">Sin API: se usa solo la rubrica local del docente</div>
             {% endif %}
-            <p class="small text-muted mb-2">
-                La IA <strong>no inventa la nota</strong>: solo evalua si la respuesta cumple tus conceptos.
-                La nota la calcula SimutaV2 con los pesos que definiste.
-            </p>
-            <div class="section-title">Instrucciones para la IA</div>
-            <p class="small mb-2">{{ simulacion.instrucciones_ia|default:"(sin instrucciones; se usa la rubrica)" }}</p>
-            <a class="btn btn-sm btn-outline-info" href="{% url 'pro_simulaciones' %}?action=conceptos&id={{ simulacion.pk }}">Editar conceptos (rubrica)</a>
+            <p class="small mb-0">{{ simulacion.instrucciones_ia|default:"Sin instrucciones adicionales; se usa la rubrica." }}</p>
         </div>
         {% endif %}
 
-        <!-- Estado / publicacion -->
         <div class="module-card p-3 mb-3">
             <h2 class="h5">Estado</h2>
             <div class="d-flex flex-wrap gap-2">

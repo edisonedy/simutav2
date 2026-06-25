@@ -55,7 +55,10 @@
 
 <div class="mb-3">
     <label class="form-label mb-1">Efecto en los indicadores</label>
-    <div class="form-text mb-2">Positivo sube, negativo baja, en blanco = sin cambio. No escribas código.</div>
+    <div class="form-text mb-2">
+        <strong>Numero positivo:</strong> el indicador sube. <strong>Numero negativo:</strong> el indicador baja.
+        <strong>Cero o vacio:</strong> no cambia. No escribas codigo.
+    </div>
     {% if indicadores_impacto %}
     <div class="row gx-2 small text-muted fw-semibold mb-1">
         <div class="col-6">Indicador</div>
@@ -80,6 +83,32 @@
     {% endif %}
 </div>
 
+<div class="mb-3">
+    <label class="form-label mb-1">Vista previa del impacto</label>
+    <div class="border rounded p-2 small" id="impacto-preview">
+        <div class="mb-2">
+            <strong>Si cumple:</strong>
+            <div data-preview="cumple">
+                {% for nombre, valor in impacto_preview.cumple %}
+                    <span class="chip {% if valor >= 0 %}chip-up{% else %}chip-down{% endif %} me-1">{{ nombre }} {% if valor >= 0 %}+{% endif %}{{ valor|floatformat:"-2" }}</span>
+                {% empty %}
+                    <span class="text-muted">No cambia indicadores.</span>
+                {% endfor %}
+            </div>
+        </div>
+        <div>
+            <strong>Si falta:</strong>
+            <div data-preview="falta">
+                {% for nombre, valor in impacto_preview.falta %}
+                    <span class="chip {% if valor >= 0 %}chip-up{% else %}chip-down{% endif %} me-1">{{ nombre }} {% if valor >= 0 %}+{% endif %}{{ valor|floatformat:"-2" }}</span>
+                {% empty %}
+                    <span class="text-muted">No cambia indicadores.</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="mb-2">
     <label class="form-label">Mensaje si lo cumple (opcional)</label>
     {{ form.retroalimentacion_si_cumple }}
@@ -90,3 +119,44 @@
 </div>
 
 <label class="d-block">{{ form.activo }} <span class="ms-1">Visible / activo</span></label>
+
+<script>
+(() => {
+    const root = document.currentScript.closest('.modal-body') || document;
+    const rows = [...root.querySelectorAll('input[name^="cumple_"], input[name^="falta_"]')];
+    if (!rows.length) return;
+
+    const previewCumple = root.querySelector('[data-preview="cumple"]');
+    const previewFalta = root.querySelector('[data-preview="falta"]');
+
+    function chipHtml(name, value) {
+        const num = Number(value);
+        const cls = num >= 0 ? 'chip-up' : 'chip-down';
+        const sign = num >= 0 ? '+' : '';
+        return `<span class="chip ${cls} me-1">${name} ${sign}${num}</span>`;
+    }
+
+    function renderPreview(kind, target) {
+        const inputs = [...root.querySelectorAll(`input[name^="${kind}_"]`)];
+        const chips = [];
+        for (const input of inputs) {
+            const value = input.value.trim();
+            if (value === '' || Number(value) === 0 || Number.isNaN(Number(value))) continue;
+            const row = input.closest('.row');
+            const name = row ? row.querySelector('.fw-semibold')?.textContent?.trim() : input.name;
+            chips.push(chipHtml(name || input.name, value));
+        }
+        target.innerHTML = chips.length ? chips.join('') : '<span class="text-muted">No cambia indicadores.</span>';
+    }
+
+    function refresh() {
+        renderPreview('cumple', previewCumple);
+        renderPreview('falta', previewFalta);
+    }
+
+    for (const input of rows) {
+        input.addEventListener('input', refresh);
+    }
+    refresh();
+})();
+</script>

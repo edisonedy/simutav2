@@ -66,8 +66,9 @@
 <div class="row g-3">
     <div class="col-lg-4">
         <div class="module-card p-3 mb-3">
-            <h2 class="h5">Puntuacion</h2>
+            <h2 class="h5">Puntaje academico</h2>
             <div class="display-6">{{ intento.puntuacion_final|floatformat:2 }}</div>
+            <div class="small text-muted mb-2">Evalua que tan bien cumpliste la rubrica y los conceptos esperados.</div>
             {% with nivel=intento.nivel_resultado %}
             <p class="mb-0">
                 <strong>Nivel:</strong>
@@ -87,6 +88,29 @@
             </p>
             {% endwith %}
         </div>
+
+        {% if gamificacion.salud is not None %}
+        <div class="module-card p-3 mb-3">
+            <h2 class="h5">Salud del caso</h2>
+            <div class="display-6">{{ gamificacion.salud }}%</div>
+            <div class="small text-muted">Mide como terminaron los indicadores de la situacion, aunque hayas sacado buena nota en la rubrica.</div>
+        </div>
+        {% endif %}
+
+        {% if explicacion_resultado %}
+        <div class="module-card p-3 mb-3">
+            <h2 class="h5">Por que pueden diferir</h2>
+            <p class="mb-2 small">{{ explicacion_resultado.texto }}</p>
+            {% if explicacion_resultado.alertas %}
+                <div class="small text-muted mb-1">Indicadores que todavia requieren atencion:</div>
+                <ul class="mb-0 small">
+                    {% for item in explicacion_resultado.alertas %}
+                        <li>{{ item.nombre }} quedo en {{ item.desempeno }}%</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+        {% endif %}
 
         <div class="module-card p-3 mb-3">
             <h2 class="h5">Estado</h2>

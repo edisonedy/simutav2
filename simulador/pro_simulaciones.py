@@ -46,6 +46,28 @@ def _limit_form_materia(form, profesor):
     return form
 
 
+def _simplificar_form_creacion(form):
+    ocultos = [
+        'plantilla_origen',
+        'perfil_materia_ia',
+        'resultado_aprendizaje',
+        'instrucciones_ia',
+        'nivel_ayuda_ia',
+        'tono_retroalimentacion',
+        'guia_debriefing',
+        'retroalimentacion_base',
+        'modelo_ia',
+        'prompt_version',
+        'esquema_ia_version',
+        'ia_habilitada',
+        'activo',
+    ]
+    for nombre in ocultos:
+        form.fields[nombre].required = False
+        form.fields[nombre].widget = forms.HiddenInput()
+    return form
+
+
 def _hide_simulacion_field(form, simulacion):
     form.fields['simulacion'].initial = simulacion
     form.fields['simulacion'].widget = forms.HiddenInput()
@@ -132,6 +154,69 @@ def _impacto_legible(simulacion, impacto):
     return [(nombres.get(k, k), v) for k, v in (impacto or {}).items()]
 
 
+def _resumen_impacto_form(indicadores_impacto):
+    cumple = []
+    falta = []
+    for item in indicadores_impacto or []:
+        valor_cumple = item.get('cumple')
+        valor_falta = item.get('falta')
+        try:
+            valor_cumple = float(valor_cumple)
+        except (TypeError, ValueError):
+            valor_cumple = 0
+        try:
+            valor_falta = float(valor_falta)
+        except (TypeError, ValueError):
+            valor_falta = 0
+        if valor_cumple:
+            cumple.append((item['nombre'], valor_cumple))
+        if valor_falta:
+            falta.append((item['nombre'], valor_falta))
+    return {'cumple': cumple, 'falta': falta}
+
+
+def _recomendaciones_conceptos(simulacion, conceptos, resumen_rubrica):
+    recomendaciones = []
+    if simulacion.indicadores.filter(activo=True).count() < 3:
+        recomendaciones.append('Agrega al menos 3 indicadores para que la evaluacion tenga mejor contexto.')
+    incompletas = [item for item in resumen_rubrica if not item['completa']]
+    if incompletas:
+        rondas = ', '.join(str(item['ronda']) for item in incompletas)
+        recomendaciones.append(f'Ajusta los pesos en las rondas {rondas} para que cada una sume 100.')
+    sin_criticos = []
+    for item in resumen_rubrica:
+        if item['conceptos'] > 0 and item['criticos'] == 0:
+            sin_criticos.append(str(item['ronda']))
+    if sin_criticos:
+        recomendaciones.append('Marca al menos un concepto critico en las rondas ' + ', '.join(sin_criticos) + '.')
+    if conceptos:
+        conceptos_sin_palabras = [c.nombre for c in conceptos if not str(c.palabras_clave or '').strip()]
+        if conceptos_sin_palabras:
+            recomendaciones.append('Completa palabras clave en: ' + ', '.join(conceptos_sin_palabras[:3]) + '.')
+        conceptos_sin_impacto = []
+        for c in conceptos:
+            if not (c.impacto_si_cumple or c.impacto_si_falta):
+                conceptos_sin_impacto.append(c.nombre)
+        if conceptos_sin_impacto:
+            recomendaciones.append('Revisa si estos conceptos deberian mover indicadores: ' + ', '.join(conceptos_sin_impacto[:3]) + '.')
+        conceptos_faciles = []
+        for c in conceptos:
+            texto, modo = _palabras_y_modo(c.palabras_clave)
+            palabras = [p.strip() for p in texto.split(',') if p.strip()]
+            if modo == 'any' and palabras and len(palabras) <= 3 and all(' ' not in p for p in palabras):
+                conceptos_faciles.append(c.nombre)
+        if len(conceptos_faciles) >= 3:
+            recomendaciones.append(
+                'La rubrica puede estar demasiado facil: varios conceptos se cumplen con una sola palabra o palabra suelta. '
+                'Revisa: ' + ', '.join(conceptos_faciles[:3]) + '.'
+            )
+    else:
+        recomendaciones.append('Agrega conceptos por ronda para que la IA tenga una rubrica que evaluar.')
+    if not recomendaciones:
+        recomendaciones.append('La rubrica actual no muestra observaciones automaticas importantes.')
+    return recomendaciones
+
+
 def _costo_recursos_legible(simulacion, costo):
     nombres = {r.codigo: f'{r.nombre} ({r.unidad})' if r.unidad else r.nombre for r in simulacion.recursos.filter(activo=True)}
     return [(nombres.get(k, k), v) for k, v in (costo or {}).items()]
@@ -165,6 +250,7 @@ def _pasos_configuracion(simulacion, rubrica_completa):
     return [
         {
             'numero': 1, 'titulo': 'Caso y aprendizaje',
+            'fase': 'caso',
             'que_es': 'El contexto, el objetivo y la situacion inicial que leera el estudiante.',
             'como_conecta': 'Es el punto de partida: define el problema real que el estudiante debe resolver.',
             'ok': caso_ok, 'opcional': False, 'aviso': False,
@@ -172,6 +258,7 @@ def _pasos_configuracion(simulacion, rubrica_completa):
         },
         {
             'numero': 2, 'titulo': 'Indicadores',
+            'fase': 'evaluacion',
             'que_es': 'Las variables que se miden (ej. riesgo, viabilidad, calidad). Cada decision las sube o baja.',
             'como_conecta': 'Son la base de todo: las restricciones, los conceptos y las decisiones actuan sobre estos indicadores.',
             'ok': n_ind > 0, 'opcional': False, 'aviso': 0 < n_ind < 3,
@@ -179,14 +266,16 @@ def _pasos_configuracion(simulacion, rubrica_completa):
             'url': url('indicadores'),
         },
         {
-            'numero': 3, 'titulo': 'Opciones dinamicas del caso',
-            'que_es': 'Alternativas reales que el estudiante puede elegir (candidatos, estrategias, rutas, etc.). Cada opcion cambia los indicadores del caso.',
-            'como_conecta': 'Si el estudiante elige una opcion, sus indicadores se actualizan automaticamente. La IA evalua si la eleccion esta justificada.',
+            'numero': 3, 'titulo': 'Opciones que cambian indicadores',
+            'fase': 'consecuencias',
+            'que_es': 'Alternativas predefinidas que modifican indicadores automaticamente.',
+            'como_conecta': 'Usalas solo si quieres que una eleccion concreta cambie numeros sin depender de la redaccion del estudiante.',
             'ok': len((simulacion.parametros or {}).get('opciones_dinamicas', [])) > 0, 'opcional': True, 'aviso': False,
             'detalle': f'{len((simulacion.parametros or {}).get("opciones_dinamicas", []))} opcion(es)', 'url': url('opciones_dinamicas'),
         },
         {
             'numero': 4, 'titulo': 'Datos visibles del caso',
+            'fase': 'caso',
             'que_es': 'Alternativas y matriz que el estudiante ve para comparar (proveedores, candidatos, cotizaciones, criterios).',
             'como_conecta': 'No da nota por si solo: entrega evidencia para que la respuesta pueda justificar bien los conceptos esperados.',
             'ok': n_opc_caso > 0 or n_mat_caso > 0, 'opcional': True, 'aviso': False,
@@ -194,6 +283,7 @@ def _pasos_configuracion(simulacion, rubrica_completa):
         },
         {
             'numero': 5, 'titulo': 'Presupuesto y recursos',
+            'fase': 'consecuencias',
             'que_es': 'Dinero, tiempo o capacidad limitada que se consume con las decisiones.',
             'como_conecta': 'Hace que una buena decision tenga costo: no se puede arreglar todo sin sacrificar recursos.',
             'ok': n_rec > 0, 'opcional': True, 'aviso': False,
@@ -201,13 +291,15 @@ def _pasos_configuracion(simulacion, rubrica_completa):
         },
         {
             'numero': 6, 'titulo': 'Restricciones',
+            'fase': 'evaluacion',
             'que_es': 'Limites que, si el estudiante los incumple, le restan puntos (ej. riesgo <= 75).',
             'como_conecta': 'Usan los indicadores del paso 2: penalizan cuando una decision deja un indicador en zona mala.',
-            'ok': n_res > 0, 'opcional': False, 'aviso': False,
+            'ok': n_res > 0, 'opcional': True, 'aviso': False,
             'detalle': f'{n_res} restriccion(es)', 'url': url('restricciones'),
         },
         {
             'numero': 7, 'titulo': 'Conceptos esperados por ronda (rubrica)',
+            'fase': 'evaluacion',
             'que_es': 'Lo que el estudiante debe mencionar o aplicar en cada ronda. Esto define la NOTA.',
             'como_conecta': 'Es el corazon de la evaluacion: cada concepto tiene un peso y los pesos de cada ronda deben sumar 100.',
             'ok': rubrica_completa, 'opcional': False, 'aviso': n_con > 0 and not rubrica_completa,
@@ -216,6 +308,7 @@ def _pasos_configuracion(simulacion, rubrica_completa):
         },
         {
             'numero': 8, 'titulo': 'Decisiones sugeridas',
+            'fase': 'consecuencias',
             'que_es': 'Opciones reales que el estudiante puede elegir, cada una con su efecto en los indicadores.',
             'como_conecta': 'Al elegir una, sus numeros cambian. El estudiante igual puede escribir su propia decision.',
             'ok': n_acc > 0, 'opcional': True, 'aviso': False,
@@ -223,12 +316,65 @@ def _pasos_configuracion(simulacion, rubrica_completa):
         },
         {
             'numero': 9, 'titulo': 'Eventos dinamicos',
+            'fase': 'consecuencias',
             'que_es': 'Sorpresas que se disparan por ronda o por estado de indicadores.',
             'como_conecta': 'Despues de una decision, la empresa puede reaccionar y mover indicadores con un mensaje visible.',
             'ok': n_evt > 0, 'opcional': True, 'aviso': False,
             'detalle': f'{n_evt} evento(s)', 'url': url('eventos'),
         },
     ]
+
+
+def _fases_configuracion(pasos):
+    orden = [
+        {
+            'clave': 'caso',
+            'numero': 1,
+            'titulo': 'Caso',
+            'subtitulo': 'Define el problema que el estudiante va a resolver.',
+            'pregunta': 'Que problema va a leer y con que datos debe decidir?',
+        },
+        {
+            'clave': 'evaluacion',
+            'numero': 2,
+            'titulo': 'Evaluacion',
+            'subtitulo': 'Define que revisa la IA y como se calcula la nota.',
+            'pregunta': 'Que debe justificar el estudiante para obtener buena nota?',
+        },
+        {
+            'clave': 'consecuencias',
+            'numero': 3,
+            'titulo': 'Consecuencias',
+            'subtitulo': 'Define que cambia despues de cada decision.',
+            'pregunta': 'Que indicadores, recursos o eventos cambian en la siguiente ronda?',
+        },
+    ]
+    por_fase = {fase['clave']: [] for fase in orden}
+    for paso in pasos:
+        por_fase.setdefault(paso.get('fase'), []).append(paso)
+    fases = []
+    for fase in orden:
+        items = por_fase.get(fase['clave'], [])
+        fase = dict(fase)
+        fase['items'] = items
+        fase['ok'] = all(item['ok'] or item.get('opcional') for item in items)
+        fases.append(fase)
+    return fases
+
+
+def _paneles_configuracion(pasos):
+    esenciales = []
+    avanzados = []
+    for paso in pasos:
+        if paso['numero'] in [1, 2, 7]:
+            esenciales.append(paso)
+        else:
+            avanzados.append(paso)
+    return {
+        'caso': [paso for paso in esenciales if paso['numero'] == 1],
+        'evaluacion': [paso for paso in esenciales if paso['numero'] in [2, 7]],
+        'avanzados': avanzados,
+    }
 
 
 def _limit_decision_form(form, simulacion, escenario=None):
@@ -413,6 +559,7 @@ def view(request):
 
         if action == 'add':
             form = _limit_form_materia(SimulacionForm(request.POST), request.user)
+            _simplificar_form_creacion(form)
             if form.is_valid():
                 simulacion = form.save(commit=False)
                 simulacion.profesor = request.user
@@ -424,6 +571,7 @@ def view(request):
         elif action == 'edit':
             simulacion = _get_simulacion_profesor(request.user, _request_id(request))
             form = _limit_form_materia(SimulacionForm(request.POST, instance=simulacion), request.user)
+            _simplificar_form_creacion(form)
             if form.is_valid():
                 form.save()
                 return ok_json(mensaje='Simulacion actualizada correctamente.')
@@ -453,18 +601,12 @@ def view(request):
                     errors.append('Debe ingresar un contexto.')
                 if not simulacion.objetivo:
                     errors.append('Debe ingresar un objetivo.')
-                if not simulacion.resultado_aprendizaje:
-                    errors.append('Debe ingresar un resultado de aprendizaje.')
                 if not simulacion.situacion_inicial:
                     errors.append('Debe ingresar una situacion inicial.')
-                if not simulacion.instrucciones_ia:
-                    errors.append('Debe ingresar instrucciones IA.')
                 if simulacion.maximo_decisiones <= 0:
                     errors.append('El maximo de decisiones debe ser mayor a 0.')
                 if simulacion.indicadores.filter(activo=True).count() < 3:
                     errors.append('Debe tener al menos 3 indicadores activos.')
-                if simulacion.restricciones.filter(activo=True).count() < 1:
-                    errors.append('Debe tener al menos 1 restriccion activa.')
                 if simulacion.conceptos_esperados.filter(activo=True).count() < 1:
                     errors.append('Debe configurar conceptos esperados para evaluar la simulacion.')
                 errors.extend(_errores_rubrica_dinamica(simulacion))
@@ -817,6 +959,7 @@ def view(request):
             return redirect('pro_simulaciones')
         form = SimulacionForm()
         _limit_form_materia(form, request.user)
+        _simplificar_form_creacion(form)
         data['form'] = form
         return render(request, 'simulador/pro_simulaciones/add.html', data)
 
@@ -826,6 +969,7 @@ def view(request):
         simulacion = _get_simulacion_profesor(request.user, request.GET.get('id'))
         form = SimulacionForm(instance=simulacion)
         _limit_form_materia(form, request.user)
+        _simplificar_form_creacion(form)
         data['form'] = form
         data['simulacion'] = simulacion
         return render(request, 'simulador/pro_simulaciones/edit.html', data)
@@ -865,7 +1009,10 @@ def view(request):
                 'modelo': getattr(settings, 'DEEPSEEK_MODEL', ''),
             },
         ]
-        data['pasos_config'] = _pasos_configuracion(simulacion, data['rubrica_completa'])
+        pasos_config = _pasos_configuracion(simulacion, data['rubrica_completa'])
+        data['pasos_config'] = pasos_config
+        data['fases_config'] = _fases_configuracion(pasos_config)
+        data['paneles_config'] = _paneles_configuracion(pasos_config)
         return render(request, 'simulador/pro_simulaciones/configuracion.html', data)
 
     elif action == 'indicadores':
@@ -930,6 +1077,7 @@ def view(request):
         data['escenario_id'] = escenario_id or ''
         data['escenarios'] = EscenarioSimulacion.objects.filter(simulacion=simulacion, activo=True)
         data['resumen_rubrica'] = _resumen_rubrica(simulacion)
+        data['recomendaciones'] = _recomendaciones_conceptos(simulacion, conceptos, data['resumen_rubrica'])
         return render(request, 'simulador/pro_simulaciones/conceptos.html', data)
 
     elif action == 'add_concepto':
@@ -939,6 +1087,7 @@ def view(request):
         data['simulacion'] = simulacion
         data['form'] = form
         data['indicadores_impacto'] = _impacto_indicadores_form(simulacion)
+        data['impacto_preview'] = _resumen_impacto_form(data['indicadores_impacto'])
         data['palabras_texto'] = ''
         data['modo_palabras'] = 'any'
         return render(request, 'simulador/pro_simulaciones/add_concepto.html', data)
@@ -955,6 +1104,7 @@ def view(request):
         data['indicadores_impacto'] = _impacto_indicadores_form(
             simulacion, concepto.impacto_si_cumple, concepto.impacto_si_falta,
         )
+        data['impacto_preview'] = _resumen_impacto_form(data['indicadores_impacto'])
         data['palabras_texto'] = palabras_texto
         data['modo_palabras'] = modo_palabras
         return render(request, 'simulador/pro_simulaciones/edit_concepto.html', data)

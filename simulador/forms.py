@@ -25,6 +25,38 @@ from .models import (
 
 
 class SimulacionForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['materia_malla'].label = 'Materia'
+        self.fields['materia_malla'].help_text = 'Elige la materia donde se publicara la simulacion.'
+        self.fields['perfil_materia_ia'].label = 'Perfil IA de la materia'
+        self.fields['perfil_materia_ia'].help_text = 'Configuracion avanzada de apoyo para la materia.'
+        self.fields['tipo_simulacion'].label = 'Modo de simulacion'
+        self.fields['tipo_simulacion'].help_text = 'Elige si la simulacion usara IA para evaluar respuestas o si trabajara como arbol de decisiones.'
+        self.fields['titulo'].label = 'Titulo del caso'
+        self.fields['titulo'].help_text = 'Ejemplo: Compra de computadoras para laboratorio.'
+        self.fields['tema'].label = 'Tema'
+        self.fields['tema'].help_text = 'Ejemplo: Evaluacion de proveedores, presupuesto y riesgo.'
+        self.fields['nivel_dificultad'].label = 'Nivel de dificultad'
+        self.fields['maximo_decisiones'].label = 'Rondas que tendra el caso'
+        self.fields['maximo_decisiones'].help_text = 'Cuantas decisiones o etapas tendra la simulacion.'
+        self.fields['contexto'].label = 'Contexto del caso'
+        self.fields['contexto'].help_text = 'Cuenta el problema general que vivira el estudiante.'
+        self.fields['objetivo'].label = 'Objetivo del estudiante'
+        self.fields['objetivo'].help_text = 'Di que debe lograr el estudiante al final.'
+        self.fields['resultado_aprendizaje'].label = 'Resultado de aprendizaje'
+        self.fields['situacion_inicial'].label = 'Situacion inicial'
+        self.fields['situacion_inicial'].help_text = 'Primera situacion que vera el estudiante antes de tomar la decision.'
+        self.fields['instrucciones_ia'].label = 'Instrucciones para la IA'
+        self.fields['nivel_ayuda_ia'].label = 'Nivel de ayuda de la IA'
+        self.fields['tono_retroalimentacion'].label = 'Tono de la retroalimentacion'
+        self.fields['guia_debriefing'].label = 'Guia de cierre'
+        self.fields['retroalimentacion_base'].label = 'Retroalimentacion base'
+        self.fields['modelo_ia'].label = 'Modelo de IA'
+        self.fields['prompt_version'].label = 'Version del prompt'
+        self.fields['esquema_ia_version'].label = 'Version del esquema de IA'
+        self.fields['ia_habilitada'].label = 'IA habilitada'
+        self.fields['activo'].label = 'Activo'
     class Meta:
         model = Simulacion
         fields = [

@@ -428,14 +428,46 @@ def _indicadores_finales(intento):
         valor = estado.get(ind.codigo)
         if not isinstance(valor, (int, float)):
             continue
+        desempeno = _salud_indicadores_item(ind, float(valor))
         indicadores.append({
             'codigo': ind.codigo,
             'nombre': ind.nombre,
             'valor': round(float(valor), 2),
             'unidad': ind.unidad,
             'critico': ind.es_critico,
+            'desempeno': round(desempeno, 0),
         })
     return indicadores
+
+
+def _salud_indicadores_item(indicador, valor):
+    minimo, maximo = float(indicador.valor_minimo), float(indicador.valor_maximo)
+    rango = maximo - minimo or 1
+    pct = max(0.0, min(100.0, (float(valor) - minimo) / rango * 100))
+    return (100 - pct) if indicador.direccion_optima == indicador.DIRECCION_BAJO else pct
+
+
+def _explicacion_resultado(intento):
+    puntaje = float(intento.puntuacion_final or 0)
+    salud = _salud_indicadores(intento)
+    indicadores = _indicadores_finales(intento)
+    alertas = [i for i in indicadores if i['desempeno'] < 70]
+    if salud is None:
+        salud = 0
+    if puntaje >= 90 and salud < 80:
+        texto = (
+            'Sacaste buena nota academica porque tu respuesta cumplio la rubrica, '
+            'pero la salud del caso no depende solo de la nota: tambien refleja como quedaron los indicadores.'
+        )
+    else:
+        texto = (
+            'El puntaje academico mide que tan bien cumpliste la rubrica. '
+            'La salud del caso mide como terminaron los indicadores de la situacion.'
+        )
+    return {
+        'texto': texto,
+        'alertas': alertas[:3],
+    }
 
 
 def _modo_ronda(simulacion, numero, hay_acciones):
@@ -654,6 +686,7 @@ def view(request):
             data['gamificacion'] = _calcular_gamificacion(intento)
             data['comparacion_reintento'] = _comparacion_reintento(intento)
             data['indicadores_finales'] = _indicadores_finales(intento)
+            data['explicacion_resultado'] = _explicacion_resultado(intento)
             return render(request, 'simulador/alu_simulaciones/resultado.html', data)
 
         elif action == 'carrera':
