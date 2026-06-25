@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load simulador_extras %}
 {% block title %}Config: {{ simulacion.titulo }}{% endblock %}
 {% block content %}
 <div class="mb-3">
@@ -146,8 +147,8 @@
                             <td>{{ c.peso }}</td>
                             <td>{% if c.es_critico %}<span class="badge text-bg-danger">Critico</span>{% else %}-{% endif %}</td>
                             <td style="max-width:250px"><code style="font-size:.75rem">{{ c.palabras_clave|truncatechars:200 }}</code></td>
-                            <td><code style="font-size:.75rem">{{ c.impacto_si_cumple }}</code></td>
-                            <td><code style="font-size:.75rem">{{ c.impacto_si_falta }}</code></td>
+                            <td><small>{{ c.impacto_si_cumple|dict_legible }}</small></td>
+                            <td><small>{{ c.impacto_si_falta|dict_legible }}</small></td>
                             <td><small>{{ c.retroalimentacion_si_cumple|default:"-"|truncatechars:60 }}</small></td>
                             <td><small>{{ c.retroalimentacion_si_falta|default:"-"|truncatechars:60 }}</small></td>
                         </tr>
@@ -192,7 +193,7 @@
                                     <tr>
                                         <td>{{ d.texto }}</td>
                                         <td><small>{{ d.descripcion|default:"-"|truncatechars:100 }}</small></td>
-                                        <td><code style="font-size:.75rem">{{ d.impacto }}</code></td>
+                                        <td><small>{{ d.impacto|dict_legible }}</small></td>
                                         <td>{{ d.puntaje_base }}</td>
                                         <td>{{ d.siguiente_escenario.titulo|default:"-" }}</td>
                                     </tr>
@@ -209,6 +210,9 @@
 {% endif %}
 
 <p class="text-muted small">
-    <strong>Parametros adicionales:</strong> <code>{{ simulacion.parametros }}</code>
+    <strong>Caso:</strong>
+    {% if simulacion.parametros.empresa %}{{ simulacion.parametros.empresa }}{% else %}—{% endif %}
+    {% if simulacion.parametros.area %} · {{ simulacion.parametros.area }}{% endif %}
+    {% if simulacion.parametros.rondas %} · {{ simulacion.parametros.rondas|length }} ronda(s) configurada(s){% endif %}
 </p>
 {% endblock %}

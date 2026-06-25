@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load simulador_extras %}
 {% block title %}Decisiones - {{ escenario.titulo }}{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -37,7 +38,7 @@
                             <div class="fw-semibold">{{ decision.texto }}</div>
                             <div class="text-muted small">{{ decision.descripcion }}</div>
                         </td>
-                        <td><code>{{ decision.impacto }}</code></td>
+                        <td class="small">{{ decision.impacto|dict_legible }}</td>
                         <td>{{ decision.puntaje_base }}</td>
                         <td>{{ decision.siguiente_escenario|default:"Finaliza" }}</td>
                     </tr>

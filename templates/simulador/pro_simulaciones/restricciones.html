@@ -5,6 +5,11 @@
     <div><div class="section-title">Configuracion</div><h1 class="h3 mb-0">Restricciones</h1><div class="text-muted">{{ simulacion.titulo }}</div></div>
     <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}">← Volver</a>
 </div>
+<div class="alert alert-info py-2 small">
+    <strong>¿Para qué sirven?</strong> Son <strong>límites que no se deben pasar</strong> (ej. "el riesgo no debe superar 75").
+    Si la decisión del estudiante deja un indicador en zona mala, <strong>le resta puntos</strong> según la penalización que pongas.
+    Sirven para enseñar que las decisiones tienen consecuencias.
+</div>
 <div class="row g-3">
     <div class="col-lg-4">
         <div class="module-card p-3">

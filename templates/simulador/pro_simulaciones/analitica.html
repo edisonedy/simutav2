@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Analitica - {{ simulacion.titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <div class="section-title">Profesor</div>
+        <h1 class="h3 mb-0">Analitica del caso</h1>
+        <div class="text-muted">{{ simulacion.titulo }}</div>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}?action=configuracion&id={{ simulacion.pk }}">&larr; Volver</a>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="module-card metric-card p-3"><div class="section-title">Intentos</div><div class="metric-value">{{ analitica.total_intentos }}</div></div></div>
+    <div class="col-md-3"><div class="module-card metric-card p-3"><div class="section-title">Finalizados</div><div class="metric-value">{{ analitica.finalizados }}</div></div></div>
+    <div class="col-md-3"><div class="module-card metric-card p-3"><div class="section-title">Promedio</div><div class="metric-value">{{ analitica.promedio|default:"-" }}</div></div></div>
+    <div class="col-md-3"><div class="module-card metric-card p-3"><div class="section-title">Alertas</div><div class="metric-value">{{ analitica.alertas_total }}</div></div></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="module-card p-3 table-responsive">
+            <h2 class="h5">Promedio por ronda</h2>
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Ronda</th><th>Intentos</th><th>Promedio</th></tr></thead>
+                <tbody>
+                {% for item in analitica.promedio_rondas %}
+                    <tr>
+                        <td>{{ item.pasos__numero }}</td>
+                        <td>{{ item.total }}</td>
+                        <td>{{ item.promedio|floatformat:2 }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="3" class="text-muted">Sin pasos validos.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="module-card p-3 table-responsive">
+            <h2 class="h5">Conceptos que mas fallan</h2>
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Concepto</th><th>Fallos</th><th>Parciales</th></tr></thead>
+                <tbody>
+                {% for item in analitica.conceptos_fallados %}
+                    <tr><td>{{ item.nombre }}</td><td>{{ item.fallos }}</td><td>{{ item.parciales }}</td></tr>
+                {% empty %}
+                    <tr><td colspan="3" class="text-muted">Aun no hay evidencia suficiente.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

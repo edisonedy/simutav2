@@ -5,7 +5,10 @@
     <div><div class="section-title">Configuracion</div><h1 class="h3 mb-0">Condiciones de exito</h1><div class="text-muted">{{ simulacion.titulo }}</div></div>
     <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}">← Volver</a>
 </div>
-<p class="text-muted">Condiciones que determinan el exito de la simulacion y otorgan bonificacion.</p>
+<div class="alert alert-info py-2 small">
+    <strong>¿Para qué sirven?</strong> Son <strong>metas opcionales</strong>: si al final un indicador llega a un valor objetivo
+    (ej. "riesgo ≤ 35"), el estudiante gana una <strong>bonificación</strong> extra. Sirven para premiar un muy buen desempeño.
+</div>
 <div class="row g-3">
     <div class="col-lg-4">
         <div class="module-card p-3">

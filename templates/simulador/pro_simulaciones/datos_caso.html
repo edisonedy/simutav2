@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Datos del caso - {{ simulacion.titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <div class="section-title">Configuracion</div>
+        <h1 class="h3 mb-0">Datos visibles del caso</h1>
+        <div class="text-muted">{{ simulacion.titulo }}</div>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}?action=configuracion&id={{ simulacion.pk }}">&larr; Volver</a>
+</div>
+
+<div class="alert alert-info py-2 small">
+    Estos datos son la evidencia que ve el estudiante para decidir: proveedores, candidatos, cotizaciones o alternativas.
+    <strong>No reemplazan la rubrica</strong>; la nota sigue saliendo de los conceptos esperados.
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-4">
+        <div class="module-card p-3">
+            <h2 class="h5">Nuevo criterio visible</h2>
+            <form method="post" action="{% url 'pro_simulaciones' %}?action=add_matriz_caso&id={{ simulacion.pk }}"
+                  onsubmit="return enviar_formulario(this)">
+                {% csrf_token %}
+                {{ form_matriz.as_p }}
+                <button class="btn btn-primary">Guardar criterio</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="module-card p-3 table-responsive">
+            <h2 class="h5">Matriz visible{% if suma_matriz %} ({{ suma_matriz }}%){% endif %}</h2>
+            <table class="table table-hover align-middle">
+                <thead><tr><th>Criterio</th><th>Peso</th><th>Que evalua</th><th>Orden</th><th></th></tr></thead>
+                <tbody>
+                {% for item in matriz %}
+                    <tr class="{% if not item.activo %}table-secondary{% endif %}">
+                        <td>{{ item.criterio }}</td>
+                        <td>{{ item.peso }}%</td>
+                        <td>{{ item.evalua }}</td>
+                        <td>{{ item.orden }}</td>
+                        <td>
+                            {% if item.activo %}
+                            <form method="post" action="{% url 'pro_simulaciones' %}?action=delete_matriz_caso&id={{ item.pk }}"
+                                  onsubmit="return enviar_formulario(this)">
+                                {% csrf_token %}
+                                <button class="btn btn-outline-dark btn-sm">&times;</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="text-muted">Sin matriz visible configurada.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="module-card p-3">
+            <h2 class="h5">Nueva alternativa</h2>
+            <form method="post" action="{% url 'pro_simulaciones' %}?action=add_opcion_caso&id={{ simulacion.pk }}"
+                  onsubmit="return enviar_formulario(this)">
+                {% csrf_token %}
+                {{ form_opcion.as_p }}
+                <button class="btn btn-primary">Guardar alternativa</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="module-card p-3 table-responsive">
+            <h2 class="h5">Alternativas visibles</h2>
+            <table class="table table-hover align-middle">
+                <thead><tr><th>Nombre</th><th>Valor</th><th>Fortaleza</th><th>Riesgo</th><th>Resultados</th><th></th></tr></thead>
+                <tbody>
+                {% for item in opciones_caso %}
+                    <tr class="{% if not item.activo %}table-secondary{% endif %}">
+                        <td>
+                            <div class="fw-semibold">{{ item.nombre }}</div>
+                            <div class="text-muted small">{{ item.subtitulo }}</div>
+                        </td>
+                        <td>{{ item.valor_referencia|default:"-" }}</td>
+                        <td>{{ item.fortaleza }}</td>
+                        <td>{{ item.riesgo }}</td>
+                        <td>
+                            {% for r in item.resultados %}
+                                <div class="small"><strong>{{ r.criterio|default:"Dato" }}:</strong> {{ r.valor }}</div>
+                            {% empty %}
+                                <span class="text-muted small">Sin resultados</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% if item.activo %}
+                            <form method="post" action="{% url 'pro_simulaciones' %}?action=delete_opcion_caso&id={{ item.pk }}"
+                                  onsubmit="return enviar_formulario(this)">
+                                {% csrf_token %}
+                                <button class="btn btn-outline-dark btn-sm">&times;</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="text-muted">Sin alternativas visibles configuradas.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

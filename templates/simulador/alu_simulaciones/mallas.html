@@ -6,8 +6,8 @@
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
             <div>
                 <div class="section-title text-light-emphasis">Panel del estudiante</div>
-                <h1 class="h3 mb-1 text-white">Elige tu malla</h1>
-                <p class="mb-2 hero-sub">Selecciona una carrera/malla para ver sus materias y misiones.</p>
+                <h1 class="h3 mb-1 text-white">¡Hola, {{ user.get_full_name|default:user.username }}! 👋</h1>
+                <p class="mb-2 hero-sub">Elige tu malla para ver sus materias y empezar una misión.</p>
                 <a class="btn btn-sm btn-light" href="?action=carrera">🏅 Mi carrera</a>
             </div>
         </div>

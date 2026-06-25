@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Eventos dinamicos - {{ simulacion.titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <div class="section-title">Configuracion</div>
+        <h1 class="h3 mb-0">Eventos dinamicos</h1>
+        <div class="text-muted">{{ simulacion.titulo }}</div>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}?action=configuracion&id={{ simulacion.pk }}">&larr; Volver</a>
+</div>
+
+<div class="alert alert-info py-2 small">
+    Un evento es una sorpresa del caso: se dispara en una ronda concreta o cuando un indicador cumple una condicion.
+    Al dispararse muestra un mensaje al estudiante y mueve los indicadores configurados. No necesitas escribir JSON.
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="module-card p-3">
+            <h2 class="h5 mb-3">Nuevo evento</h2>
+            <form method="post" action="{% url 'pro_simulaciones' %}?action=add_evento&id={{ simulacion.pk }}"
+                  onsubmit="return enviar_formulario(this)">
+                {% csrf_token %}
+                {{ form.simulacion }}
+                <div class="mb-3">
+                    <label class="form-label" for="id_nombre">Nombre interno</label>
+                    {{ form.nombre }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="id_mensaje">Mensaje para el estudiante</label>
+                    {{ form.mensaje }}
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-4">
+                        <label class="form-label" for="id_ronda">Ronda</label>
+                        {{ form.ronda }}
+                        <div class="form-text">Vacio = cualquier ronda</div>
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label" for="id_prioridad">Prioridad</label>
+                        {{ form.prioridad }}
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label d-block">Activo</label>
+                        <label class="small">{{ form.activo }} Visible</label>
+                    </div>
+                </div>
+
+                <div class="mb-3 p-2 border rounded">
+                    <div class="fw-semibold mb-2">Condicion opcional</div>
+                    <div class="row g-2">
+                        <div class="col-sm-6">
+                            <label class="form-label" for="id_codigo_indicador_condicion">Indicador</label>
+                            {{ form.codigo_indicador_condicion }}
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label" for="id_operador_condicion">Operador</label>
+                            {{ form.operador_condicion }}
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label" for="id_valor_condicion">Valor</label>
+                            {{ form.valor_condicion }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label mb-1">Efecto sobre indicadores</label>
+                    <div class="text-muted small mb-2">Positivo sube, negativo baja. En blanco = sin cambio.</div>
+                    {% for ind in indicadores %}
+                    <div class="impacto-row">
+                        <div class="impacto-label">
+                            <span class="fw-semibold">{{ ind.nombre }}</span>
+                            <span class="text-muted small d-block">
+                                {% if ind.direccion_optima == 'BAJO' %}mejor cuando es bajo{% else %}mejor cuando es alto{% endif %}
+                            </span>
+                        </div>
+                        <input type="number" step="0.01" class="impacto-input" name="efecto_{{ ind.codigo }}"
+                               placeholder="0" inputmode="decimal">
+                    </div>
+                    {% empty %}
+                    <div class="text-muted small">Esta simulacion aun no tiene indicadores configurados.</div>
+                    {% endfor %}
+                </div>
+
+                <button class="btn btn-primary mt-2">Guardar evento</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="module-card p-3">
+            <h2 class="h5 mb-3">Eventos actuales</h2>
+            <div class="vstack gap-2">
+            {% for item in eventos %}
+                <div class="decision-item">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <div class="fw-semibold">{{ item.nombre }}</div>
+                            <div class="text-muted small">{{ item.mensaje }}</div>
+                            <div class="sim-tags mt-2">
+                                <span class="chip chip-soft">Ronda: {{ item.ronda|default:"cualquiera" }}</span>
+                                <span class="chip chip-soft">{{ item.condicion_legible }}</span>
+                                <span class="chip chip-soft">Prioridad {{ item.prioridad }}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-1">
+                            <a class="btn btn-outline-info btn-sm" href="#"
+                               onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=edit_evento&id={{ item.pk }}'); return false;">Editar</a>
+                            <form method="post" action="{% url 'pro_simulaciones' %}?action=delete_evento&id={{ item.pk }}"
+                                  onsubmit="return enviar_formulario(this)">
+                                {% csrf_token %}
+                                <button class="btn btn-outline-dark btn-sm" title="Desactivar">&times;</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="sim-tags mt-2">
+                        {% for nombre, valor in item.efecto_legible %}
+                            <span class="chip {% if valor >= 0 %}chip-up{% else %}chip-down{% endif %}">
+                                {{ nombre }} {% if valor >= 0 %}+{% endif %}{{ valor }}
+                            </span>
+                        {% empty %}
+                            <span class="chip chip-soft">Sin efecto en indicadores</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-muted mb-0">Aun no hay eventos. Crea el primero con el formulario.</p>
+            {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

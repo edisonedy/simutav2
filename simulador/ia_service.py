@@ -465,7 +465,8 @@ class IAServiceDeepSeek(IAServiceLLM):
             ],
             response_format={'type': 'json_object'},
             temperature=0.4,
-            timeout=getattr(settings, 'DEEPSEEK_TIMEOUT', 90),
+            max_tokens=8000,
+            timeout=getattr(settings, 'DEEPSEEK_TIMEOUT', 120),
         )
         return json.loads(respuesta.choices[0].message.content)
 
@@ -564,8 +565,9 @@ def _prompt_generacion_caso(materia_nombre, nivel):
         '  "acciones": [ {"texto":"decision de ejemplo","descripcion":"consecuencia","impacto":{"codigo_indicador":N}} ]\n'
         "}\n\n"
         "Reglas: 5 a 6 indicadores propios de la materia; en cada ronda 3-4 conceptos cuyos pesos SUMEN 100; "
-        "los impactos deben usar SOLO los codigos de los indicadores definidos; incluye 3-4 acciones (una mala/riesgosa); "
-        "palabras_clave separadas por comas (tecnicas de la materia). Todo en espanol.\n\n"
+        "los impactos deben usar SOLO los codigos de los indicadores definidos; incluye 4 a 5 acciones (decisiones de "
+        "ejemplo) variadas, con AL MENOS una mala/riesgosa; palabras_clave separadas por comas (tecnicas de la materia). "
+        "Todo en espanol.\n\n"
         f"Materia: {materia_nombre}\nNivel: {nivel}\n"
     )
 
