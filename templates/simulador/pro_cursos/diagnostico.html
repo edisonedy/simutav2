@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Diagnóstico - {{ asignacion.titulo|default:asignacion.simulacion.titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+        <div class="page-kicker"><a href="{% url 'pro_cursos' %}?action=notas&pk={{ asignacion.pk }}" class="text-decoration-none">Notas</a> / Diagnóstico</div>
+        <h1 class="h3">{{ asignacion.titulo|default:asignacion.simulacion.titulo }}</h1>
+        <div class="text-muted">Intentos analizados: {{ diagnostico.intentos_analizados }}</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-primary" href="{% url 'pro_cursos' %}?action=diagnostico_export&pk={{ asignacion.pk }}">Exportar CSV</a>
+        <a class="btn btn-outline-secondary" href="{% url 'pro_cursos' %}?action=seccion&pk={{ asignacion.seccion.pk }}">Volver al curso</a>
+    </div>
+</div>
+
+{% if diagnostico.recomendaciones %}
+<div class="module-card p-3 mb-3">
+    <h2 class="h6 mb-2">Qué reforzar en clase</h2>
+    <ul class="mb-0">
+        {% for r in diagnostico.recomendaciones %}
+            <li>{{ r }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if diagnostico.auditoria_caso %}
+<div class="module-card p-3 mb-3">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+            <h2 class="h6 mb-1">Calidad del caso</h2>
+            <div class="text-muted small">Revisa si la simulación tiene suficiente estructura pedagógica.</div>
+        </div>
+        <span class="badge {% if diagnostico.auditoria_caso.puntaje >= 80 %}text-bg-success{% elif diagnostico.auditoria_caso.puntaje >= 55 %}text-bg-warning{% else %}text-bg-danger{% endif %}">
+            {{ diagnostico.auditoria_caso.nivel }} · {{ diagnostico.auditoria_caso.puntaje }}%
+        </span>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-2 small">
+        <span class="chip chip-soft">Indicadores: {{ diagnostico.auditoria_caso.indicadores }}</span>
+        <span class="chip chip-soft">Conceptos: {{ diagnostico.auditoria_caso.conceptos }}</span>
+        <span class="chip chip-soft">Decisiones: {{ diagnostico.auditoria_caso.acciones }}</span>
+        <span class="chip chip-soft">Trade-offs: {{ diagnostico.auditoria_caso.acciones_tradeoff }}</span>
+        <span class="chip chip-soft">Restricciones: {{ diagnostico.auditoria_caso.restricciones }}</span>
+        <span class="chip chip-soft">Recursos: {{ diagnostico.auditoria_caso.recursos }}</span>
+        <span class="chip chip-soft">Eventos: {{ diagnostico.auditoria_caso.eventos }}</span>
+    </div>
+    {% if diagnostico.auditoria_caso.hallazgos %}
+    <ul class="small mt-2 mb-0">
+        {% for h in diagnostico.auditoria_caso.hallazgos %}
+            <li>{{ h }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="module-card p-3 h-100">
+            <h2 class="h6 mb-3">Conceptos faltantes</h2>
+            {% include "simulador/pro_cursos/_diagnostico_lista.html" with items=diagnostico.conceptos_faltantes empty="Sin conceptos faltantes registrados." %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="module-card p-3 h-100">
+            <h2 class="h6 mb-3">Pronósticos fallidos</h2>
+            {% include "simulador/pro_cursos/_diagnostico_lista.html" with items=diagnostico.pronosticos_fallidos empty="Sin fallos de pronóstico registrados." %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="module-card p-3 h-100">
+            <h2 class="h6 mb-3">Sacrificios frecuentes</h2>
+            {% include "simulador/pro_cursos/_diagnostico_lista.html" with items=diagnostico.tradeoffs_sacrificados empty="Sin trade-offs registrados." %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="module-card p-3 h-100">
+            <h2 class="h6 mb-3">Indicadores deteriorados</h2>
+            {% include "simulador/pro_cursos/_diagnostico_lista.html" with items=diagnostico.indicadores_danados empty="Sin indicadores deteriorados registrados." %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="module-card p-3 h-100">
+            <h2 class="h6 mb-3">Respuestas inválidas</h2>
+            {% include "simulador/pro_cursos/_diagnostico_lista.html" with items=diagnostico.respuestas_invalidas empty="Sin respuestas inválidas." %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="module-card p-3 h-100">
+            <h2 class="h6 mb-3">Reflexión pendiente</h2>
+            {% include "simulador/pro_cursos/_diagnostico_lista.html" with items=diagnostico.sin_reflexion empty="Todos reflexionaron en sus pasos válidos." %}
+        </div>
+    </div>
+</div>
+
+<div class="module-card p-3 mt-3">
+    <h2 class="h6 mb-3">Estudiantes en riesgo</h2>
+    {% if diagnostico.estudiantes_riesgo %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Estudiante</th><th>Motivo</th><th class="text-end">Nota</th></tr></thead>
+            <tbody>
+            {% for r in diagnostico.estudiantes_riesgo %}
+                <tr>
+                    <td>{{ r.estudiante.get_full_name|default:r.estudiante.username }}</td>
+                    <td>{{ r.motivo }}</td>
+                    <td class="text-end">{% if r.nota is None %}-{% else %}{{ r.nota }}{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p class="text-muted mb-0">Sin estudiantes en riesgo para esta tarea.</p>
+    {% endif %}
+</div>
+{% endblock %}

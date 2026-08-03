@@ -1,28 +1,42 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
-    <h1 class="h3">Materias</h1>
-    <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_materias' %}?action=add')">Nueva materia</button>
+<div class="page-head">
+    <div>
+        <div class="page-kicker">Academico</div>
+        <h1 class="h3">Materias <span class="count-pill">{{ list|length }}</span></h1>
+    </div>
+    <div class="page-head-actions">
+        <input type="search" class="table-search" placeholder="Buscar materia..." oninput="filtrar_tabla(this, 'tabla-materias')">
+        <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_materias' %}?action=add')">+ Nueva materia</button>
+    </div>
 </div>
-<div class="module-card p-3 table-responsive">
-    <table class="table table-hover align-middle">
-        <thead><tr><th>Codigo</th><th>Nombre</th><th>Institucion</th><th>Creditos</th><th>Horas</th><th>Acciones</th></tr></thead>
+<div class="module-card data-card table-responsive">
+    <table class="table table-hover align-middle" id="tabla-materias">
+        <thead><tr><th>Codigo</th><th>Nombre</th><th>Institucion</th><th>Creditos</th><th>Horas</th><th class="text-end">Acciones</th></tr></thead>
         <tbody>
         {% for item in list %}
-            <tr>
-                <td>{{ item.codigo }}</td>
-                <td>{{ item.nombre }}</td>
+            <tr data-row>
+                <td class="cell-code">{{ item.codigo }}</td>
+                <td class="cell-strong">{{ item.nombre }}</td>
                 <td>{{ item.institucion }}</td>
-                <td>{{ item.creditos }}</td>
-                <td>{{ item.horas }}</td>
-                <td>
+                <td><span class="chip chip-basica">{{ item.creditos }} cr</span></td>
+                <td class="cell-num">{{ item.horas }} <span class="text-muted">h</span></td>
+                <td class="text-end">
                     <button class="btn btn-sm btn-outline-primary btn-action" onclick="abrir_modal('{% url 'adm_materias' %}?action=edit&pk={{ item.pk }}')">Editar</button>
                     <button class="btn btn-sm btn-outline-danger btn-action" onclick="abrir_modal('{% url 'adm_materias' %}?action=delete&pk={{ item.pk }}')">Eliminar</button>
                 </td>
             </tr>
         {% empty %}
-            <tr><td colspan="6" class="text-muted">No hay registros</td></tr>
+            <tr><td colspan="6">
+                <div class="empty-state">
+                    <span class="empty-ico">&#128218;</span>
+                    <div class="empty-title">Aun no hay materias</div>
+                    <p class="empty-text">Crea materias para luego asignarlas a los niveles de cada malla.</p>
+                    <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_materias' %}?action=add')">+ Crear materia</button>
+                </div>
+            </td></tr>
         {% endfor %}
+            <tr class="no-match row-hidden"><td colspan="6"><div class="empty-state"><span class="empty-ico">&#128269;</span><div class="empty-title">Sin coincidencias</div><p class="empty-text">Ninguna materia coincide con tu busqueda.</p></div></td></tr>
         </tbody>
     </table>
 </div>

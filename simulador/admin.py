@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import (
     AccionSugeridaSimulacion,
+    Asignacion,
     CondicionExitoSimulacion,
     ConceptoEsperadoRonda,
     CriterioEvaluacion,
@@ -20,8 +21,11 @@ from .models import (
     PlantillaRonda,
     PlantillaSimulacion,
     PistaTutor,
+    Equipo,
     RecursoSimulacion,
+    ResultadoAprendizaje,
     RestriccionSimulacion,
+    Seccion,
     Simulacion,
 )
 
@@ -47,3 +51,7 @@ admin.site.register(DecisionConfigurada)
 admin.site.register(IntentoSimulacion)
 admin.site.register(PasoSimulacion)
 admin.site.register(PistaTutor)
+admin.site.register(ResultadoAprendizaje)
+admin.site.register(Seccion)
+admin.site.register(Asignacion)
+admin.site.register(Equipo)

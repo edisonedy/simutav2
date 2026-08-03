@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker"><a href="{% url 'pro_cursos' %}?action=seccion&pk={{ asignacion.seccion.pk }}" class="text-decoration-none">{{ asignacion.seccion.materia_malla.materia.nombre }}</a> / Notas</div>
+        <h1 class="h3">{{ asignacion.titulo|default:asignacion.simulacion.titulo }}</h1>
+        <div class="text-muted">Nota minima para aprobar: {{ asignacion.nota_minima_aprobacion }} &middot; Peso: {{ asignacion.ponderacion }}%</div>
+    </div>
+    <div class="page-head-actions">
+        <a class="btn btn-outline-warning" href="{% url 'pro_cursos' %}?action=diagnostico&pk={{ asignacion.pk }}">Diagnóstico</a>
+        <a class="btn btn-primary" href="{% url 'pro_cursos' %}?action=export&pk={{ asignacion.pk }}">&#11015; Exportar CSV</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><span class="metric-ico">&#128202;</span><div><div class="metric-label">Promedio</div><div class="metric-value">{{ resumen.promedio|default:"-" }}</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><span class="metric-ico">&#9989;</span><div><div class="metric-label">Aprobados</div><div class="metric-value">{{ resumen.aprobados }}</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><span class="metric-ico">&#128221;</span><div><div class="metric-label">Entregaron</div><div class="metric-value">{{ resumen.entregados }}/{{ resumen.total }}</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><span class="metric-ico">&#9203;</span><div><div class="metric-label">Sin entregar</div><div class="metric-value">{{ resumen.sin_entregar }}</div></div></div></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <h2 class="h5 mb-2">Libro de notas</h2>
+        <div class="module-card data-card table-responsive">
+            <table class="table table-hover align-middle">
+                <thead><tr><th>Estudiante</th><th>Nota</th><th>Intentos</th><th>Estado</th></tr></thead>
+                <tbody>
+                {% for f in filas %}
+                    <tr>
+                        <td class="cell-strong">{{ f.nombre }}</td>
+                        <td><span class="metric-value" style="font-size:1.1rem">{{ f.nota|default:"-" }}</span></td>
+                        <td class="cell-num">{{ f.intentos }}</td>
+                        <td>
+                            {% if f.estado == 'APROBADO' %}<span class="badge text-bg-success">Aprobado</span>
+                            {% elif f.estado == 'REPROBADO' %}<span class="badge text-bg-warning">Reprobado</span>
+                            {% else %}<span class="badge text-bg-secondary">Sin entregar</span>{% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4">
+                        <div class="empty-state">
+                            <span class="empty-ico">&#128101;</span>
+                            <div class="empty-title">Este curso no tiene estudiantes</div>
+                            <p class="empty-text">Agrega estudiantes a la seccion para poder calificarlos.</p>
+                        </div>
+                    </td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <h2 class="h5 mb-2">&#127942; Tabla de posiciones</h2>
+        <div class="module-card p-3">
+            {% for p in posiciones %}
+                <div class="rank-row {% if p.posicion <= 3 %}rank-me{% endif %} mb-2">
+                    <span class="rank-pos">{{ p.posicion }}</span>
+                    <span class="rank-name">{{ p.nombre }}</span>
+                    <span class="rank-xp">{{ p.nota }}</span>
+                </div>
+            {% empty %}
+                <p class="text-muted mb-0">Aun no hay notas para rankear.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

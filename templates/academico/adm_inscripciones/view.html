@@ -1,27 +1,45 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
-    <h1 class="h3">Inscripciones</h1>
-    <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_inscripciones' %}?action=add')">Nueva inscripcion</button>
+<div class="page-head">
+    <div>
+        <div class="page-kicker">Academico</div>
+        <h1 class="h3">Inscripciones <span class="count-pill">{{ list|length }}</span></h1>
+    </div>
+    <div class="page-head-actions">
+        <input type="search" class="table-search" placeholder="Buscar estudiante o malla..." oninput="filtrar_tabla(this, 'tabla-inscripciones')">
+        <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_inscripciones' %}?action=add')">+ Nueva inscripcion</button>
+    </div>
 </div>
-<div class="module-card p-3 table-responsive">
-    <table class="table table-hover align-middle">
-        <thead><tr><th>Estudiante</th><th>Malla</th><th>Periodo</th><th>Estado</th><th>Acciones</th></tr></thead>
+<div class="module-card data-card table-responsive">
+    <table class="table table-hover align-middle" id="tabla-inscripciones">
+        <thead><tr><th>Estudiante</th><th>Malla</th><th>Periodo</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
         <tbody>
         {% for item in list %}
-            <tr>
-                <td>{{ item.estudiante }}</td>
+            <tr data-row>
+                <td class="cell-strong">{{ item.estudiante.get_full_name|default:item.estudiante.username }}</td>
                 <td>{{ item.malla }}</td>
                 <td>{{ item.periodo }}</td>
-                <td>{{ item.estado }}</td>
                 <td>
+                    {% if item.estado == 'ACTIVA' %}<span class="badge text-bg-success">{{ item.get_estado_display }}</span>
+                    {% elif item.estado == 'FINALIZADA' %}<span class="badge text-bg-primary">{{ item.get_estado_display }}</span>
+                    {% else %}<span class="badge text-bg-secondary">{{ item.get_estado_display }}</span>{% endif %}
+                </td>
+                <td class="text-end">
                     <button class="btn btn-sm btn-outline-primary btn-action" onclick="abrir_modal('{% url 'adm_inscripciones' %}?action=edit&pk={{ item.pk }}')">Editar</button>
                     <button class="btn btn-sm btn-outline-danger btn-action" onclick="abrir_modal('{% url 'adm_inscripciones' %}?action=delete&pk={{ item.pk }}')">Eliminar</button>
                 </td>
             </tr>
         {% empty %}
-            <tr><td colspan="5" class="text-muted">No hay registros</td></tr>
+            <tr><td colspan="5">
+                <div class="empty-state">
+                    <span class="empty-ico">&#127891;</span>
+                    <div class="empty-title">Aun no hay inscripciones</div>
+                    <p class="empty-text">Inscribe a un estudiante en una malla y periodo para que pueda acceder a sus simulaciones.</p>
+                    <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_inscripciones' %}?action=add')">+ Inscribir estudiante</button>
+                </div>
+            </td></tr>
         {% endfor %}
+            <tr class="no-match row-hidden"><td colspan="5"><div class="empty-state"><span class="empty-ico">&#128269;</span><div class="empty-title">Sin coincidencias</div><p class="empty-text">Ninguna inscripcion coincide con tu busqueda.</p></div></td></tr>
         </tbody>
     </table>
 </div>

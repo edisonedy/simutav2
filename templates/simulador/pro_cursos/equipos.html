@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker"><a href="{% url 'pro_cursos' %}?action=seccion&pk={{ asignacion.seccion.pk }}" class="text-decoration-none">{{ asignacion.seccion.materia_malla.materia.nombre }}</a> / Equipos</div>
+        <h1 class="h3">Equipos &middot; {{ asignacion.titulo|default:asignacion.simulacion.titulo }}</h1>
+    </div>
+    <div class="page-head-actions">
+        <button class="btn btn-primary" onclick="abrir_modal('{% url 'pro_cursos' %}?action=add_equipo&asignacion={{ asignacion.pk }}')">+ Nuevo equipo</button>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        {% if equipos %}
+        <div class="row g-3">
+            {% for eq in equipos %}
+            <div class="col-md-6">
+                <div class="module-card p-3 h-100">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h2 class="h6 mb-0">&#128101; {{ eq.nombre }}</h2>
+                        <form method="post" action="{% url 'pro_cursos' %}" onsubmit="return enviar_formulario(this)" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_equipo">
+                            <input type="hidden" name="pk" value="{{ eq.pk }}">
+                            <button class="btn btn-sm btn-outline-danger" title="Eliminar">&times;</button>
+                        </form>
+                    </div>
+                    {% for u in eq.integrantes.all %}
+                        <div class="sim-row mb-1"><span>{{ u.get_full_name|default:u.username }}</span></div>
+                    {% empty %}
+                        <p class="text-muted small mb-0">Sin integrantes.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="module-card data-card">
+            <div class="empty-state">
+                <span class="empty-ico">&#128101;</span>
+                <div class="empty-title">Aun no hay equipos</div>
+                <p class="empty-text">Crea equipos y asigna a los estudiantes del curso. La tabla de posiciones rankeara por equipo.</p>
+                <button class="btn btn-primary" onclick="abrir_modal('{% url 'pro_cursos' %}?action=add_equipo&asignacion={{ asignacion.pk }}')">+ Crear primer equipo</button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="col-lg-5">
+        <h2 class="h5 mb-2">&#127942; Tabla de posiciones</h2>
+        <div class="module-card p-3">
+            {% for p in posiciones %}
+                <div class="rank-row {% if p.posicion <= 3 %}rank-me{% endif %} mb-2">
+                    <span class="rank-pos">{{ p.posicion }}</span>
+                    <span class="rank-name">{{ p.nombre }}</span>
+                    <span class="rank-xp">{{ p.nota }}</span>
+                </div>
+            {% empty %}
+                <p class="text-muted mb-0">Aun no hay notas para rankear.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

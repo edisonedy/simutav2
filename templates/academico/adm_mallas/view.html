@@ -1,28 +1,42 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
-    <h1 class="h3">Mallas</h1>
-    <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_mallas' %}?action=add')">Nueva malla</button>
+<div class="page-head">
+    <div>
+        <div class="page-kicker">Academico</div>
+        <h1 class="h3">Mallas <span class="count-pill">{{ list|length }}</span></h1>
+    </div>
+    <div class="page-head-actions">
+        <input type="search" class="table-search" placeholder="Buscar malla..." oninput="filtrar_tabla(this, 'tabla-mallas')">
+        <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_mallas' %}?action=add')">+ Nueva malla</button>
+    </div>
 </div>
-<div class="module-card p-3 table-responsive">
-    <table class="table table-hover align-middle">
-        <thead><tr><th>Codigo</th><th>Nombre</th><th>Carrera</th><th>Fecha Inicio</th><th>Fecha Fin</th><th>Acciones</th></tr></thead>
+<div class="module-card data-card table-responsive">
+    <table class="table table-hover align-middle" id="tabla-mallas">
+        <thead><tr><th>Codigo</th><th>Nombre</th><th>Carrera</th><th>Vigencia</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
         <tbody>
         {% for item in list %}
-            <tr>
-                <td>{{ item.codigo }}</td>
-                <td>{{ item.nombre }}</td>
+            <tr data-row>
+                <td class="cell-code">{{ item.codigo }}</td>
+                <td class="cell-strong">{{ item.nombre }}</td>
                 <td>{{ item.carrera }}</td>
-                <td>{{ item.fecha_inicio|date:"d/m/Y" }}</td>
-                <td>{{ item.fecha_fin|date:"d/m/Y"|default:"-" }}</td>
-                <td>
+                <td class="cell-num">{{ item.fecha_inicio|date:"d/m/Y"|default:"-" }} <span class="text-muted">&ndash;</span> {{ item.fecha_fin|date:"d/m/Y"|default:"hoy" }}</td>
+                <td>{% if item.vigente %}<span class="badge text-bg-success">Vigente</span>{% else %}<span class="badge text-bg-secondary">No vigente</span>{% endif %}</td>
+                <td class="text-end">
                     <button class="btn btn-sm btn-outline-primary btn-action" onclick="abrir_modal('{% url 'adm_mallas' %}?action=edit&pk={{ item.pk }}')">Editar</button>
                     <button class="btn btn-sm btn-outline-danger btn-action" onclick="abrir_modal('{% url 'adm_mallas' %}?action=delete&pk={{ item.pk }}')">Eliminar</button>
                 </td>
             </tr>
         {% empty %}
-            <tr><td colspan="6" class="text-muted">No hay registros</td></tr>
+            <tr><td colspan="6">
+                <div class="empty-state">
+                    <span class="empty-ico">&#128202;</span>
+                    <div class="empty-title">Aun no hay mallas</div>
+                    <p class="empty-text">Crea una malla curricular para organizar las materias por nivel dentro de una carrera.</p>
+                    <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_mallas' %}?action=add')">+ Crear malla</button>
+                </div>
+            </td></tr>
         {% endfor %}
+            <tr class="no-match row-hidden"><td colspan="6"><div class="empty-state"><span class="empty-ico">&#128269;</span><div class="empty-title">Sin coincidencias</div><p class="empty-text">Ninguna malla coincide con tu busqueda.</p></div></td></tr>
         </tbody>
     </table>
 </div>

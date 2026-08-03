@@ -483,6 +483,10 @@ class ConceptoEsperadoRonda(ModeloBase):
     numero_ronda = models.PositiveIntegerField(null=True, blank=True)
     nombre = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, default='')
+    resultado_aprendizaje = models.ForeignKey(
+        'ResultadoAprendizaje', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='conceptos',
+    )
     palabras_clave = models.TextField(help_text='Separar por comas o ingresar una lista JSON.')
     regla_evaluacion = models.JSONField(default=dict, blank=True)
     peso = models.DecimalField(max_digits=5, decimal_places=2)
@@ -515,6 +519,14 @@ class IntentoSimulacion(ModeloBase):
         related_name='intentos_simulacion',
     )
     simulacion = models.ForeignKey(Simulacion, on_delete=models.PROTECT, related_name='intentos')
+    asignacion = models.ForeignKey(
+        'Asignacion', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='intentos',
+    )
+    equipo = models.ForeignKey(
+        'Equipo', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='intentos',
+    )
     intento_origen = models.ForeignKey(
         'self',
         on_delete=models.SET_NULL,
@@ -591,6 +603,18 @@ class PasoSimulacion(ModeloBase):
     alertas_restricciones = models.JSONField(default=list, blank=True)
     penalizacion_aplicada = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     siguiente_situacion = models.TextField(blank=True, default='')
+    # Reflexion del estudiante tras ver las consecuencias (ciclo de Kolb) y la
+    # repregunta socratica del tutor IA. Convierte la experiencia en aprendizaje.
+    reflexion = models.TextField(blank=True, default='')
+    reflexion_feedback = models.TextField(blank=True, default='')
+    # Pronostico previo a decidir (metacognicion): el estudiante predice que
+    # indicador cambiara y luego compara su hipotesis con el resultado real.
+    pronostico_indicador = models.CharField(max_length=80, blank=True, default='')
+    pronostico_direccion = models.CharField(max_length=20, blank=True, default='')
+    pronostico_justificacion = models.TextField(blank=True, default='')
+    pronostico_resultado = models.JSONField(default=dict, blank=True)
+    tradeoff_aceptado = models.TextField(blank=True, default='')
+    tradeoff_resultado = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ['intento', 'numero']
@@ -613,6 +637,29 @@ class PistaTutor(ModeloBase):
 
     def __str__(self):
         return f'{self.intento} / Pista ronda {self.numero_ronda}'
+
+
+class RetoRefuerzo(ModeloBase):
+    estudiante = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='retos_refuerzo',
+    )
+    simulacion = models.ForeignKey(Simulacion, on_delete=models.CASCADE, related_name='retos_refuerzo')
+    intento_origen = models.ForeignKey(
+        IntentoSimulacion, on_delete=models.CASCADE, related_name='retos_refuerzo',
+    )
+    concepto = models.CharField(max_length=200, blank=True, default='')
+    pregunta = models.TextField()
+    respuesta = models.TextField(blank=True, default='')
+    feedback = models.TextField(blank=True, default='')
+    fecha_disponible = models.DateTimeField()
+    completado = models.BooleanField(default=False)
+    fecha_completado = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['completado', 'fecha_disponible', '-fecha_creacion']
+
+    def __str__(self):
+        return f'{self.estudiante} / {self.simulacion} / {self.concepto or "refuerzo"}'
 
 
 class PerfilJuego(models.Model):
@@ -645,3 +692,106 @@ class PerfilJuego(models.Model):
     @property
     def progreso_nivel_pct(self):
         return round(self.xp_en_nivel / self.XP_POR_NIVEL * 100, 1)
+
+
+class ResultadoAprendizaje(ModeloBase):
+    """Resultado de aprendizaje (RA) de una materia, con su nivel de Bloom.
+    Permite mapear los conceptos de la rubrica a RAs y generar reportes de
+    logro por curso (acreditacion tipo CACES)."""
+    RECORDAR = 'RECORDAR'
+    COMPRENDER = 'COMPRENDER'
+    APLICAR = 'APLICAR'
+    ANALIZAR = 'ANALIZAR'
+    EVALUAR = 'EVALUAR'
+    CREAR = 'CREAR'
+    NIVELES_BLOOM = [
+        (RECORDAR, 'Recordar'),
+        (COMPRENDER, 'Comprender'),
+        (APLICAR, 'Aplicar'),
+        (ANALIZAR, 'Analizar'),
+        (EVALUAR, 'Evaluar'),
+        (CREAR, 'Crear'),
+    ]
+
+    materia_malla = models.ForeignKey(
+        MateriaMalla, on_delete=models.CASCADE, related_name='resultados_aprendizaje',
+    )
+    codigo = models.CharField(max_length=30)
+    descripcion = models.TextField()
+    nivel_bloom = models.CharField(max_length=20, choices=NIVELES_BLOOM, default=APLICAR)
+
+    class Meta:
+        ordering = ['materia_malla', 'codigo']
+        unique_together = [('materia_malla', 'codigo')]
+        verbose_name = 'resultado de aprendizaje'
+        verbose_name_plural = 'resultados de aprendizaje'
+
+    def __str__(self):
+        return f'{self.codigo} - {self.descripcion[:60]}'
+
+
+class Seccion(ModeloBase):
+    """Grupo/paralelo de estudiantes de una materia en un periodo, a cargo de un
+    profesor. Es la 'capa de curso' sobre la que se asignan simulaciones."""
+    materia_malla = models.ForeignKey(
+        MateriaMalla, on_delete=models.PROTECT, related_name='secciones',
+    )
+    periodo = models.ForeignKey(
+        'academico.PeriodoAcademico', on_delete=models.PROTECT, related_name='secciones',
+    )
+    profesor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='secciones_dictadas',
+    )
+    paralelo = models.CharField(max_length=20, default='A')
+    estudiantes = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, blank=True, related_name='secciones_inscritas',
+    )
+
+    class Meta:
+        ordering = ['periodo', 'materia_malla__materia__nombre', 'paralelo']
+        unique_together = [('materia_malla', 'periodo', 'paralelo')]
+
+    def __str__(self):
+        return f'{self.materia_malla.materia} - {self.paralelo} ({self.periodo})'
+
+
+class Asignacion(ModeloBase):
+    """Simulacion asignada a una seccion, con fecha limite y ponderacion.
+    Convierte una simulacion de juego libre en una tarea evaluable del curso."""
+    seccion = models.ForeignKey(Seccion, on_delete=models.CASCADE, related_name='asignaciones')
+    simulacion = models.ForeignKey(Simulacion, on_delete=models.PROTECT, related_name='asignaciones')
+    titulo = models.CharField(max_length=200, blank=True, default='')
+    fecha_apertura = models.DateTimeField(default=timezone.now)
+    fecha_limite = models.DateTimeField(null=True, blank=True)
+    ponderacion = models.DecimalField(max_digits=5, decimal_places=2, default=100)
+    nota_minima_aprobacion = models.DecimalField(max_digits=5, decimal_places=2, default=70)
+    permite_reintento = models.BooleanField(default=True)
+    trabajo_en_equipo = models.BooleanField(default=False)
+    publicada = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-fecha_apertura']
+        unique_together = [('seccion', 'simulacion')]
+
+    def __str__(self):
+        return self.titulo or f'{self.simulacion.titulo} ({self.seccion})'
+
+    @property
+    def cerrada(self):
+        return bool(self.fecha_limite and timezone.now() > self.fecha_limite)
+
+
+class Equipo(ModeloBase):
+    """Equipo de estudiantes que resuelve una asignacion en conjunto."""
+    asignacion = models.ForeignKey(Asignacion, on_delete=models.CASCADE, related_name='equipos')
+    nombre = models.CharField(max_length=120)
+    integrantes = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, blank=True, related_name='equipos_simulacion',
+    )
+
+    class Meta:
+        ordering = ['asignacion', 'nombre']
+        unique_together = [('asignacion', 'nombre')]
+
+    def __str__(self):
+        return f'{self.nombre} ({self.asignacion})'

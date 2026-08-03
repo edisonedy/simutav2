@@ -47,6 +47,24 @@
     <div class="row g-3">
         <div class="col-lg-8">
 
+            {% if objetivos_mision %}
+            <div class="game-card mb-3" style="border-left:4px solid var(--gold)">
+                <div class="game-card-head">
+                    <span class="game-tag">🎯 Objetivo de la misión</span>
+                    <span class="game-phase">{{ objetivos_mision|length }} meta(s)</span>
+                </div>
+                {% for o in objetivos_mision %}
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small">
+                        <span>{% if o.cumplido %}✅{% else %}🎯{% endif %} {{ o.descripcion }}</span>
+                        <span class="cell-num text-muted">{{ o.valor_actual }} / {{ o.meta }}</span>
+                    </div>
+                    <div class="progress" style="height:7px"><div class="progress-bar" style="width:{{ o.progreso_pct }}%;background:{% if o.cumplido %}var(--forest){% else %}var(--gold){% endif %}"></div></div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
             {% if ultimo_paso %}
             <div class="game-card consequence {% if ultimo_paso.es_valido %}consequence-ok{% else %}consequence-bad{% endif %} mb-3">
                 <div class="game-card-head">
@@ -56,7 +74,10 @@
                 {% if not ultimo_paso.es_valido %}
                     <div class="alert alert-danger py-2 mt-2 mb-2">Esa jugada no contó. Reformula y responde la misma situación.</div>
                 {% endif %}
-                <p class="mb-2 mt-1">{{ ultimo_paso.evaluacion_ia }}</p>
+                {% if reaccion_narrada %}
+                <p class="briefing-text mb-2 mt-1" style="font-size:1.02rem">{{ reaccion_narrada }}</p>
+                {% endif %}
+                <p class="small text-muted mb-2 mt-1">{{ ultimo_paso.evaluacion_ia }}</p>
                 {% if ultimo_paso.evaluacion_detalle.evento_mensaje %}
                 <div class="evento-banner">⚡ {{ ultimo_paso.evaluacion_detalle.evento_mensaje }}</div>
                 {% endif %}
@@ -85,6 +106,38 @@
                     {% endfor %}
                 </div>
                 {% endif %}
+                {% if ultimo_paso.pronostico_indicador %}
+                <div class="alert {% if ultimo_paso.pronostico_resultado.estado == 'acierto' %}alert-success{% else %}alert-secondary{% endif %} py-2 small mt-2 mb-0">
+                    <strong>Pronóstico previo:</strong>
+                    esperabas que <strong>{{ ultimo_paso.pronostico_indicador }}</strong>
+                    quedara <strong>{{ ultimo_paso.pronostico_direccion }}</strong>.
+                    {% if ultimo_paso.pronostico_resultado.mensaje %}
+                        {{ ultimo_paso.pronostico_resultado.mensaje }}
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% if ultimo_paso.tradeoff_resultado %}
+                <div class="alert alert-light border py-2 small mt-2 mb-0">
+                    <strong>Trade-off:</strong> {{ ultimo_paso.tradeoff_resultado.mensaje }}
+                    {% if ultimo_paso.tradeoff_aceptado %}
+                        <div class="text-muted mt-1">Sacrificio que aceptaste: {{ ultimo_paso.tradeoff_aceptado }}</div>
+                    {% endif %}
+                    {% if ultimo_paso.tradeoff_resultado.ganancias %}
+                        <div class="mt-2"><strong>Ganancias:</strong>
+                            {% for item in ultimo_paso.tradeoff_resultado.ganancias %}
+                                <span class="game-delta up">{{ item.nombre }} +{{ item.delta }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if ultimo_paso.tradeoff_resultado.sacrificios %}
+                        <div class="mt-1"><strong>Sacrificios:</strong>
+                            {% for item in ultimo_paso.tradeoff_resultado.sacrificios %}
+                                <span class="game-delta down">{{ item.nombre }} {{ item.delta }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
                 {% if ultimo_paso.alertas_restricciones %}
                     <div class="alert alert-warning mt-2 mb-0 py-2 small">
                         <strong>⚠ Reglas rotas:</strong>
@@ -94,6 +147,32 @@
                         {% endfor %}
                         </ul>
                     </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Reflexión (ciclo de Kolb): convierte la experiencia en aprendizaje -->
+            {% if ultimo_paso and ultimo_paso.es_valido %}
+            <div class="game-card briefing mb-3" style="border-left-color: var(--gold)">
+                <div class="game-card-head">
+                    <span class="game-tag">🤔 Reflexiona</span>
+                    <span class="game-phase">Así se aprende</span>
+                </div>
+                {% if ultimo_paso.reflexion %}
+                    <p class="small text-muted mb-1">Tu reflexión:</p>
+                    <p class="mb-2">{{ ultimo_paso.reflexion }}</p>
+                    {% if ultimo_paso.reflexion_feedback %}
+                        <div class="alert alert-info py-2 small mb-0"><strong>🎓 Tutor:</strong> {{ ultimo_paso.reflexion_feedback }}</div>
+                    {% endif %}
+                {% else %}
+                    <p class="small mb-2">Antes de seguir: <strong>¿por qué crees que la empresa reaccionó así? ¿Qué cambiarías?</strong></p>
+                    <form method="post" action="?action=reflexionar" onsubmit="return enviar_formulario(this)">
+                        {% csrf_token %}
+                        <input type="hidden" name="intento_id" value="{{ intento.pk }}">
+                        <input type="hidden" name="numero" value="{{ ultimo_paso.numero }}">
+                        <textarea name="reflexion" rows="2" class="mb-2" placeholder="Escribe tu reflexión... el tutor te repreguntará para que pienses más a fondo."></textarea>
+                        <button class="btn btn-outline-warning btn-sm" type="submit">Enviar reflexión</button>
+                    </form>
                 {% endif %}
             </div>
             {% endif %}
@@ -108,6 +187,46 @@
                 </div>
                 <p class="briefing-text mb-0">{{ situacion }}</p>
             </div>
+
+            {% if rubrica_visible %}
+            <div class="game-card mb-3">
+                <div class="game-card-head">
+                    <span class="game-tag">📌 Criterios de evaluación</span>
+                    <span class="game-phase">Sin revelar la respuesta</span>
+                </div>
+                {% if rubrica_visible.conceptos %}
+                <div class="mb-2">
+                    <div class="hud-label mb-1">Conceptos que debes evidenciar</div>
+                    <div class="d-flex flex-wrap gap-2">
+                    {% for c in rubrica_visible.conceptos %}
+                        <span class="chip chip-soft">{{ c.nombre }}{% if c.es_critico %} · crítico{% endif %}</span>
+                    {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% if rubrica_visible.indicadores %}
+                <div class="mb-2">
+                    <div class="hud-label mb-1">Indicadores a cuidar</div>
+                    <div class="d-flex flex-wrap gap-2">
+                    {% for ind in rubrica_visible.indicadores %}
+                        <span class="chip chip-soft">{{ ind.nombre }}</span>
+                    {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% if rubrica_visible.restricciones %}
+                <div class="mb-2">
+                    <div class="hud-label mb-1">Restricciones</div>
+                    <ul class="small mb-0">
+                    {% for r in rubrica_visible.restricciones %}
+                        <li>{{ r.descripcion }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                <div class="small text-muted">Una buena respuesta incluye: {{ rubrica_visible.formato|join:", " }}.</div>
+            </div>
+            {% endif %}
 
             {% if candidatos or prueba_tecnica %}
             <div class="game-card mb-3">
@@ -193,12 +312,42 @@
             <div class="game-card play">
                 <div class="game-card-head">
                     <span class="game-tag">🕹 Tu jugada</span>
+                    {% if andamiaje %}<span class="game-phase">{{ andamiaje.etiqueta }}</span>{% endif %}
                 </div>
+                {% if andamiaje %}
+                    <div class="alert alert-light border py-2 small mb-3">{{ andamiaje.mensaje }}</div>
+                {% endif %}
 
                 {% if simulacion.tipo_simulacion == 'SIN_IA_ARBOL' %}
                     <form method="post" action="?action=ejecutar_paso" onsubmit="return enviar_formulario(this)">
                         {% csrf_token %}
                         <input type="hidden" name="intento_id" value="{{ intento.pk }}">
+                        {% if pronostico_indicadores %}
+                        <div class="mb-2 p-2 rounded" style="background:var(--field)">
+                            <div class="small text-muted mb-1">🔮 Pronóstico rápido <span class="text-muted">(opcional)</span> — ¿qué indicador crees que más cambiará?</div>
+                            <div class="row g-2">
+                                <div class="col-7">
+                                    <select name="pronostico_indicador" class="form-select form-select-sm">
+                                        <option value="">Elegir indicador…</option>
+                                        {% for ind in pronostico_indicadores %}
+                                            <option value="{{ ind.codigo }}">{{ ind.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-5">
+                                    <select name="pronostico_direccion" class="form-select form-select-sm">
+                                        <option value="">¿Sube o baja?</option>
+                                        <option value="sube">Sube ▲</option>
+                                        <option value="baja">Baja ▼</option>
+                                        <option value="igual">Igual</option>
+                                    </select>
+                                </div>
+                            </div>
+                            {% if pedir_tradeoff %}
+                            <input type="text" name="tradeoff_aceptado" class="form-control form-control-sm mt-2" placeholder="⚖️ ¿Qué aceptas sacrificar? (opcional)">
+                            {% endif %}
+                        </div>
+                        {% endif %}
                         {% if decisiones %}
                             <div class="vstack gap-2">
                                 {% for decision in decisiones %}
@@ -218,6 +367,32 @@
                     <form method="post" action="?action=ejecutar_paso" onsubmit="return enviar_formulario(this)">
                         {% csrf_token %}
                         <input type="hidden" name="intento_id" value="{{ intento.pk }}">
+                        {% if pronostico_indicadores %}
+                        <div class="mb-2 p-2 rounded" style="background:var(--field)">
+                            <div class="small text-muted mb-1">🔮 Pronóstico rápido <span class="text-muted">(opcional)</span> — ¿qué indicador crees que más cambiará?</div>
+                            <div class="row g-2">
+                                <div class="col-7">
+                                    <select name="pronostico_indicador" class="form-select form-select-sm">
+                                        <option value="">Elegir indicador…</option>
+                                        {% for ind in pronostico_indicadores %}
+                                            <option value="{{ ind.codigo }}">{{ ind.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-5">
+                                    <select name="pronostico_direccion" class="form-select form-select-sm">
+                                        <option value="">¿Sube o baja?</option>
+                                        <option value="sube">Sube ▲</option>
+                                        <option value="baja">Baja ▼</option>
+                                        <option value="igual">Igual</option>
+                                    </select>
+                                </div>
+                            </div>
+                            {% if pedir_tradeoff %}
+                            <input type="text" name="tradeoff_aceptado" class="form-control form-control-sm mt-2" placeholder="⚖️ ¿Qué aceptas sacrificar? (opcional)">
+                            {% endif %}
+                        </div>
+                        {% endif %}
                         {% if modo_ronda == 'escribir' %}
                             {# Solo escribir: texto libre + justificacion #}
                             <div class="mb-3">

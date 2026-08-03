@@ -30,6 +30,60 @@
             </span>
         {% endif %}
     </div>
+    {% if comparacion_reintento.senales %}
+    <ul class="small mt-3 mb-0">
+        {% for s in comparacion_reintento.senales %}
+            <li>{{ s }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    <div class="row g-2 mt-2">
+        <div class="col-6 col-lg-3">
+            <div class="border rounded p-2 small">
+                <div class="text-muted">Respuestas inválidas</div>
+                <strong>{{ comparacion_reintento.invalidos_origen }} → {{ comparacion_reintento.invalidos_actual }}</strong>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="border rounded p-2 small">
+                <div class="text-muted">Reflexiones</div>
+                <strong>{{ comparacion_reintento.reflexiones_origen }} → {{ comparacion_reintento.reflexiones_actual }}</strong>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="border rounded p-2 small">
+                <div class="text-muted">Pronósticos acertados</div>
+                <strong>{{ comparacion_reintento.pronosticos_origen }} → {{ comparacion_reintento.pronosticos_actual }}</strong>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="border rounded p-2 small">
+                <div class="text-muted">Trade-offs declarados</div>
+                <strong>{{ comparacion_reintento.tradeoffs_origen }} → {{ comparacion_reintento.tradeoffs_actual }}</strong>
+            </div>
+        </div>
+    </div>
+    {% if comparacion_reintento.indicadores %}
+    <div class="table-responsive mt-3">
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Indicador</th><th>Anterior</th><th>Actual</th><th>Cambio</th></tr></thead>
+            <tbody>
+            {% for ind in comparacion_reintento.indicadores %}
+                <tr>
+                    <td>{{ ind.nombre }}</td>
+                    <td>{{ ind.anterior }}</td>
+                    <td>{{ ind.actual }}</td>
+                    <td>
+                        <span class="badge {% if ind.mejora %}text-bg-success{% else %}text-bg-warning{% endif %}">
+                            {% if ind.cambio > 0 %}+{% endif %}{{ ind.cambio }}
+                        </span>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -60,6 +114,46 @@
             {% endfor %}
         </div>
     </div>
+</div>
+{% endif %}
+
+{% if objetivos_mision %}
+<div class="module-card p-3 mb-3" style="border-left:4px solid var(--gold)">
+    <div class="section-title mb-2">🎯 Resultado de la misión</div>
+    {% for o in objetivos_mision %}
+    <div class="mb-2">
+        <div class="d-flex justify-content-between small">
+            <span>{% if o.cumplido %}✅ Logrado{% else %}⏳ Pendiente{% endif %} · {{ o.descripcion }}</span>
+            <span class="cell-num text-muted">{{ o.valor_actual }} / {{ o.meta }}</span>
+        </div>
+        <div class="progress" style="height:7px"><div class="progress-bar" style="width:{{ o.progreso_pct }}%;background:{% if o.cumplido %}var(--forest){% else %}var(--gold){% endif %}"></div></div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if gamificacion %}
+<div class="module-card p-3 mb-3">
+    <div class="section-title mb-2">Cómo pensaste (metacognición)</div>
+    <div class="row g-2 text-center">
+        <div class="col-4">
+            <div class="metric-value">{{ gamificacion.pronosticos_acertados }}/{{ gamificacion.pronosticos }}</div>
+            <div class="metric-label">Pronósticos acertados</div>
+        </div>
+        <div class="col-4">
+            <div class="metric-value">{{ gamificacion.reflexiones }}</div>
+            <div class="metric-label">Reflexiones escritas</div>
+        </div>
+        <div class="col-4">
+            <div class="metric-value">{{ gamificacion.tradeoffs }}</div>
+            <div class="metric-label">Trade-offs explícitos</div>
+        </div>
+    </div>
+    {% if gamificacion.recomendaciones %}
+    <ul class="small text-muted mb-0 mt-3">
+        {% for r in gamificacion.recomendaciones %}<li>{{ r }}</li>{% endfor %}
+    </ul>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -112,6 +206,24 @@
         </div>
         {% endif %}
 
+        {% if calidad_metacognitiva %}
+        <div class="module-card p-3 mb-3">
+            <h2 class="h5">Calidad del razonamiento</h2>
+            <div class="display-6">{{ calidad_metacognitiva.puntaje }}%</div>
+            <div class="small text-muted mb-2">{{ calidad_metacognitiva.nivel }}</div>
+            <div class="small">
+                Reflexiones: {{ calidad_metacognitiva.reflexiones }}/{{ calidad_metacognitiva.total }}<br>
+                Pronósticos acertados: {{ calidad_metacognitiva.pronosticos_acertados }}/{{ calidad_metacognitiva.pronosticos }}<br>
+                Trade-offs reales: {{ calidad_metacognitiva.tradeoffs_reales }}/{{ calidad_metacognitiva.tradeoffs }}
+            </div>
+            <ul class="small mt-2 mb-0">
+                {% for r in calidad_metacognitiva.recomendaciones %}
+                    <li>{{ r }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
         <div class="module-card p-3 mb-3">
             <h2 class="h5">Estado</h2>
             <p class="mb-0"><strong>Estado:</strong> Finalizado</p>
@@ -146,6 +258,32 @@
         <div class="module-card p-3 mb-3">
             <div class="section-title">Retroalimentacion</div>
             <p class="mb-0 mt-2">{{ intento.retroalimentacion_final }}</p>
+        </div>
+        {% endif %}
+
+        {% if casos_equivalentes %}
+        <div class="module-card p-3 mb-3">
+            <div class="section-title">Practica transferencia</div>
+            <div class="small text-muted mb-2">Aplica el mismo aprendizaje en otro caso para evitar memorizar una sola respuesta.</div>
+            <div class="vstack gap-2">
+                {% for item in casos_equivalentes %}
+                <div class="border rounded p-2 d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                    <div>
+                        <div class="fw-semibold">{{ item.simulacion.titulo }}</div>
+                        <div class="small text-muted">
+                            {{ item.simulacion.materia_malla.materia.nombre }}
+                            {% if item.compartidos %} · comparte {{ item.compartidos }} resultado(s) de aprendizaje{% endif %}
+                            {% if item.completada %} · ya completada{% endif %}
+                        </div>
+                    </div>
+                    <form method="post" action="{% url 'alu_simulaciones' %}?action=iniciar" onsubmit="return enviar_formulario(this)">
+                        {% csrf_token %}
+                        <input type="hidden" name="simulacion_id" value="{{ item.simulacion.pk }}">
+                        <button class="btn btn-outline-primary btn-sm">Practicar</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
         </div>
         {% endif %}
 

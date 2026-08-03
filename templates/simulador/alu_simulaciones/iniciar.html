@@ -114,13 +114,41 @@
             </div>
             {% endif %}
 
+            {% if objetivos_mision %}
+            <div class="game-card mb-3" style="border-left:4px solid var(--gold)">
+                <div class="game-card-head"><span class="game-tag">🎯 Tu meta</span></div>
+                <p class="text-muted small mb-2">Para ganar la misión debes llevar la empresa a:</p>
+                <div class="vstack gap-1">
+                    {% for o in objetivos_mision %}
+                    <div class="d-flex justify-content-between align-items-center mission-ind">
+                        <span class="small">{{ o.descripcion }}</span>
+                        <span class="mission-ind-val">{{ o.meta }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if asignacion %}
+                {% if asignacion.cerrada %}
+                    <div class="evento-banner mb-3" style="background:linear-gradient(100deg,var(--slate) 0%,var(--accent) 130%)">⛔ Tarea cerrada: la fecha límite ({{ asignacion.fecha_limite|date:"d/m/Y H:i" }}) ya pasó. Ya no admite nuevos intentos.</div>
+                {% elif asignacion.fecha_limite %}
+                    <div class="scenario-box mb-3"><strong>📌 Tarea del curso.</strong> Entrega antes del <strong>{{ asignacion.fecha_limite|date:"d/m/Y H:i" }}</strong>. Nota mínima para aprobar: {{ asignacion.nota_minima_aprobacion }}.</div>
+                {% else %}
+                    <div class="scenario-box mb-3"><strong>📌 Tarea del curso</strong> (sin fecha límite). Nota mínima para aprobar: {{ asignacion.nota_minima_aprobacion }}.</div>
+                {% endif %}
+            {% endif %}
             <div class="game-card mission-start">
                 <p class="small text-muted mb-3">Tomarás <strong>{{ simulacion.maximo_decisiones }} decisiones</strong>. Cada una mueve la empresa. ¿List@ para jugar?</p>
+                {% if asignacion and asignacion.cerrada %}
+                    <button class="btn btn-secondary btn-lg w-100" disabled>Tarea cerrada</button>
+                {% else %}
                 <form method="post" action="?action=iniciar" onsubmit="return enviar_formulario(this)">
                     {% csrf_token %}
                     <input type="hidden" name="simulacion_id" value="{{ simulacion.pk }}">
                     <button class="btn btn-primary btn-play btn-lg w-100">▶ Iniciar misión</button>
                 </form>
+                {% endif %}
             </div>
         </div>
     </div>

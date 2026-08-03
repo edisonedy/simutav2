@@ -5,6 +5,22 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+def _limitar_prompt(prompt):
+    prompt = str(prompt or '')
+    max_chars = int(getattr(settings, 'SIMUTA_IA_MAX_PROMPT_CHARS', 18000))
+    if max_chars > 0 and len(prompt) > max_chars:
+        return prompt[:max_chars] + '\n\n[Prompt truncado por limite de seguridad.]'
+    return prompt
+
+
+def _ia_permitida_para_intento(intento):
+    max_llamadas = int(getattr(settings, 'SIMUTA_IA_MAX_EVAL_CALLS_PER_INTENTO', 8))
+    if max_llamadas <= 0:
+        return False
+    usadas = intento.pasos.exclude(api_ia='').count()
+    return usadas < max_llamadas
+
+
 class IAServiceMock:
     def evaluar_ronda_dinamica(self, intento, decision, justificacion):
         from simulador.services import validar_respuesta_estudiante
@@ -144,7 +160,7 @@ class IAServiceLLM:
         # Si el proveedor falla (sin cuota, timeout, etc.) se lanza la excepcion
         # para que el despachador pruebe el siguiente proveedor (DeepSeek/OpenAI)
         # y, si todos fallan, el motor use la rubrica local.
-        resultado, usage = self._llamar_modelo(prompt)
+        resultado, usage = self._llamar_modelo(_limitar_prompt(prompt))
 
         evaluaciones_conceptos = resultado.get('conceptos') or []
         evaluacion_rubrica = evaluar_conceptos_esperados(
@@ -501,6 +517,8 @@ def orden_proveedores():
 def evaluar_ronda_con_proveedores(intento, decision, justificacion):
     """Intenta los proveedores en orden; si uno falla (sin cuota/timeout) prueba
     el siguiente. Lanza excepcion solo si todos fallan (el motor usa rubrica)."""
+    if not _ia_permitida_para_intento(intento):
+        raise RuntimeError('Limite de llamadas IA alcanzado para este intento')
     ultimo_error = None
     for nombre in orden_proveedores():
         try:
@@ -515,13 +533,21 @@ def evaluar_ronda_con_proveedores(intento, decision, justificacion):
     raise RuntimeError('No hay proveedores de IA con API key configurada')
 
 
-def _prompt_pista(simulacion, situacion, conceptos_nombres, ronda):
+def _prompt_pista(simulacion, situacion, conceptos_nombres, ronda, nivel_andamiaje='MEDIO'):
     conceptos = ', '.join(conceptos_nombres) if conceptos_nombres else 'los conceptos de la ronda'
+    nivel_andamiaje = (nivel_andamiaje or 'MEDIO').upper()
+    if nivel_andamiaje == 'ALTO':
+        estilo = 'Da una pista mas guiada: propone 2 pasos de pensamiento, sin resolver la decision.'
+    elif nivel_andamiaje == 'BAJO':
+        estilo = 'Da una pregunta abierta y exigente; no des estructura paso a paso.'
+    else:
+        estilo = 'Da una pista equilibrada: orienta sin resolver.'
     return (
         "Eres un tutor socratico. El estudiante esta atascado en una simulacion de decisiones.\n"
         "Da UNA pista breve (maximo 2 frases) en forma de PREGUNTA orientadora.\n"
         "REGLAS: NO des la respuesta ni la decision; NO menciones nota; guia a que el estudiante "
-        "considere los conceptos esperados y conecte su decision con un indicador del caso.\n\n"
+        "considere los conceptos esperados y conecte su decision con un indicador del caso.\n"
+        f"Nivel de andamiaje: {nivel_andamiaje}. {estilo}\n\n"
         f"Materia/tema: {simulacion.titulo} - {simulacion.tema}\n"
         f"Ronda {ronda}. Situacion actual: {situacion}\n"
         f"Conceptos que deberia abordar: {conceptos}\n\n"
@@ -529,10 +555,13 @@ def _prompt_pista(simulacion, situacion, conceptos_nombres, ronda):
     )
 
 
-def generar_pista_ia(intento, conceptos_nombres, situacion):
+def generar_pista_ia(intento, conceptos_nombres, situacion, nivel_andamiaje='MEDIO'):
     """Genera una pista socratica con el primer proveedor disponible. Devuelve ''
     si no hay proveedor o todos fallan (el llamador usa la pista de plantilla)."""
-    prompt = _prompt_pista(intento.simulacion, situacion, conceptos_nombres, intento.numero_ronda_actual)
+    prompt = _limitar_prompt(_prompt_pista(
+        intento.simulacion, situacion, conceptos_nombres, intento.numero_ronda_actual,
+        nivel_andamiaje=nivel_andamiaje,
+    ))
     for nombre in orden_proveedores():
         try:
             servicio = PROVEEDORES_IA[nombre]()
@@ -543,6 +572,68 @@ def generar_pista_ia(intento, conceptos_nombres, situacion):
             logger.warning(f"Pista IA con '{nombre}' fallo: {e}")
             continue
     return ''
+
+
+def _completar_con_proveedores(prompt, tope=900):
+    """Devuelve texto del primer proveedor que responda, o '' si todos fallan."""
+    prompt = _limitar_prompt(prompt)
+    for nombre in orden_proveedores():
+        try:
+            texto = PROVEEDORES_IA[nombre]().completar_texto(prompt)
+            if texto:
+                return texto[:tope]
+        except Exception as e:
+            logger.warning(f"Texto IA con '{nombre}' fallo: {e}")
+            continue
+    return ''
+
+
+def _resumen_decisiones(intento):
+    lineas = []
+    for p in intento.pasos.order_by('numero'):
+        if not p.decision_estudiante:
+            continue
+        lineas.append(f"Ronda {p.numero}: decidio '{p.decision_estudiante[:160]}' "
+                      f"(puntaje {float(p.puntaje_paso):.0f}/100).")
+    return '\n'.join(lineas) or 'Sin decisiones registradas.'
+
+
+def generar_debriefing_ia(intento):
+    """Debrief REFLEXIVO (ciclo de Kolb) a partir de las decisiones reales del
+    estudiante. Devuelve '' si no hay proveedor de IA (el motor usa el de texto)."""
+    sim = intento.simulacion
+    prompt = (
+        "Eres un tutor que cierra una simulacion de toma de decisiones. Escribe un "
+        "DEBRIEFING para que el estudiante APRENDA de la experiencia (no memorice). "
+        "Usa EXACTAMENTE estas 4 secciones cortas, en espanol, en segunda persona:\n"
+        "1. Lo que lograste: que cambio en la empresa por tus decisiones.\n"
+        "2. La decision clave: cual fue la decision mas determinante y por que.\n"
+        "3. Que harias distinto: 1-2 mejoras concretas para la proxima.\n"
+        "4. Concepto para reforzar: 1 idea de la materia que conviene estudiar mas.\n\n"
+        f"Caso: {sim.titulo} - {sim.tema}\n"
+        f"Nota final: {intento.puntuacion_final}/100.\n"
+        f"Decisiones del estudiante:\n{_resumen_decisiones(intento)}\n\n"
+        "Maximo 140 palabras. No repitas la nota como juicio; enfocate en el aprendizaje."
+    )
+    return _completar_con_proveedores(prompt, tope=1200)
+
+
+def generar_feedback_reflexion(intento, paso, reflexion):
+    """Repregunta socratica del tutor ante la reflexion del estudiante tras ver
+    las consecuencias de su decision. NO da la respuesta; profundiza el pensamiento."""
+    sim = intento.simulacion
+    prompt = (
+        "Eres un tutor socratico. El estudiante acaba de ver las consecuencias de su "
+        "decision y escribio una reflexion. Responde en 2-3 frases que VALIDEN lo "
+        "rescatable y hagan UNA repregunta que lo lleve mas profundo (causa-efecto, "
+        "trade-offs, o que evidencia faltaba). REGLAS: no des la decision correcta; no "
+        "menciones la nota; conecta con un indicador o concepto del caso.\n\n"
+        f"Caso: {sim.titulo} - {sim.tema}\n"
+        f"Ronda {paso.numero}. Decision que tomo: {paso.decision_estudiante[:200]}\n"
+        f"Reflexion del estudiante: {reflexion[:400]}\n\n"
+        "Respuesta del tutor (solo el texto, en espanol):"
+    )
+    return _completar_con_proveedores(prompt, tope=500)
 
 
 def _prompt_generacion_caso(materia_nombre, nivel):

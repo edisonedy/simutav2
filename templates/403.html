@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Acceso denegado - SimutaV2{% endblock %}
+{% block content %}
+<div class="module-card data-card">
+    <div class="empty-state">
+        <span class="empty-ico">&#128274;</span>
+        <div class="empty-title">403 &middot; Acceso denegado</div>
+        <p class="empty-text">No tienes permiso para ver o modificar este recurso. Si crees que es un error, contacta al administrador.</p>
+        <a class="btn btn-primary" href="{% url 'dashboard' %}">Volver al inicio</a>
+    </div>
+</div>
+{% endblock %}

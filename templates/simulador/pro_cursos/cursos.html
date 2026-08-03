@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker">Simulador</div>
+        <h1 class="h3">Mis cursos <span class="count-pill">{{ cursos|length }}</span></h1>
+    </div>
+    <div class="page-head-actions">
+        <button class="btn btn-outline-primary" onclick="abrir_modal('{% url 'pro_cursos' %}?action=add_resultado')">+ Resultado de aprendizaje</button>
+        <button class="btn btn-primary" onclick="abrir_modal('{% url 'pro_cursos' %}?action=add_seccion')">+ Nuevo curso</button>
+    </div>
+</div>
+
+{% if cursos %}
+<div class="row g-3">
+    {% for c in cursos %}
+    <div class="col-md-6 col-xl-4">
+        <a class="malla-card" href="{% url 'pro_cursos' %}?action=seccion&pk={{ c.seccion.pk }}">
+            <div class="malla-card-top">
+                <span class="malla-ico">&#128218;</span>
+                <div>
+                    <div class="malla-carrera">{{ c.seccion.periodo }} &middot; Paralelo {{ c.seccion.paralelo }}</div>
+                    <div class="malla-nombre">{{ c.seccion.materia_malla.materia.nombre }}</div>
+                </div>
+            </div>
+            <div class="malla-stats">
+                <span class="chip chip-basica">{{ c.estudiantes }} estudiantes</span>
+                <span class="chip chip-media">{{ c.asignaciones }} tareas</span>
+            </div>
+            <div class="malla-go">Abrir curso &rarr;</div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="module-card data-card">
+    <div class="empty-state">
+        <span class="empty-ico">&#127979;</span>
+        <div class="empty-title">Aun no tienes cursos</div>
+        <p class="empty-text">Crea un curso (seccion/paralelo), inscribe a tus estudiantes y asignales simulaciones con fecha limite para calificarlas.</p>
+        <button class="btn btn-primary" onclick="abrir_modal('{% url 'pro_cursos' %}?action=add_seccion')">+ Crear mi primer curso</button>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

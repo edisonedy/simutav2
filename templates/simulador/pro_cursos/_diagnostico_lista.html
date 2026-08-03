@@ -1,0 +1,12 @@
+{% if items %}
+<div class="vstack gap-2">
+    {% for item in items %}
+    <div class="d-flex justify-content-between align-items-center border rounded px-2 py-1">
+        <span>{{ item.nombre }}</span>
+        <span class="badge text-bg-secondary">{{ item.conteo }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-muted mb-0">{{ empty }}</p>
+{% endif %}

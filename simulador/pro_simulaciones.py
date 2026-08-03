@@ -1,3 +1,4 @@
+import csv
 import json
 
 from django import forms
@@ -8,15 +9,17 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db import models
 from decimal import Decimal
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
 from core.funciones import ok_json, bad_json
 from academico.models import MateriaMalla, ProfesorMateria
+from simulador import cursos_service
 from simulador.models import (
     Simulacion, IndicadorSimulacion, RestriccionSimulacion,
     ConceptoEsperadoRonda, CriterioEvaluacion, AccionSugeridaSimulacion, CondicionExitoSimulacion,
     DecisionConfigurada, EscenarioSimulacion, EventoSimulacion, IntentoSimulacion, RecursoSimulacion,
-    MatrizEvaluacionCaso, OpcionCasoSimulacion,
+    MatrizEvaluacionCaso, OpcionCasoSimulacion, PasoSimulacion, RetoRefuerzo,
 )
 from simulador.forms import (
     SimulacionForm, IndicadorSimulacionForm, RestriccionSimulacionForm,
@@ -448,6 +451,8 @@ def _analitica_simulacion(simulacion):
     intentos = IntentoSimulacion.objects.filter(simulacion=simulacion)
     finalizados = intentos.filter(finalizado=True)
     promedio = finalizados.aggregate(prom=models.Avg('puntuacion_final')).get('prom')
+    pasos_qs = PasoSimulacion.objects.filter(intento__simulacion=simulacion)
+    pasos_validos_qs = pasos_qs.filter(es_valido=True)
     pasos = simulacion.intentos.filter(pasos__es_valido=True).values(
         'pasos__numero'
     ).annotate(
@@ -475,6 +480,60 @@ def _analitica_simulacion(simulacion):
         alertas_restricciones += len(restricciones or [])
 
     conceptos_fallados = sorted(fallos.values(), key=lambda x: x['fallos'], reverse=True)[:10]
+    pasos_validos = list(pasos_validos_qs.select_related('intento__estudiante'))
+    total_pasos_validos = len(pasos_validos)
+    reflexiones = [p for p in pasos_validos if (p.reflexion or '').strip()]
+    pronosticos = [p for p in pasos_validos if (p.pronostico_indicador or '').strip()]
+    pronosticos_acertados = [
+        p for p in pronosticos if (p.pronostico_resultado or {}).get('estado') == 'acierto'
+    ]
+    tradeoffs = [p for p in pasos_validos if (p.tradeoff_aceptado or '').strip()]
+    tradeoffs_reales = [
+        p for p in tradeoffs if (p.tradeoff_resultado or {}).get('estado') == 'tradeoff_real'
+    ]
+    retos = RetoRefuerzo.objects.filter(simulacion=simulacion)
+    retos_total = retos.count()
+    retos_completados = retos.filter(completado=True).count()
+
+    def pct(parte, total):
+        return round((parte / total) * 100, 1) if total else 0
+
+    estudiantes = {}
+    for intento in finalizados.select_related('estudiante').prefetch_related('pasos'):
+        pasos_estudiante = list(intento.pasos.filter(es_valido=True))
+        if not pasos_estudiante:
+            continue
+        sin_reflexion = sum(1 for p in pasos_estudiante if not (p.reflexion or '').strip())
+        pronosticos_estudiante = [
+            p for p in pasos_estudiante if (p.pronostico_indicador or '').strip()
+        ]
+        pronosticos_fallidos = sum(
+            1 for p in pronosticos_estudiante
+            if (p.pronostico_resultado or {}).get('estado') == 'diferencia'
+        )
+        estudiantes[intento.estudiante_id] = {
+            'nombre': intento.estudiante.get_full_name() or intento.estudiante.username,
+            'nota': intento.puntuacion_final,
+            'sin_reflexion': sin_reflexion,
+            'pronosticos_fallidos': pronosticos_fallidos,
+            'requiere_refuerzo': float(intento.puntuacion_final or 0) < 70
+                or sin_reflexion
+                or pronosticos_fallidos,
+        }
+
+    estudiantes_riesgo = [
+        item for item in estudiantes.values() if item['requiere_refuerzo']
+    ][:10]
+    recomendaciones = []
+    if pct(len(reflexiones), total_pasos_validos) < 70:
+        recomendaciones.append('Abrir una discusion breve sobre evidencias: muchos estudiantes deciden sin explicar la causa.')
+    if pronosticos and pct(len(pronosticos_acertados), len(pronosticos)) < 60:
+        recomendaciones.append('Practicar lectura de indicadores antes de decidir; el pronostico esta fallando.')
+    if tradeoffs and pct(len(tradeoffs_reales), len(tradeoffs)) < 60:
+        recomendaciones.append('Reforzar pensamiento sistemico: no estan identificando costos o sacrificios reales.')
+    if retos_total and pct(retos_completados, retos_total) < 60:
+        recomendaciones.append('Dar seguimiento a los retos de refuerzo pendientes antes del siguiente caso.')
+
     return {
         'total_intentos': intentos.count(),
         'finalizados': finalizados.count(),
@@ -484,6 +543,22 @@ def _analitica_simulacion(simulacion):
         'alertas_recursos': alertas_recursos,
         'alertas_restricciones': alertas_restricciones,
         'alertas_total': alertas_recursos + alertas_restricciones,
+        'metacognicion': {
+            'pasos_validos': total_pasos_validos,
+            'reflexiones': len(reflexiones),
+            'reflexion_pct': pct(len(reflexiones), total_pasos_validos),
+            'pronosticos': len(pronosticos),
+            'pronosticos_acertados': len(pronosticos_acertados),
+            'pronostico_pct': pct(len(pronosticos_acertados), len(pronosticos)),
+            'tradeoffs': len(tradeoffs),
+            'tradeoffs_reales': len(tradeoffs_reales),
+            'tradeoff_pct': pct(len(tradeoffs_reales), len(tradeoffs)),
+            'retos_total': retos_total,
+            'retos_completados': retos_completados,
+            'retos_pct': pct(retos_completados, retos_total),
+        },
+        'estudiantes_riesgo': estudiantes_riesgo,
+        'recomendaciones': recomendaciones,
     }
 
 
@@ -514,6 +589,111 @@ def _simulaciones_permitidas(user):
         | models.Q(usuario_creacion=user)
         | models.Q(materia_malla__profesores__profesor=user, materia_malla__profesores__activo=True)
     ).distinct()
+
+
+def _auditar_lista_simulaciones(simulaciones):
+    for simulacion in simulaciones:
+        simulacion.auditoria_caso = cursos_service.auditar_calidad_simulacion(simulacion)
+    return simulaciones
+
+
+def _exportar_auditoria_casos(request):
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    response['Content-Disposition'] = 'attachment; filename="auditoria_calidad_simulaciones.csv"'
+    writer = csv.writer(response)
+    writer.writerow([
+        'simulacion', 'materia', 'estado', 'tipo', 'nivel_calidad', 'puntaje',
+        'indicadores', 'conceptos', 'acciones', 'acciones_con_tradeoff',
+        'restricciones', 'recursos', 'eventos', 'hallazgos',
+    ])
+    simulaciones = _simulaciones_permitidas(request.user).select_related(
+        'materia_malla__materia',
+    ).distinct()
+    for simulacion in simulaciones:
+        auditoria = cursos_service.auditar_calidad_simulacion(simulacion)
+        writer.writerow([
+            simulacion.titulo,
+            simulacion.materia_malla.materia.nombre if simulacion.materia_malla_id else '',
+            simulacion.get_estado_display(),
+            simulacion.get_tipo_simulacion_display(),
+            auditoria['nivel'],
+            auditoria['puntaje'],
+            auditoria['indicadores'],
+            auditoria['conceptos'],
+            auditoria['acciones'],
+            auditoria['acciones_tradeoff'],
+            auditoria['restricciones'],
+            auditoria['recursos'],
+            auditoria['eventos'],
+            ' | '.join(auditoria['hallazgos']),
+        ])
+    return response
+
+
+def _exportar_analitica_simulacion(simulacion):
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    response['Content-Disposition'] = (
+        f'attachment; filename="analitica_simulacion_{simulacion.pk}.csv"'
+    )
+    writer = csv.writer(response)
+    writer.writerow([
+        'estudiante', 'intento_id', 'finalizado', 'nota', 'pasos_validos',
+        'reflexiones', 'pronosticos', 'pronosticos_acertados', 'pronosticos_fallidos',
+        'tradeoffs', 'tradeoffs_reales', 'retos_total', 'retos_completados',
+        'requiere_refuerzo',
+    ])
+    intentos = (
+        IntentoSimulacion.objects
+        .filter(simulacion=simulacion, activo=True)
+        .select_related('estudiante')
+        .prefetch_related('pasos')
+        .order_by('estudiante_id', '-puntuacion_final', '-fecha_fin')
+    )
+    mejor_por_estudiante = {}
+    for intento in intentos:
+        if intento.estudiante_id not in mejor_por_estudiante:
+            mejor_por_estudiante[intento.estudiante_id] = intento
+
+    for intento in mejor_por_estudiante.values():
+        pasos = list(intento.pasos.filter(es_valido=True))
+        pronosticos = [p for p in pasos if (p.pronostico_indicador or '').strip()]
+        pronosticos_acertados = [
+            p for p in pronosticos if (p.pronostico_resultado or {}).get('estado') == 'acierto'
+        ]
+        pronosticos_fallidos = [
+            p for p in pronosticos if (p.pronostico_resultado or {}).get('estado') == 'diferencia'
+        ]
+        tradeoffs = [p for p in pasos if (p.tradeoff_aceptado or '').strip()]
+        tradeoffs_reales = [
+            p for p in tradeoffs if (p.tradeoff_resultado or {}).get('estado') == 'tradeoff_real'
+        ]
+        retos = RetoRefuerzo.objects.filter(simulacion=simulacion, estudiante=intento.estudiante)
+        retos_total = retos.count()
+        retos_completados = retos.filter(completado=True).count()
+        reflexiones = [p for p in pasos if (p.reflexion or '').strip()]
+        requiere_refuerzo = (
+            float(intento.puntuacion_final or 0) < 70
+            or len(reflexiones) < len(pasos)
+            or bool(pronosticos_fallidos)
+            or (retos_total > retos_completados)
+        )
+        writer.writerow([
+            intento.estudiante.get_full_name() or intento.estudiante.username,
+            intento.pk,
+            'si' if intento.finalizado else 'no',
+            intento.puntuacion_final,
+            len(pasos),
+            len(reflexiones),
+            len(pronosticos),
+            len(pronosticos_acertados),
+            len(pronosticos_fallidos),
+            len(tradeoffs),
+            len(tradeoffs_reales),
+            retos_total,
+            retos_completados,
+            'si' if requiere_refuerzo else 'no',
+        ])
+    return response
 
 
 def _get_simulacion_profesor(user, pk):
@@ -1230,15 +1410,22 @@ def view(request):
         data['analitica'] = _analitica_simulacion(simulacion)
         return render(request, 'simulador/pro_simulaciones/analitica.html', data)
 
+    elif action == 'analitica_export':
+        simulacion = _get_simulacion_profesor(request.user, request.GET.get('id'))
+        return _exportar_analitica_simulacion(simulacion)
+
+    elif action == 'auditoria_export':
+        return _exportar_auditoria_casos(request)
+
     if _tiene_acceso_global(request.user):
-        data['list'] = _simulaciones_permitidas(request.user).select_related(
+        data['list'] = _auditar_lista_simulaciones(list(_simulaciones_permitidas(request.user).select_related(
             'materia_malla__materia', 'materia_malla__nivel'
-        ).all()
+        ).all()))
         data['asignaciones'] = []
     else:
-        data['list'] = _simulaciones_permitidas(request.user).select_related(
+        data['list'] = _auditar_lista_simulaciones(list(_simulaciones_permitidas(request.user).select_related(
             'materia_malla__materia', 'materia_malla__nivel'
-        ).distinct()
+        ).distinct()))
         data['asignaciones'] = ProfesorMateria.objects.filter(
             profesor=request.user,
             activo=True,

@@ -1,28 +1,42 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
-    <h1 class="h3">Periodos academicos</h1>
-    <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_periodos' %}?action=add')">Nuevo periodo</button>
+<div class="page-head">
+    <div>
+        <div class="page-kicker">Academico</div>
+        <h1 class="h3">Periodos academicos <span class="count-pill">{{ list|length }}</span></h1>
+    </div>
+    <div class="page-head-actions">
+        <input type="search" class="table-search" placeholder="Buscar periodo..." oninput="filtrar_tabla(this, 'tabla-periodos')">
+        <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_periodos' %}?action=add')">+ Nuevo periodo</button>
+    </div>
 </div>
-<div class="module-card p-3 table-responsive">
-    <table class="table table-hover align-middle">
-        <thead><tr><th>Nombre</th><th>Institucion</th><th>Fecha Inicio</th><th>Fecha Fin</th><th>Matricula Activa</th><th>Acciones</th></tr></thead>
+<div class="module-card data-card table-responsive">
+    <table class="table table-hover align-middle" id="tabla-periodos">
+        <thead><tr><th>Nombre</th><th>Institucion</th><th>Inicio</th><th>Fin</th><th>Matricula</th><th class="text-end">Acciones</th></tr></thead>
         <tbody>
         {% for item in list %}
-            <tr>
-                <td>{{ item.nombre }}</td>
+            <tr data-row>
+                <td class="cell-strong">{{ item.nombre }}</td>
                 <td>{{ item.institucion }}</td>
-                <td>{{ item.fecha_inicio|date:"d/m/Y" }}</td>
-                <td>{{ item.fecha_fin|date:"d/m/Y" }}</td>
-                <td>{{ item.activo_matricula|yesno:"Si,No" }}</td>
-                <td>
+                <td class="cell-num">{{ item.fecha_inicio|date:"d/m/Y" }}</td>
+                <td class="cell-num">{{ item.fecha_fin|date:"d/m/Y" }}</td>
+                <td>{% if item.activo_matricula %}<span class="badge text-bg-success">Abierta</span>{% else %}<span class="badge text-bg-secondary">Cerrada</span>{% endif %}</td>
+                <td class="text-end">
                     <button class="btn btn-sm btn-outline-primary btn-action" onclick="abrir_modal('{% url 'adm_periodos' %}?action=edit&pk={{ item.pk }}')">Editar</button>
                     <button class="btn btn-sm btn-outline-danger btn-action" onclick="abrir_modal('{% url 'adm_periodos' %}?action=delete&pk={{ item.pk }}')">Eliminar</button>
                 </td>
             </tr>
         {% empty %}
-            <tr><td colspan="6" class="text-muted">No hay registros</td></tr>
+            <tr><td colspan="6">
+                <div class="empty-state">
+                    <span class="empty-ico">&#128197;</span>
+                    <div class="empty-title">Aun no hay periodos</div>
+                    <p class="empty-text">Define un periodo academico para poder matricular estudiantes y abrir simulaciones.</p>
+                    <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_periodos' %}?action=add')">+ Crear periodo</button>
+                </div>
+            </td></tr>
         {% endfor %}
+            <tr class="no-match row-hidden"><td colspan="6"><div class="empty-state"><span class="empty-ico">&#128269;</span><div class="empty-title">Sin coincidencias</div><p class="empty-text">Ningun periodo coincide con tu busqueda.</p></div></td></tr>
         </tbody>
     </table>
 </div>

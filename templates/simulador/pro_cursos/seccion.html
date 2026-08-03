@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker"><a href="{% url 'pro_cursos' %}" class="text-decoration-none">Mis cursos</a> / Curso</div>
+        <h1 class="h3">{{ seccion.materia_malla.materia.nombre }}</h1>
+        <div class="text-muted">{{ seccion.periodo }} &middot; Paralelo {{ seccion.paralelo }} &middot; Prof. {{ seccion.profesor.get_full_name|default:seccion.profesor.username }}</div>
+    </div>
+    <div class="page-head-actions">
+        <a class="btn btn-outline-info" href="{% url 'pro_cursos' %}?action=reporte_pdf&pk={{ seccion.pk }}">&#128196; Reporte PDF</a>
+        <a class="btn btn-outline-primary" href="{% url 'pro_cursos' %}?action=mapeo&pk={{ seccion.pk }}">&#128279; Mapeo de rubrica</a>
+        <button class="btn btn-primary" onclick="abrir_modal('{% url 'pro_cursos' %}?action=add_asignacion&seccion={{ seccion.pk }}')">+ Asignar simulacion</button>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><span class="metric-ico">&#128101;</span><div><div class="metric-label">Estudiantes</div><div class="metric-value">{{ analitica.total_estudiantes }}</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><span class="metric-ico">&#128221;</span><div><div class="metric-label">Tareas</div><div class="metric-value">{{ analitica.total_asignaciones }}</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><span class="metric-ico">&#128202;</span><div><div class="metric-label">Promedio curso</div><div class="metric-value">{{ analitica.promedio_curso|default:"-" }}</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><span class="metric-ico">&#127919;</span><div><div class="metric-label">Resultados RA</div><div class="metric-value">{{ resultados|length }}</div></div></div></div>
+</div>
+
+<h2 class="h5 mb-2">Tareas asignadas</h2>
+<div class="module-card data-card table-responsive mb-4">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Tarea</th><th>Fecha limite</th><th>Entrega</th><th>Aprobacion</th><th>Promedio</th><th class="text-end">Acciones</th></tr></thead>
+        <tbody>
+        {% for r in analitica.asignaciones %}
+            <tr>
+                <td class="cell-strong">{{ r.asignacion.titulo|default:r.asignacion.simulacion.titulo }}</td>
+                <td class="cell-num">{% if r.asignacion.fecha_limite %}{{ r.asignacion.fecha_limite|date:"d/m/Y H:i" }} {% if r.asignacion.cerrada %}<span class="badge text-bg-secondary">Cerrada</span>{% else %}<span class="badge text-bg-success">Abierta</span>{% endif %}{% else %}<span class="text-muted">Sin limite</span>{% endif %}</td>
+                <td><span class="chip chip-soft">{{ r.entregados }}/{{ r.total }}</span> <span class="cell-num">{{ r.pct_entrega }}%</span></td>
+                <td class="cell-num">{{ r.pct_aprobacion }}%</td>
+                <td><span class="metric-value" style="font-size:1.1rem">{{ r.promedio|default:"-" }}</span></td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary btn-action" href="{% url 'pro_cursos' %}?action=notas&pk={{ r.asignacion.pk }}">Notas</a>
+                    <a class="btn btn-sm btn-outline-warning btn-action" href="{% url 'pro_cursos' %}?action=diagnostico&pk={{ r.asignacion.pk }}">Diagnóstico</a>
+                    {% if r.asignacion.trabajo_en_equipo %}<a class="btn btn-sm btn-outline-dark btn-action" href="{% url 'pro_cursos' %}?action=equipos&pk={{ r.asignacion.pk }}">Equipos</a>{% endif %}
+                    <a class="btn btn-sm btn-outline-info btn-action" href="{% url 'pro_cursos' %}?action=export&pk={{ r.asignacion.pk }}">CSV</a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6">
+                <div class="empty-state">
+                    <span class="empty-ico">&#128221;</span>
+                    <div class="empty-title">Sin tareas asignadas</div>
+                    <p class="empty-text">Asigna una simulacion a este curso, con fecha limite y peso, para empezar a calificar.</p>
+                    <button class="btn btn-primary" onclick="abrir_modal('{% url 'pro_cursos' %}?action=add_asignacion&seccion={{ seccion.pk }}')">+ Asignar simulacion</button>
+                </div>
+            </td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<h2 class="h5 mb-2">Logro de resultados de aprendizaje <span class="text-muted" style="font-size:.8rem">(acreditacion)</span></h2>
+<div class="module-card data-card table-responsive">
+    <table class="table align-middle">
+        <thead><tr><th>RA</th><th>Descripcion</th><th>Bloom</th><th>Logro</th></tr></thead>
+        <tbody>
+        {% for r in resultados %}
+            <tr>
+                <td class="cell-code">{{ r.ra.codigo }}</td>
+                <td>{{ r.ra.descripcion }}</td>
+                <td><span class="chip chip-media">{{ r.ra.get_nivel_bloom_display }}</span></td>
+                <td style="min-width:160px">
+                    {% if r.logro_pct is not None %}
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height:8px"><div class="progress-bar" style="width:{{ r.logro_pct }}%;background:var(--forest)"></div></div>
+                            <span class="cell-num">{{ r.promedio }}</span>
+                        </div>
+                    {% else %}
+                        <span class="text-muted">Sin datos</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="4">
+                <div class="empty-state">
+                    <span class="empty-ico">&#127919;</span>
+                    <div class="empty-title">Sin resultados de aprendizaje</div>
+                    <p class="empty-text">Crea resultados de aprendizaje para esta materia y enlazalos a los conceptos de la rubrica para medir su logro.</p>
+                    <button class="btn btn-primary" onclick="abrir_modal('{% url 'pro_cursos' %}?action=add_resultado')">+ Crear resultado de aprendizaje</button>
+                </div>
+            </td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

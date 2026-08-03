@@ -7,7 +7,10 @@
         <h1 class="h3 mb-0">Analitica del caso</h1>
         <div class="text-muted">{{ simulacion.titulo }}</div>
     </div>
-    <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}?action=configuracion&id={{ simulacion.pk }}">&larr; Volver</a>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-primary btn-sm" href="{% url 'pro_simulaciones' %}?action=analitica_export&id={{ simulacion.pk }}">Exportar CSV</a>
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'pro_simulaciones' %}?action=configuracion&id={{ simulacion.pk }}">&larr; Volver</a>
+    </div>
 </div>
 
 <div class="row g-3 mb-3">
@@ -15,6 +18,13 @@
     <div class="col-md-3"><div class="module-card metric-card p-3"><div class="section-title">Finalizados</div><div class="metric-value">{{ analitica.finalizados }}</div></div></div>
     <div class="col-md-3"><div class="module-card metric-card p-3"><div class="section-title">Promedio</div><div class="metric-value">{{ analitica.promedio|default:"-" }}</div></div></div>
     <div class="col-md-3"><div class="module-card metric-card p-3"><div class="section-title">Alertas</div><div class="metric-value">{{ analitica.alertas_total }}</div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="module-card metric-card p-3"><div class="section-title">Reflexion</div><div class="metric-value">{{ analitica.metacognicion.reflexion_pct }}%</div><div class="text-muted small">{{ analitica.metacognicion.reflexiones }}/{{ analitica.metacognicion.pasos_validos }} pasos</div></div></div>
+    <div class="col-md-3"><div class="module-card metric-card p-3"><div class="section-title">Pronostico</div><div class="metric-value">{{ analitica.metacognicion.pronostico_pct }}%</div><div class="text-muted small">{{ analitica.metacognicion.pronosticos_acertados }}/{{ analitica.metacognicion.pronosticos }} aciertos</div></div></div>
+    <div class="col-md-3"><div class="module-card metric-card p-3"><div class="section-title">Trade-offs</div><div class="metric-value">{{ analitica.metacognicion.tradeoff_pct }}%</div><div class="text-muted small">{{ analitica.metacognicion.tradeoffs_reales }}/{{ analitica.metacognicion.tradeoffs }} reales</div></div></div>
+    <div class="col-md-3"><div class="module-card metric-card p-3"><div class="section-title">Refuerzo</div><div class="metric-value">{{ analitica.metacognicion.retos_pct }}%</div><div class="text-muted small">{{ analitica.metacognicion.retos_completados }}/{{ analitica.metacognicion.retos_total }} retos</div></div></div>
 </div>
 
 <div class="row g-3">
@@ -50,6 +60,39 @@
                 {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-1">
+    <div class="col-lg-6">
+        <div class="module-card p-3 table-responsive">
+            <h2 class="h5">Estudiantes que requieren refuerzo</h2>
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Estudiante</th><th>Nota</th><th>Sin reflexion</th><th>Pronosticos fallidos</th></tr></thead>
+                <tbody>
+                {% for item in analitica.estudiantes_riesgo %}
+                    <tr>
+                        <td>{{ item.nombre }}</td>
+                        <td>{{ item.nota|floatformat:2 }}</td>
+                        <td>{{ item.sin_reflexion }}</td>
+                        <td>{{ item.pronosticos_fallidos }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="text-muted">Sin alertas individuales.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="module-card p-3">
+            <h2 class="h5">Recomendaciones docentes</h2>
+            {% for recomendacion in analitica.recomendaciones %}
+                <div class="border-top py-2">{{ recomendacion }}</div>
+            {% empty %}
+                <p class="text-muted mb-0">Aun no hay recomendaciones: falta evidencia o los indicadores estan dentro de rango.</p>
+            {% endfor %}
         </div>
     </div>
 </div>

@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import transaction
 from django.shortcuts import get_object_or_404, render
 
-from core.funciones import ok_json, bad_json
+from core.funciones import ok_json, bad_json, errores_formulario
 from simulador.models import Simulacion, IndicadorSimulacion, RestriccionSimulacion
 from simulador.models import CriterioEvaluacion, ConceptoEsperadoRonda
 from simulador.models import EscenarioSimulacion, DecisionConfigurada
@@ -24,7 +24,7 @@ def view(request):
                 obj.estado = Simulacion.BORRADOR
                 obj.save()
                 return ok_json()
-            return bad_json(mensaje='Error en el formulario', data={'errors': form.errors})
+            return bad_json(mensaje=errores_formulario(form), data={'errors': form.errors})
         elif action == 'edit':
             pk = request.POST.get('pk') or request.GET.get('pk')
             obj = get_object_or_404(Simulacion, pk=pk)
@@ -32,7 +32,7 @@ def view(request):
             if form.is_valid():
                 form.save()
                 return ok_json()
-            return bad_json(mensaje='Error en el formulario', data={'errors': form.errors})
+            return bad_json(mensaje=errores_formulario(form), data={'errors': form.errors})
         elif action == 'delete':
             pk = request.POST.get('pk') or request.GET.get('pk')
             obj = get_object_or_404(Simulacion, pk=pk)

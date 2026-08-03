@@ -717,6 +717,35 @@ def calcular_penalizaciones(alertas):
     return sum(a.get('penalizacion', 0) for a in alertas)
 
 
+def _magnitud_violacion(operador, limite, valor):
+    """Cuanto le falta a un indicador para cumplir su restriccion (0 = la cumple)."""
+    if valor is None or limite is None:
+        return 0.0
+    valor = float(valor)
+    limite = float(limite)
+    if operador in ('>=', '>'):
+        return max(0.0, limite - valor)
+    if operador in ('<=', '<'):
+        return max(0.0, valor - limite)
+    if operador in ('==', '='):
+        return abs(valor - limite)
+    return 0.0
+
+
+def _restriccion_mejoro(alerta, estado_antes, estado_despues):
+    """True si el estudiante ACERCO el indicador a cumplir su restriccion este
+    turno (aunque todavia la incumpla). Sirve para premiar el avance: si baja los
+    defectos de 15% a 7% va por buen camino y no debe penalizarse como si nada."""
+    codigo = alerta.get('indicador')
+    operador = alerta.get('operador')
+    limite = alerta.get('limite')
+    if not codigo or operador is None or limite is None:
+        return False
+    falta_antes = _magnitud_violacion(operador, limite, (estado_antes or {}).get(codigo))
+    falta_despues = _magnitud_violacion(operador, limite, (estado_despues or {}).get(codigo))
+    return falta_despues < falta_antes
+
+
 def validar_condiciones_exito(simulacion, estado):
     cumplidas = []
     bonificacion_total = 0
@@ -787,6 +816,138 @@ def _hubo_movimiento(antes, despues):
             if round(float(valor), 3) != round(float(prev), 3):
                 return True
     return False
+
+
+def normalizar_pronostico(pronostico=None):
+    pronostico = pronostico or {}
+    direccion = (pronostico.get('direccion') or '').strip().lower()
+    if direccion not in {'sube', 'baja', 'igual'}:
+        direccion = ''
+    return {
+        'indicador': (pronostico.get('indicador') or '').strip()[:80],
+        'direccion': direccion,
+        'justificacion': (pronostico.get('justificacion') or '').strip()[:1000],
+    }
+
+
+def evaluar_pronostico(pronostico, estado_antes, estado_despues):
+    pronostico = normalizar_pronostico(pronostico)
+    indicador = pronostico.get('indicador')
+    direccion = pronostico.get('direccion')
+    if not indicador or not direccion:
+        return {}
+    if indicador not in (estado_antes or {}) and indicador not in (estado_despues or {}):
+        return {
+            'estado': 'sin_datos',
+            'mensaje': 'No se pudo comparar el pronostico porque el indicador no tiene datos en este paso.',
+        }
+    antes = float((estado_antes or {}).get(indicador, 0) or 0)
+    despues = float((estado_despues or {}).get(indicador, antes) or antes)
+    delta = despues - antes
+    if delta > 0:
+        real = 'sube'
+    elif delta < 0:
+        real = 'baja'
+    else:
+        real = 'igual'
+    acerto = direccion == real
+    return {
+        'estado': 'acierto' if acerto else 'diferencia',
+        'indicador': indicador,
+        'direccion_predicha': direccion,
+        'direccion_real': real,
+        'valor_antes': antes,
+        'valor_despues': despues,
+        'delta': delta,
+        'mensaje': (
+            'Tu pronostico coincidio con el cambio real.'
+            if acerto else
+            f'Tu pronostico fue "{direccion}", pero el indicador realmente quedo "{real}".'
+        ),
+    }
+
+
+def evaluar_tradeoff(simulacion, tradeoff_aceptado, estado_antes, estado_despues, recursos_antes=None, recursos_despues=None):
+    tradeoff_aceptado = (tradeoff_aceptado or '').strip()[:1000]
+    indicadores = {
+        ind.codigo: ind
+        for ind in simulacion.indicadores.filter(activo=True)
+    }
+    recursos = {
+        rec.codigo: rec
+        for rec in simulacion.recursos.filter(activo=True)
+    }
+    ganancias = []
+    sacrificios = []
+
+    for codigo, ind in indicadores.items():
+        antes = (estado_antes or {}).get(codigo)
+        despues = (estado_despues or {}).get(codigo)
+        if not isinstance(antes, (int, float)) or not isinstance(despues, (int, float)):
+            continue
+        delta = round(float(despues) - float(antes), 2)
+        if delta == 0:
+            continue
+        mejora = (
+            delta > 0 if ind.direccion_optima == ind.DIRECCION_ALTO
+            else delta < 0
+        )
+        item = {
+            'tipo': 'indicador',
+            'codigo': codigo,
+            'nombre': ind.nombre or codigo,
+            'antes': float(antes),
+            'despues': float(despues),
+            'delta': delta,
+        }
+        if mejora:
+            ganancias.append(item)
+        else:
+            sacrificios.append(item)
+
+    for codigo, rec in recursos.items():
+        antes = (recursos_antes or {}).get(codigo)
+        despues = (recursos_despues or {}).get(codigo)
+        if not isinstance(antes, (int, float)) or not isinstance(despues, (int, float)):
+            continue
+        delta = round(float(despues) - float(antes), 2)
+        if delta == 0:
+            continue
+        item = {
+            'tipo': 'recurso',
+            'codigo': codigo,
+            'nombre': rec.nombre or codigo,
+            'antes': float(antes),
+            'despues': float(despues),
+            'delta': delta,
+            'unidad': rec.unidad,
+        }
+        if delta < 0:
+            sacrificios.append(item)
+        else:
+            ganancias.append(item)
+
+    if not ganancias and not sacrificios and not tradeoff_aceptado:
+        return {}
+    if ganancias and sacrificios:
+        estado = 'tradeoff_real'
+        mensaje = 'La jugada tuvo un intercambio real: mejoro algo, pero sacrifico otra variable.'
+    elif ganancias:
+        estado = 'solo_ganancia'
+        mensaje = 'La jugada genero ganancias visibles sin sacrificios medibles en este paso.'
+    elif sacrificios:
+        estado = 'solo_sacrificio'
+        mensaje = 'La jugada tuvo costo o deterioro, pero no genero una ganancia medible inmediata.'
+    else:
+        estado = 'sin_cambio'
+        mensaje = 'No hubo cambios medibles para contrastar el trade-off declarado.'
+    return {
+        'estado': estado,
+        'mensaje': mensaje,
+        'aceptado': tradeoff_aceptado,
+        'ganancias': ganancias,
+        'sacrificios': sacrificios,
+    }
 
 
 def _cumple_condicion(estado, cond):
@@ -996,8 +1157,17 @@ def generar_debriefing_final(intento):
     restricciones = sum(1 for p in intento.pasos.all() if p.alertas_restricciones)
     rondas_validas = intento.pasos.filter(es_valido=True).count()
     intentos_invalidos = intento.pasos.filter(es_valido=False).count()
-    partes = [
-        f'=== DEBRIEFING ===',
+    partes = []
+    # Debrief REFLEXIVO con IA (ciclo de Kolb): lo mas importante para aprender.
+    try:
+        from simulador.ia_service import generar_debriefing_ia
+        reflexivo = generar_debriefing_ia(intento)
+    except Exception:
+        reflexivo = ''
+    if reflexivo:
+        partes += ['=== QUE APRENDISTE ===', reflexivo, '']
+    partes += [
+        f'=== RESUMEN ===',
         f'Simulacion: {intento.simulacion.titulo}',
         f'Estudiante: {intento.estudiante.get_full_name() or intento.estudiante.username}',
         f'Puntaje final: {intento.puntuacion_final} - {obtener_nivel_resultado(float(intento.puntuacion_final))}',
@@ -1031,7 +1201,50 @@ def finalizar_intento(intento):
         'debriefing_final', 'finalizado', 'fecha_fin',
     ])
     registrar_resultado_juego(intento)
+    programar_retos_refuerzo(intento)
     return intento
+
+
+def programar_retos_refuerzo(intento):
+    from datetime import timedelta
+    from simulador.models import ConceptoEsperadoRonda, RetoRefuerzo
+
+    if RetoRefuerzo.objects.filter(intento_origen=intento).exists():
+        return []
+
+    faltantes = []
+    for paso in intento.pasos.order_by('numero'):
+        for nombre in (paso.evaluacion_detalle or {}).get('conceptos_faltantes') or []:
+            if nombre and nombre not in faltantes:
+                faltantes.append(str(nombre))
+
+    conceptos = faltantes[:2]
+    if not conceptos:
+        conceptos = list(
+            ConceptoEsperadoRonda.objects.filter(
+                simulacion=intento.simulacion, activo=True,
+            ).order_by('numero_ronda', 'nombre').values_list('nombre', flat=True)[:2]
+        )
+    if not conceptos:
+        conceptos = [intento.simulacion.tema or intento.simulacion.titulo]
+
+    retos = []
+    for idx, concepto in enumerate(conceptos[:2]):
+        dias = 1 if idx == 0 else 3
+        pregunta = (
+            f'Aplica "{concepto}" en un caso distinto al que jugaste: '
+            f'que decision tomarias, que indicador observarias y que trade-off aceptarias?'
+        )
+        retos.append(RetoRefuerzo.objects.create(
+            estudiante=intento.estudiante,
+            simulacion=intento.simulacion,
+            intento_origen=intento,
+            concepto=concepto[:200],
+            pregunta=pregunta,
+            fecha_disponible=timezone.now() + timedelta(days=dias),
+            usuario_creacion=intento.estudiante,
+        ))
+    return retos
 
 
 def registrar_resultado_juego(intento):
@@ -1100,7 +1313,7 @@ def obtener_escenario_inicial(simulacion):
     return simulacion.escenarios_arbol.filter(activo=True).order_by('orden').first()
 
 
-def ejecutar_decision_arbol(intento, decision):
+def ejecutar_decision_arbol(intento, decision, pronostico=None, tradeoff_aceptado=''):
     estado_antes = dict(intento.estado_actual or {})
     recursos_antes = dict(intento.recursos_actuales or {})
     impacto = dict(decision.impacto or {})
@@ -1110,6 +1323,13 @@ def ejecutar_decision_arbol(intento, decision):
     alertas = validar_restricciones(intento.simulacion, estado_despues)
     penalizacion = calcular_penalizaciones(alertas)
     puntaje_paso = calcular_puntaje_paso(float(decision.puntaje_base), penalizacion)
+    pronostico = normalizar_pronostico(pronostico)
+    pronostico_resultado = evaluar_pronostico(pronostico, estado_antes, estado_despues)
+    tradeoff_aceptado = (tradeoff_aceptado or '').strip()[:1000]
+    tradeoff_resultado = evaluar_tradeoff(
+        intento.simulacion, tradeoff_aceptado, estado_antes, estado_despues,
+        recursos_antes, recursos_despues,
+    )
     numero = intento.pasos.count() + 1
     siguiente = decision.siguiente_escenario
     situacion = intento.escenario_actual.situacion if intento.escenario_actual else decision.escenario.situacion
@@ -1140,6 +1360,12 @@ def ejecutar_decision_arbol(intento, decision):
         alertas_restricciones=alertas,
         penalizacion_aplicada=penalizacion,
         siguiente_situacion=siguiente.situacion if siguiente else '',
+        pronostico_indicador=pronostico['indicador'],
+        pronostico_direccion=pronostico['direccion'],
+        pronostico_justificacion=pronostico['justificacion'],
+        pronostico_resultado=pronostico_resultado,
+        tradeoff_aceptado=tradeoff_aceptado,
+        tradeoff_resultado=tradeoff_resultado,
     )
 
     intento.estado_actual = estado_despues
@@ -1165,7 +1391,7 @@ def ejecutar_decision_arbol(intento, decision):
     return paso
 
 
-def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None):
+def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pronostico=None, tradeoff_aceptado=''):
     # Modo hibrido: si el estudiante ELIGIO una decision (accion), su texto se
     # suma a la decision (la IA evalua la justificacion) y su impacto_base es la
     # CONSECUENCIA real sobre los indicadores. Si no elige, es texto libre.
@@ -1177,6 +1403,8 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None):
         accion_costo = dict(getattr(accion, 'costo_recursos', {}) or {})
     estado_antes = dict(intento.estado_actual or {})
     recursos_antes = dict(intento.recursos_actuales or construir_recursos_iniciales(intento.simulacion))
+    pronostico = normalizar_pronostico(pronostico)
+    tradeoff_aceptado = (tradeoff_aceptado or '').strip()[:1000]
     numero = intento.pasos.count() + 1
     ronda_actual = intento.numero_ronda_actual
     situacion_actual = intento.situacion_actual or intento.simulacion.situacion_inicial or intento.simulacion.contexto
@@ -1215,6 +1443,27 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None):
             alertas_restricciones=[],
             penalizacion_aplicada=0,
             siguiente_situacion=situacion_actual,
+            pronostico_indicador=pronostico['indicador'],
+            pronostico_direccion=pronostico['direccion'],
+            pronostico_justificacion=pronostico['justificacion'],
+            pronostico_resultado=(
+                {
+                    'estado': 'sin_aplicar',
+                    'mensaje': 'No se comparo el pronostico porque la jugada no fue valida.',
+                }
+                if pronostico.get('indicador') else {}
+            ),
+            tradeoff_aceptado=tradeoff_aceptado,
+            tradeoff_resultado=(
+                {
+                    'estado': 'sin_aplicar',
+                    'mensaje': 'No se analizo el trade-off porque la jugada no fue valida.',
+                    'aceptado': tradeoff_aceptado,
+                    'ganancias': [],
+                    'sacrificios': [],
+                }
+                if tradeoff_aceptado else {}
+            ),
         )
         intento.intentos_invalidos_actuales += 1
         update_fields = ['intentos_invalidos_actuales']
@@ -1300,13 +1549,25 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None):
         # Fase B: eventos dinamicos -- la empresa reacciona con sucesos segun el
         # estado/ronda (un cliente cancela, aparece una crisis, etc.).
         estado_despues, eventos_msgs = aplicar_eventos(intento.simulacion, estado_despues, ronda_actual)
+        pronostico_resultado = evaluar_pronostico(pronostico, estado_antes, estado_despues)
+        tradeoff_resultado = evaluar_tradeoff(
+            intento.simulacion, tradeoff_aceptado, estado_antes, estado_despues,
+            recursos_antes, recursos_despues,
+        )
         # Solo se penaliza por indicadores que la decision del estudiante movio
         # este turno: no se castiga un estado inicial malo que el no causo. Ademas
         # se aplica un tope para que las restricciones nunca aplasten la nota.
         alertas = validar_restricciones(intento.simulacion, estado_despues)
         alertas_recursos = validar_recursos(intento.simulacion, recursos_despues)
         indicadores_movidos = set(impacto.keys())
-        alertas = [a for a in alertas if a.get('indicador') in indicadores_movidos]
+        # Solo se penaliza un indicador que el estudiante movio este turno Y que
+        # NO acerco a cumplir su restriccion. Si lo mejoro (aunque siga fuera de
+        # rango) va por buen camino: premiar el avance, no castigar el progreso.
+        alertas = [
+            a for a in alertas
+            if a.get('indicador') in indicadores_movidos
+            and not _restriccion_mejoro(a, estado_antes, estado_despues)
+        ]
         penalizacion_recursos = min(15, len(alertas_recursos) * 5)
         penalizacion = min(PENALIZACION_MAX_PASO, calcular_penalizaciones(alertas) + penalizacion_recursos)
         puntaje_paso = calcular_puntaje_paso(puntaje_sugerido, penalizacion)
@@ -1373,6 +1634,12 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None):
         alertas_restricciones=alertas,
         penalizacion_aplicada=penalizacion,
         siguiente_situacion=siguiente_situacion,
+        pronostico_indicador=pronostico['indicador'],
+        pronostico_direccion=pronostico['direccion'],
+        pronostico_justificacion=pronostico['justificacion'],
+        pronostico_resultado=pronostico_resultado,
+        tradeoff_aceptado=tradeoff_aceptado,
+        tradeoff_resultado=tradeoff_resultado,
     )
 
     intento.estado_actual = estado_despues

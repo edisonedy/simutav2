@@ -1,11 +1,15 @@
 from django import forms
 
+from core.models import PerfilUsuario
+
 from .models import (
     AccionSugeridaSimulacion,
+    Asignacion,
     CondicionExitoSimulacion,
     ConceptoEsperadoRonda,
     CriterioEvaluacion,
     DecisionConfigurada,
+    Equipo,
     EscenarioSimulacion,
     EventoSimulacion,
     IndicadorSimulacion,
@@ -19,9 +23,85 @@ from .models import (
     PlantillaRonda,
     PlantillaSimulacion,
     RecursoSimulacion,
+    ResultadoAprendizaje,
     RestriccionSimulacion,
+    Seccion,
     Simulacion,
 )
+
+
+class _DateTimeInput(forms.DateTimeInput):
+    input_type = 'datetime-local'
+
+    def __init__(self, attrs=None):
+        super().__init__(attrs=attrs, format='%Y-%m-%dT%H:%M')
+
+
+class SeccionForm(forms.ModelForm):
+    class Meta:
+        model = Seccion
+        fields = ['materia_malla', 'periodo', 'paralelo', 'estudiantes', 'activo']
+        widgets = {'estudiantes': forms.SelectMultiple(attrs={'size': 8})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['materia_malla'].label = 'Materia'
+        self.fields['paralelo'].help_text = 'Ejemplo: A, B, "Matutino".'
+        estudiantes = self.fields['estudiantes']
+        estudiantes.queryset = estudiantes.queryset.filter(
+            perfil__rol=PerfilUsuario.ESTUDIANTE, perfil__activo=True, is_active=True,
+        ).order_by('last_name', 'first_name', 'username')
+        estudiantes.label_from_instance = lambda u: u.get_full_name() or u.username
+        estudiantes.help_text = 'Elige los estudiantes del paralelo (Ctrl/Cmd para varios).'
+
+
+class AsignacionForm(forms.ModelForm):
+    class Meta:
+        model = Asignacion
+        fields = [
+            'simulacion', 'titulo', 'fecha_apertura', 'fecha_limite',
+            'ponderacion', 'nota_minima_aprobacion', 'permite_reintento',
+            'trabajo_en_equipo', 'publicada', 'activo',
+        ]
+        widgets = {
+            'fecha_apertura': _DateTimeInput(),
+            'fecha_limite': _DateTimeInput(),
+        }
+
+    def __init__(self, *args, simulaciones=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if simulaciones is not None:
+            self.fields['simulacion'].queryset = simulaciones
+        self.fields['titulo'].help_text = 'Si lo dejas vacio se usa el titulo de la simulacion.'
+        self.fields['fecha_limite'].help_text = 'Opcional. Despues de esta fecha la tarea queda cerrada.'
+        self.fields['ponderacion'].label = 'Peso en la nota (%)'
+        self.fields['nota_minima_aprobacion'].label = 'Nota minima para aprobar'
+
+
+class ResultadoAprendizajeForm(forms.ModelForm):
+    class Meta:
+        model = ResultadoAprendizaje
+        fields = ['materia_malla', 'codigo', 'descripcion', 'nivel_bloom', 'activo']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['materia_malla'].label = 'Materia'
+        self.fields['codigo'].help_text = 'Ejemplo: RA1, RA2.'
+        self.fields['nivel_bloom'].label = 'Nivel de Bloom'
+
+
+class EquipoForm(forms.ModelForm):
+    class Meta:
+        model = Equipo
+        fields = ['nombre', 'integrantes', 'activo']
+        widgets = {'integrantes': forms.SelectMultiple(attrs={'size': 6})}
+
+    def __init__(self, *args, estudiantes=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        integrantes = self.fields['integrantes']
+        if estudiantes is not None:
+            integrantes.queryset = estudiantes
+        integrantes.label_from_instance = lambda u: u.get_full_name() or u.username
 
 
 class SimulacionForm(forms.ModelForm):

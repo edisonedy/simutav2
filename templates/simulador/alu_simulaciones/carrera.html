@@ -37,6 +37,32 @@
                 </div>
             </div>
 
+            <div class="game-card mb-3">
+                <div class="game-card-head"><span class="game-tag">🧠 Retos de refuerzo</span><span class="text-muted small">Práctica espaciada</span></div>
+                {% if retos_refuerzo %}
+                <div class="vstack gap-3">
+                    {% for reto in retos_refuerzo %}
+                    <div class="border rounded p-2">
+                        <div class="small text-muted">{{ reto.simulacion.materia_malla.materia.nombre }} · {{ reto.concepto|default:"Refuerzo" }}</div>
+                        <div class="fw-semibold mb-2">{{ reto.pregunta }}</div>
+                        {% if reto.fecha_disponible <= ahora %}
+                        <form method="post" action="{% url 'alu_simulaciones' %}?action=completar_reto" onsubmit="return enviar_formulario(this)">
+                            {% csrf_token %}
+                            <input type="hidden" name="reto_id" value="{{ reto.pk }}">
+                            <textarea name="respuesta" rows="2" class="mb-2" placeholder="Responde con decisión, indicador y trade-off." required></textarea>
+                            <button class="btn btn-outline-primary btn-sm">Completar reto</button>
+                        </form>
+                        {% else %}
+                        <span class="chip chip-soft">Disponible: {{ reto.fecha_disponible|date:"d/m/Y H:i" }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Completa una misión para desbloquear retos de refuerzo.</p>
+                {% endif %}
+            </div>
+
             <div class="game-card">
                 <div class="game-card-head"><span class="game-tag">📜 Historial de misiones</span></div>
                 {% if historial %}

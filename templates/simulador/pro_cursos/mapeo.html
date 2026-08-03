@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker"><a href="{% url 'pro_cursos' %}?action=seccion&pk={{ seccion.pk }}" class="text-decoration-none">{{ seccion.materia_malla.materia.nombre }}</a> / Mapeo de rubrica</div>
+        <h1 class="h3">Conceptos &rarr; Resultados de aprendizaje</h1>
+        <div class="text-muted">Enlaza cada concepto de la rubrica con un RA para medir su logro.</div>
+    </div>
+    <div class="page-head-actions">
+        <button class="btn btn-outline-primary" onclick="abrir_modal('{% url 'pro_cursos' %}?action=add_resultado')">+ Resultado de aprendizaje</button>
+    </div>
+</div>
+
+{% if not resultados %}
+<div class="evento-banner mb-3" style="background:linear-gradient(100deg,var(--gold) 0%,var(--accent) 130%)">Primero crea resultados de aprendizaje para esta materia y luego enlaza los conceptos.</div>
+{% endif %}
+
+<div class="module-card data-card table-responsive">
+    <table class="table align-middle">
+        <thead><tr><th>Simulacion</th><th>Ronda</th><th>Concepto</th><th style="min-width:260px">Resultado de aprendizaje</th></tr></thead>
+        <tbody>
+        {% for c in conceptos %}
+            <tr>
+                <td class="cell-strong">{{ c.simulacion.titulo|default:"-" }}</td>
+                <td class="cell-num">{{ c.numero_ronda|default:"-" }}</td>
+                <td>{{ c.nombre }}</td>
+                <td>
+                    <form method="post" action="{% url 'pro_cursos' %}" onsubmit="return enviar_formulario(this)">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="map_concepto">
+                        <input type="hidden" name="seccion" value="{{ seccion.pk }}">
+                        <input type="hidden" name="concepto" value="{{ c.pk }}">
+                        <select name="resultado" class="form-select form-select-sm" onchange="enviar_formulario(this.form)" {% if not resultados %}disabled{% endif %}>
+                            <option value="">— Sin enlazar —</option>
+                            {% for ra in resultados %}
+                                <option value="{{ ra.pk }}" {% if c.resultado_aprendizaje_id == ra.pk %}selected{% endif %}>{{ ra.codigo }} · {{ ra.descripcion|truncatechars:50 }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="4">
+                <div class="empty-state">
+                    <span class="empty-ico">&#128279;</span>
+                    <div class="empty-title">No hay conceptos para mapear</div>
+                    <p class="empty-text">Asigna simulaciones con rubrica a este curso para poder enlazar sus conceptos a los resultados de aprendizaje.</p>
+                </div>
+            </td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
