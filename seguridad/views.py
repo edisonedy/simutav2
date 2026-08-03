@@ -11,12 +11,12 @@ from seguridad.forms import AsignarPerfilForm, PerfilUsuarioForm, UsuarioPerfilC
 MENSAJE_AUTOBLOQUEO = 'No puedes quitarte a ti mismo el acceso de administrador.'
 
 
-def _se_esta_bloqueando(request, perfil, rol_nuevo, activo):
+def _se_esta_bloqueando(request, perfil, roles_nuevos, activo):
     """Evita que el ultimo administrador se deje fuera del sistema sin querer."""
     if perfil.usuario_id != request.user.pk or request.user.is_superuser:
         return False
-    sigue_mandando = activo and rol_nuevo in (PerfilUsuario.ADMIN, PerfilUsuario.COORDINADOR)
-    return not sigue_mandando
+    manda = {PerfilUsuario.ADMIN, PerfilUsuario.COORDINADOR}.intersection(roles_nuevos)
+    return not (activo and manda)
 
 
 @solo_administrativos
@@ -38,7 +38,7 @@ def usuarios(request):
             perfil = get_object_or_404(PerfilUsuario, pk=request.POST.get('pk'))
             form = PerfilUsuarioForm(request.POST, instance=perfil)
             if form.is_valid():
-                if _se_esta_bloqueando(request, perfil, form.cleaned_data['rol'], form.cleaned_data['activo']):
+                if _se_esta_bloqueando(request, perfil, form.cleaned_data['roles'], form.cleaned_data['activo']):
                     return respuesta_error(request, url_retorno, MENSAJE_AUTOBLOQUEO)
                 form.save()
                 return respuesta_ok(request, url_retorno)
@@ -53,7 +53,7 @@ def usuarios(request):
 
         elif action == 'delete':
             perfil = get_object_or_404(PerfilUsuario, pk=request.POST.get('pk'))
-            if _se_esta_bloqueando(request, perfil, perfil.rol, False):
+            if _se_esta_bloqueando(request, perfil, perfil.roles, False):
                 return respuesta_error(request, url_retorno, MENSAJE_AUTOBLOQUEO)
             perfil.activo = False
             perfil.save(update_fields=['activo'])
@@ -88,7 +88,9 @@ def usuarios(request):
 
     # El listado recorre USUARIOS, no perfiles: asi tambien salen los que no
     # tienen ninguno (el superusuario creado por consola, por ejemplo).
-    lista = User.objects.select_related('perfil', 'perfil__institucion').order_by(
+    lista = User.objects.select_related(
+        'perfil', 'perfil__institucion',
+    ).prefetch_related('perfil__roles_adicionales').order_by(
         'last_name', 'first_name', 'username',
     )
     return render(request, 'seguridad/usuarios/view.html', {

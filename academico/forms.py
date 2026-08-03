@@ -4,6 +4,7 @@ from django.utils.html import format_html
 
 from core.funciones import conservar_seleccion_actual
 from core.models import PerfilUsuario
+from core.permisos import usuarios_con_rol
 
 
 def _ayuda_por_rol(quienes):
@@ -137,11 +138,9 @@ class InscripcionMallaForm(ActiveQuerysetsMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         estudiante = self.fields['estudiante']
-        estudiante.queryset = estudiante.queryset.filter(
-            perfil__rol=PerfilUsuario.ESTUDIANTE,
-            perfil__activo=True,
-            is_active=True,
-        ).order_by('last_name', 'first_name', 'username')
+        estudiante.queryset = usuarios_con_rol(PerfilUsuario.ESTUDIANTE).order_by(
+            'last_name', 'first_name', 'username',
+        )
         estudiante.label_from_instance = self._etiqueta_estudiante
         estudiante.help_text = _ayuda_por_rol('Estudiante')
         conservar_seleccion_actual(self)
@@ -171,11 +170,9 @@ class ProfesorMateriaForm(ActiveQuerysetsMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         profesor = self.fields['profesor']
-        profesor.queryset = profesor.queryset.filter(
-            perfil__rol__in=self.ROLES_DOCENTES,
-            perfil__activo=True,
-            is_active=True,
-        ).order_by('last_name', 'first_name', 'username')
+        profesor.queryset = usuarios_con_rol(*self.ROLES_DOCENTES).order_by(
+            'last_name', 'first_name', 'username',
+        )
         profesor.label_from_instance = lambda u: u.get_full_name() or u.username
         profesor.help_text = _ayuda_por_rol('Profesor, Coordinador o Administrador')
         conservar_seleccion_actual(self)

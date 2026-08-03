@@ -30,7 +30,12 @@
                 {% for item in grupo.usuarios %}
                     <tr data-row>
                         <td class="cell-code">{{ item.username }}</td>
-                        <td class="cell-strong">{{ item.get_full_name|default:"-" }}</td>
+                        <td class="cell-strong">
+                            {{ item.get_full_name|default:"-" }}
+                            {% for extra in item.perfil.roles_secundarios %}
+                                <span class="badge text-bg-light border ms-1">tambien {{ extra }}</span>
+                            {% endfor %}
+                        </td>
                         <td>{{ item.perfil.institucion|default:"-" }}</td>
                         <td>
                             {% if not item.is_active %}<span class="badge text-bg-secondary">Inactivo</span>

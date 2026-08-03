@@ -5,6 +5,7 @@ from django.utils.html import format_html
 from academico.forms import _ayuda_por_rol
 from core.funciones import conservar_seleccion_actual
 from core.models import PerfilUsuario
+from core.permisos import usuarios_con_rol
 
 from .models import (
     AccionSugeridaSimulacion,
@@ -52,9 +53,9 @@ class SeccionForm(forms.ModelForm):
         self.fields['materia_malla'].label = 'Materia'
         self.fields['paralelo'].help_text = 'Ejemplo: A, B, "Matutino".'
         estudiantes = self.fields['estudiantes']
-        estudiantes.queryset = estudiantes.queryset.filter(
-            perfil__rol=PerfilUsuario.ESTUDIANTE, perfil__activo=True, is_active=True,
-        ).order_by('last_name', 'first_name', 'username')
+        estudiantes.queryset = usuarios_con_rol(PerfilUsuario.ESTUDIANTE).order_by(
+            'last_name', 'first_name', 'username',
+        )
         estudiantes.label_from_instance = lambda u: u.get_full_name() or u.username
         estudiantes.help_text = format_html(
             'Elige los estudiantes del paralelo (Ctrl/Cmd para varios). {}',

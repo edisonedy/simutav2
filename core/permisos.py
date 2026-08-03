@@ -2,7 +2,9 @@
 from functools import wraps
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 
 from core.funciones import bad_json, es_ajax
 from core.models import PerfilUsuario
@@ -11,6 +13,13 @@ ROLES_ADMINISTRATIVOS = (PerfilUsuario.ADMIN, PerfilUsuario.COORDINADOR)
 ROLES_DOCENTES = (PerfilUsuario.PROFESOR, PerfilUsuario.ADMIN, PerfilUsuario.COORDINADOR)
 
 MENSAJE_SIN_PERMISO = 'No tienes permiso para administrar esta seccion.'
+
+
+def _perfil_activo(user):
+    if user is None or not user.is_authenticated:
+        return None
+    perfil = getattr(user, 'perfil', None)
+    return perfil if perfil and perfil.activo else None
 
 
 def es_administrativo(user):
@@ -23,8 +32,8 @@ def es_administrativo(user):
         return False
     if user.is_superuser:
         return True
-    perfil = getattr(user, 'perfil', None)
-    return bool(perfil and perfil.activo and perfil.rol in ROLES_ADMINISTRATIVOS)
+    perfil = _perfil_activo(user)
+    return bool(perfil and perfil.tiene_rol(*ROLES_ADMINISTRATIVOS))
 
 
 def es_docente(user):
@@ -33,11 +42,23 @@ def es_docente(user):
         return False
     if user.is_superuser or user.is_staff:
         return True
-    perfil = getattr(user, 'perfil', None)
-    if perfil and perfil.activo and perfil.rol in ROLES_DOCENTES:
+    perfil = _perfil_activo(user)
+    if perfil and perfil.tiene_rol(*ROLES_DOCENTES):
         return True
     from academico.models import ProfesorMateria
     return ProfesorMateria.objects.filter(profesor=user, activo=True).exists()
+
+
+def usuarios_con_rol(*roles):
+    """Usuarios activos que tienen alguno de esos perfiles, sea como principal o
+    como adicional. Una persona puede aparecer como estudiante aunque ademas sea
+    administradora."""
+    return User.objects.filter(
+        Q(perfil__rol__in=roles)
+        | Q(perfil__roles_adicionales__rol__in=roles, perfil__roles_adicionales__activo=True),
+        perfil__activo=True,
+        is_active=True,
+    ).distinct()
 
 
 def solo_administrativos(vista):

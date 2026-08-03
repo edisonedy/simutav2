@@ -1,8 +1,11 @@
 from django.contrib.auth.models import User
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 
+from academico.forms import InscripcionMallaForm
 from core.models import Institucion, PerfilUsuario
+from core.permisos import es_administrativo, es_docente, usuarios_con_rol
 
 
 class GestionPerfilesTests(TestCase):
@@ -33,7 +36,7 @@ class GestionPerfilesTests(TestCase):
             'action': 'add',
             'username': 'nueva.docente', 'password1': 'ClaveLarga123!', 'password2': 'ClaveLarga123!',
             'first_name': 'Ana', 'last_name': 'Vega', 'email': 'ana@uta.edu.ec',
-            'rol': PerfilUsuario.PROFESOR, 'institucion': self.institucion.pk,
+            'roles': [PerfilUsuario.PROFESOR], 'institucion': self.institucion.pk,
             'identificacion': '1804', 'telefono': '099',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
         self.assertTrue(respuesta.json()['result'], respuesta.json())
@@ -47,7 +50,7 @@ class GestionPerfilesTests(TestCase):
         usuario, perfil = self._crear('confundido', PerfilUsuario.ESTUDIANTE)
         respuesta = self.client.post(self.url, {
             'action': 'edit', 'pk': perfil.pk,
-            'rol': PerfilUsuario.PROFESOR, 'institucion': self.institucion.pk,
+            'roles': [PerfilUsuario.PROFESOR], 'institucion': self.institucion.pk,
             'identificacion': '', 'telefono': '', 'activo': 'on',
             'first_name': 'Luis', 'last_name': 'Paz', 'email': '',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
@@ -62,7 +65,7 @@ class GestionPerfilesTests(TestCase):
         self.assertFalse(hasattr(huerfano, 'perfil'))
         respuesta = self.client.post(self.url, {
             'action': 'asignar', 'usuario': huerfano.pk,
-            'rol': PerfilUsuario.ADMIN, 'institucion': self.institucion.pk,
+            'roles': [PerfilUsuario.ADMIN], 'institucion': self.institucion.pk,
             'identificacion': '', 'telefono': '',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
         self.assertTrue(respuesta.json()['result'], respuesta.json())
@@ -106,7 +109,7 @@ class GestionPerfilesTests(TestCase):
         """Si no, el ultimo administrador se deja fuera y toca entrar por consola."""
         respuesta = self.client.post(self.url, {
             'action': 'edit', 'pk': self.admin.perfil.pk,
-            'rol': PerfilUsuario.ESTUDIANTE, 'institucion': self.institucion.pk,
+            'roles': [PerfilUsuario.ESTUDIANTE], 'institucion': self.institucion.pk,
             'identificacion': '', 'telefono': '', 'activo': 'on',
             'first_name': '', 'last_name': '', 'email': '',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
@@ -127,3 +130,106 @@ class GestionPerfilesTests(TestCase):
                 html = self.client.get(self.url, parametros).content.decode()
                 self.assertIn(f'action="{self.url}"', html)
                 self.assertIn(f'name="action" value="{accion}"', html)
+
+
+class VariosPerfilesPorPersonaTests(TestCase):
+    """Una misma persona puede ser administradora y ademas profesora o estudiante."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.institucion = Institucion.objects.create(nombre='UTA')
+        cls.admin = User.objects.create_user('rectora', password='x')
+        PerfilUsuario.objects.create(
+            usuario=cls.admin, institucion=cls.institucion, rol=PerfilUsuario.ADMIN,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+        self.url = reverse('seguridad:usuarios')
+
+    def _perfil(self, username, *roles):
+        usuario = User.objects.create_user(username, password='x')
+        perfil = PerfilUsuario.objects.create(usuario=usuario, institucion=self.institucion)
+        perfil.fijar_roles(roles)
+        perfil.save()
+        return usuario, perfil
+
+    def test_el_rol_principal_es_el_de_mayor_alcance(self):
+        _, perfil = self._perfil('mixta', PerfilUsuario.ESTUDIANTE, PerfilUsuario.ADMIN)
+        self.assertEqual(perfil.rol, PerfilUsuario.ADMIN)
+        self.assertEqual(perfil.roles, {PerfilUsuario.ADMIN, PerfilUsuario.ESTUDIANTE})
+        self.assertEqual(perfil.roles_secundarios, ['Estudiante'])
+
+    def test_un_admin_que_ademas_es_estudiante_conserva_los_dos_accesos(self):
+        usuario, _ = self._perfil('doble', PerfilUsuario.ADMIN, PerfilUsuario.ESTUDIANTE)
+        self.assertTrue(es_administrativo(usuario))
+        self.assertIn(usuario, usuarios_con_rol(PerfilUsuario.ESTUDIANTE))
+        self.assertIn(usuario, InscripcionMallaForm().fields['estudiante'].queryset)
+
+    def test_un_admin_que_ademas_es_profesor_entra_a_los_dos_paneles(self):
+        usuario, _ = self._perfil('gestora', PerfilUsuario.ADMIN, PerfilUsuario.PROFESOR)
+        self.assertTrue(es_administrativo(usuario))
+        self.assertTrue(es_docente(usuario))
+        self.client.force_login(usuario)
+        self.assertEqual(self.client.get(reverse('adm_carreras')).status_code, 200)
+        self.assertEqual(self.client.get(reverse('pro_simulaciones')).status_code, 200)
+
+    def test_quitar_un_perfil_quita_el_acceso(self):
+        usuario, perfil = self._perfil('temporal', PerfilUsuario.ADMIN, PerfilUsuario.ESTUDIANTE)
+        perfil.fijar_roles([PerfilUsuario.ESTUDIANTE])
+        perfil.save()
+        self.assertFalse(es_administrativo(usuario))
+        self.assertEqual(perfil.roles, {PerfilUsuario.ESTUDIANTE})
+
+    def test_editar_marca_y_desmarca_perfiles(self):
+        usuario, perfil = self._perfil('editable', PerfilUsuario.ESTUDIANTE)
+        respuesta = self.client.post(self.url, {
+            'action': 'edit', 'pk': perfil.pk,
+            'roles': [PerfilUsuario.ADMIN, PerfilUsuario.PROFESOR],
+            'institucion': self.institucion.pk,
+            'identificacion': '', 'telefono': '', 'activo': 'on',
+            'first_name': '', 'last_name': '', 'email': '',
+        }, headers={'x-requested-with': 'XMLHttpRequest'})
+        self.assertTrue(respuesta.json()['result'], respuesta.json())
+        perfil.refresh_from_db()
+        self.assertEqual(perfil.roles, {PerfilUsuario.ADMIN, PerfilUsuario.PROFESOR})
+        self.assertEqual(perfil.rol, PerfilUsuario.ADMIN)
+
+    def test_alta_admite_varios_perfiles_de_una_vez(self):
+        respuesta = self.client.post(self.url, {
+            'action': 'add',
+            'username': 'multi', 'password1': 'ClaveLarga123!', 'password2': 'ClaveLarga123!',
+            'first_name': '', 'last_name': '', 'email': '',
+            'roles': [PerfilUsuario.PROFESOR, PerfilUsuario.ESTUDIANTE],
+            'institucion': self.institucion.pk, 'identificacion': '', 'telefono': '',
+        }, headers={'x-requested-with': 'XMLHttpRequest'})
+        self.assertTrue(respuesta.json()['result'], respuesta.json())
+        perfil = User.objects.get(username='multi').perfil
+        self.assertEqual(perfil.roles, {PerfilUsuario.PROFESOR, PerfilUsuario.ESTUDIANTE})
+        self.assertEqual(perfil.rol, PerfilUsuario.PROFESOR)
+
+    def test_el_listado_muestra_los_perfiles_secundarios(self):
+        self._perfil('conextras', PerfilUsuario.ADMIN, PerfilUsuario.PROFESOR)
+        html = self.client.get(self.url).content.decode()
+        self.assertIn('tambien Profesor', html)
+
+    def test_comando_agrega_y_quita_sin_pisar_lo_demas(self):
+        usuario, perfil = self._perfil('porconsola', PerfilUsuario.PROFESOR)
+        call_command('asignar_rol', 'porconsola', '--agregar', 'ADMIN')
+        perfil.refresh_from_db()
+        self.assertEqual(perfil.roles, {PerfilUsuario.ADMIN, PerfilUsuario.PROFESOR})
+        call_command('asignar_rol', 'porconsola', '--quitar', 'ADMIN')
+        perfil.refresh_from_db()
+        self.assertEqual(perfil.roles, {PerfilUsuario.PROFESOR})
+
+    def test_comando_crea_el_perfil_de_quien_no_tiene(self):
+        User.objects.create_superuser('desdeconsola', password='x')
+        call_command('asignar_rol', 'desdeconsola', '--agregar', 'ADMIN')
+        perfil = User.objects.get(username='desdeconsola').perfil
+        self.assertEqual(perfil.roles, {PerfilUsuario.ADMIN})
+
+    def test_el_comando_no_deja_a_nadie_sin_ningun_perfil(self):
+        usuario, perfil = self._perfil('unico', PerfilUsuario.PROFESOR)
+        call_command('asignar_rol', 'unico', '--quitar', 'PROFESOR')
+        perfil.refresh_from_db()
+        self.assertEqual(perfil.roles, {PerfilUsuario.PROFESOR})

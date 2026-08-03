@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from academico.models import Carrera, InscripcionMalla, Malla, Materia, PeriodoAcademico, ProfesorMateria
 from core.forms import InstitucionForm
-from core.permisos import solo_administrativos
+from core.permisos import solo_administrativos, usuarios_con_rol
 from core.models import PerfilUsuario
 from core.models import Institucion
 from simulador.models import EscenarioSimulacion, IntentoSimulacion, PasoSimulacion, Simulacion
@@ -31,8 +31,8 @@ def dashboard(request):
         contexto['total_mallas'] = Malla.objects.count()
         contexto['total_materias'] = Materia.objects.count()
         contexto['total_periodos'] = PeriodoAcademico.objects.count()
-        contexto['total_profesores'] = PerfilUsuario.objects.filter(rol=PerfilUsuario.PROFESOR).count()
-        contexto['total_estudiantes'] = PerfilUsuario.objects.filter(rol=PerfilUsuario.ESTUDIANTE).count()
+        contexto['total_profesores'] = usuarios_con_rol(PerfilUsuario.PROFESOR).count()
+        contexto['total_estudiantes'] = usuarios_con_rol(PerfilUsuario.ESTUDIANTE).count()
         contexto['total_simulaciones'] = Simulacion.objects.count()
         contexto['total_escenarios'] = EscenarioSimulacion.objects.filter(activo=True).count()
         contexto['total_intentos'] = IntentoSimulacion.objects.count()
