@@ -54,6 +54,9 @@ DEBUG = env_bool('DEBUG', True)
 
 ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver')
 
+# Dominios desde los que se aceptan formularios en produccion (detras de HTTPS).
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
+
 
 # Application definition
 
@@ -154,6 +157,12 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
+
+# Destino de collectstatic en el servidor (ignorado por git).
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
