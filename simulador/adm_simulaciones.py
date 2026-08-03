@@ -1,7 +1,7 @@
-from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import transaction
 from django.shortcuts import get_object_or_404, render
 
+from core.permisos import solo_administrativos
 from core.funciones import ok_json, bad_json, errores_formulario
 from simulador.models import Simulacion, IndicadorSimulacion, RestriccionSimulacion
 from simulador.models import CriterioEvaluacion, ConceptoEsperadoRonda
@@ -9,7 +9,7 @@ from simulador.models import EscenarioSimulacion, DecisionConfigurada
 from simulador.forms import SimulacionForm
 
 
-@login_required
+@solo_administrativos
 @transaction.atomic
 def view(request):
     data = {'title': 'Simulaciones'}

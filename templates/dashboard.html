@@ -8,8 +8,8 @@
         <div class="text-muted">Rol: {{ rol|default:"Sin perfil asignado" }}</div>
     </div>
     <div class="d-flex gap-2">
-        <a class="btn btn-outline-primary" href="{% url 'adm_simulaciones' %}">Simulaciones</a>
-        <a class="btn btn-primary" href="{% url 'alu_simulaciones' %}">Probar como estudiante</a>
+        {% if puede_administrar %}<a class="btn btn-outline-primary" href="{% url 'adm_simulaciones' %}">Simulaciones</a>{% endif %}
+        <a class="btn btn-primary" href="{% url 'alu_simulaciones' %}">{% if puede_ensenar %}Probar como estudiante{% else %}Mis simulaciones{% endif %}</a>
     </div>
 </div>
 

@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from academico.models import Carrera, InscripcionMalla, Malla, Materia, PeriodoAcademico, ProfesorMateria
 from core.forms import InstitucionForm
+from core.permisos import solo_administrativos
 from core.models import PerfilUsuario
 from core.models import Institucion
 from simulador.models import EscenarioSimulacion, IntentoSimulacion, PasoSimulacion, Simulacion
@@ -48,13 +49,13 @@ def dashboard(request):
     return render(request, 'dashboard.html', contexto)
 
 
-@login_required
+@solo_administrativos
 def instituciones(request):
     instituciones_qs = Institucion.objects.all()
     return render(request, 'core/instituciones/view.html', {'instituciones': instituciones_qs})
 
 
-@login_required
+@solo_administrativos
 def institucion_add(request):
     form = InstitucionForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
@@ -65,7 +66,7 @@ def institucion_add(request):
     return render(request, 'core/instituciones/add.html', {'form': form})
 
 
-@login_required
+@solo_administrativos
 def institucion_edit(request, pk):
     institucion = get_object_or_404(Institucion, pk=pk)
     form = InstitucionForm(request.POST or None, instance=institucion)

@@ -13,6 +13,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
 from core.funciones import ok_json, bad_json, conservar_seleccion_actual
+from core.permisos import es_administrativo, es_docente
 from academico.models import MateriaMalla, ProfesorMateria
 from simulador import cursos_service
 from simulador.models import (
@@ -570,19 +571,11 @@ def _analitica_simulacion(simulacion):
 def _es_profesor(user):
     """Solo profesores/staff pueden usar el panel del profesor. Evita que un
     estudiante edite o borre simulaciones por ID (IDOR / acceso indebido)."""
-    if user.is_superuser or user.is_staff:
-        return True
-    perfil = getattr(user, 'perfil', None)
-    if perfil and perfil.rol in ('PROFESOR', 'ADMIN', 'COORDINADOR'):
-        return True
-    return ProfesorMateria.objects.filter(profesor=user, activo=True).exists()
+    return es_docente(user)
 
 
 def _tiene_acceso_global(user):
-    if user.is_superuser:
-        return True
-    perfil = getattr(user, 'perfil', None)
-    return bool(perfil and perfil.rol in ('ADMIN', 'COORDINADOR'))
+    return es_administrativo(user)
 
 
 def _simulaciones_permitidas(user):

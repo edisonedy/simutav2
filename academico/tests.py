@@ -77,6 +77,108 @@ class FormulariosInscripcionTests(TestCase):
         self.assertIn('ya existe', mensaje)
 
 
+class PermisosAdministracionTests(TestCase):
+    """Antes de esto, cualquier usuario logueado podia crear carreras, inscribirse
+    solo a una malla y darse de alta un usuario ADMIN. Solo pedia @login_required."""
+
+    MODULOS = ['adm_carreras', 'adm_mallas', 'adm_materias', 'adm_periodos', 'adm_inscripciones']
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.institucion = Institucion.objects.create(nombre='UTA')
+        cls.carrera = Carrera.objects.create(institucion=cls.institucion, nombre='Sistemas', codigo='SIS')
+        cls.malla = Malla.objects.create(carrera=cls.carrera, nombre='Malla', codigo='M1')
+        cls.periodo = PeriodoAcademico.objects.create(
+            institucion=cls.institucion, nombre='2026-1',
+            fecha_inicio=date(2026, 1, 1), fecha_fin=date(2026, 6, 30),
+        )
+        cls.estudiante = cls._usuario('alumno', PerfilUsuario.ESTUDIANTE)
+        # Los profesores tienen is_staff, pero no administran el catalogo.
+        cls.profesor = cls._usuario('docente', PerfilUsuario.PROFESOR, is_staff=True)
+        cls.admin = cls._usuario('rector', PerfilUsuario.ADMIN)
+        cls.superusuario = User.objects.create_superuser('root', password='x')
+
+    @classmethod
+    def _usuario(cls, username, rol, is_staff=False):
+        usuario = User.objects.create_user(username, password='x', is_staff=is_staff)
+        PerfilUsuario.objects.create(usuario=usuario, institucion=cls.institucion, rol=rol)
+        return usuario
+
+    def test_estudiante_no_entra_a_ningun_modulo_academico(self):
+        self.client.force_login(self.estudiante)
+        for nombre in self.MODULOS:
+            with self.subTest(modulo=nombre):
+                self.assertEqual(self.client.get(reverse(nombre)).status_code, 403)
+
+    def test_profesor_tampoco_administra_el_catalogo(self):
+        self.client.force_login(self.profesor)
+        for nombre in self.MODULOS:
+            with self.subTest(modulo=nombre):
+                self.assertEqual(self.client.get(reverse(nombre)).status_code, 403)
+
+    def test_admin_y_superusuario_si_entran(self):
+        for usuario in (self.admin, self.superusuario):
+            self.client.force_login(usuario)
+            for nombre in self.MODULOS:
+                with self.subTest(usuario=usuario.username, modulo=nombre):
+                    self.assertEqual(self.client.get(reverse(nombre)).status_code, 200)
+
+    def test_estudiante_no_puede_crear_una_carrera(self):
+        self.client.force_login(self.estudiante)
+        antes = Carrera.objects.count()
+        respuesta = self.client.post(reverse('adm_carreras'), {
+            'action': 'add', 'institucion': self.institucion.pk,
+            'nombre': 'Carrera pirata', 'codigo': 'HACK',
+            'modalidad': 'PRESENCIAL', 'duracion_periodos': 8, 'activo': 'on',
+        }, headers={'x-requested-with': 'XMLHttpRequest'})
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertEqual(Carrera.objects.count(), antes)
+
+    def test_estudiante_no_puede_inscribirse_solo(self):
+        self.client.force_login(self.estudiante)
+        respuesta = self.client.post(reverse('adm_inscripciones'), {
+            'action': 'add', 'estudiante': self.estudiante.pk,
+            'malla': self.malla.pk, 'periodo': self.periodo.pk,
+            'estado': InscripcionMalla.ACTIVA, 'activo': 'on',
+        }, headers={'x-requested-with': 'XMLHttpRequest'})
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertFalse(InscripcionMalla.objects.filter(estudiante=self.estudiante).exists())
+
+    def test_estudiante_no_puede_desactivar_una_malla(self):
+        self.client.force_login(self.estudiante)
+        respuesta = self.client.post(reverse('adm_mallas'), {
+            'action': 'delete', 'pk': self.malla.pk,
+        }, headers={'x-requested-with': 'XMLHttpRequest'})
+        self.assertEqual(respuesta.status_code, 403)
+        self.malla.refresh_from_db()
+        self.assertTrue(self.malla.activo)
+
+    def test_estudiante_no_puede_crear_usuarios(self):
+        """El peor caso: darse de alta a si mismo una cuenta ADMIN."""
+        self.client.force_login(self.estudiante)
+        antes = User.objects.count()
+        respuesta = self.client.post(reverse('seguridad:crear_usuario'), {
+            'username': 'pirata', 'password1': 'ClaveLarga123!', 'password2': 'ClaveLarga123!',
+            'first_name': 'P', 'last_name': 'U', 'email': 'p@x.com',
+            'rol': PerfilUsuario.ADMIN, 'institucion': self.institucion.pk,
+            'identificacion': '1', 'telefono': '1',
+        })
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertEqual(User.objects.count(), antes)
+
+    def test_estudiante_no_ve_el_menu_de_administracion(self):
+        self.client.force_login(self.estudiante)
+        html = self.client.get(reverse('dashboard')).content.decode()
+        self.assertNotIn(reverse('adm_carreras'), html)
+        self.assertNotIn(reverse('adm_simulaciones'), html)
+        self.assertIn(reverse('alu_simulaciones'), html)
+
+    def test_admin_si_ve_el_menu_de_administracion(self):
+        self.client.force_login(self.admin)
+        html = self.client.get(reverse('dashboard')).content.decode()
+        self.assertIn(reverse('adm_carreras'), html)
+
+
 class ModalesAcademicoTests(TestCase):
     """Los modales publican por AJAX: si el action del form no apunta a una URL
     valida el navegador recibe un 404 y el usuario no puede guardar nada."""

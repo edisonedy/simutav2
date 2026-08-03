@@ -643,6 +643,7 @@
             {% if user.is_authenticated %}
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Inicio</a></li>
+                    {% if puede_administrar %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Academico</a>
                         <ul class="dropdown-menu">
@@ -653,12 +654,15 @@
                             <li><a class="dropdown-item" href="{% url 'adm_inscripciones' %}">Inscripciones</a></li>
                         </ul>
                     </li>
+                    {% endif %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Simulador</a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'adm_simulaciones' %}">Admin simulaciones</a></li>
+                            {% if puede_administrar %}<li><a class="dropdown-item" href="{% url 'adm_simulaciones' %}">Admin simulaciones</a></li>{% endif %}
+                            {% if puede_ensenar %}
                             <li><a class="dropdown-item" href="{% url 'pro_simulaciones' %}">Panel profesor</a></li>
                             <li><a class="dropdown-item" href="{% url 'pro_cursos' %}">Mis cursos</a></li>
+                            {% endif %}
                             <li><a class="dropdown-item" href="{% url 'alu_simulaciones' %}">Panel estudiante</a></li>
                         </ul>
                     </li>

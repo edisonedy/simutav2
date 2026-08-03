@@ -1,13 +1,13 @@
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 from django.db import transaction
 from django.urls import reverse
 from core.funciones import errores_formulario, respuesta_error, respuesta_ok
+from core.permisos import solo_administrativos
 from academico.forms import PeriodoAcademicoForm
 from academico.models import PeriodoAcademico
 
 
-@login_required
+@solo_administrativos
 @transaction.atomic
 def view(request):
     data = {}

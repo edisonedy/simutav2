@@ -2,16 +2,17 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
 from core.models import PerfilUsuario
+from core.permisos import solo_administrativos
 from seguridad.forms import UsuarioPerfilCreationForm
 
 
-@login_required
+@solo_administrativos
 def usuarios(request):
     perfiles = PerfilUsuario.objects.select_related('usuario', 'institucion').all()
     return render(request, 'seguridad/usuarios.html', {'perfiles': perfiles})
 
 
-@login_required
+@solo_administrativos
 def crear_usuario(request):
     form = UsuarioPerfilCreationForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
