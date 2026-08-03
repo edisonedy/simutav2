@@ -1,7 +1,19 @@
 from django import forms
+from django.urls import reverse_lazy
+from django.utils.html import format_html
 
 from core.funciones import conservar_seleccion_actual
 from core.models import PerfilUsuario
+
+
+def _ayuda_por_rol(quienes):
+    """Explica por que la lista sale corta y donde se arregla, en vez de dejar
+    al usuario adivinando por que falta alguien."""
+    return format_html(
+        'Solo aparecen los usuarios activos con perfil de <strong>{}</strong>. '
+        'Si falta alguien, cambiale el rol en <a href="{}" target="_blank">Usuarios y perfiles</a>.',
+        quienes, reverse_lazy('seguridad:usuarios'),
+    )
 
 from .models import (
     Carrera,
@@ -131,6 +143,7 @@ class InscripcionMallaForm(ActiveQuerysetsMixin, forms.ModelForm):
             is_active=True,
         ).order_by('last_name', 'first_name', 'username')
         estudiante.label_from_instance = self._etiqueta_estudiante
+        estudiante.help_text = _ayuda_por_rol('Estudiante')
         conservar_seleccion_actual(self)
 
     @staticmethod
@@ -164,6 +177,7 @@ class ProfesorMateriaForm(ActiveQuerysetsMixin, forms.ModelForm):
             is_active=True,
         ).order_by('last_name', 'first_name', 'username')
         profesor.label_from_instance = lambda u: u.get_full_name() or u.username
+        profesor.help_text = _ayuda_por_rol('Profesor, Coordinador o Administrador')
         conservar_seleccion_actual(self)
 
     def clean(self):

@@ -1,5 +1,8 @@
 from django import forms
 
+from django.utils.html import format_html
+
+from academico.forms import _ayuda_por_rol
 from core.funciones import conservar_seleccion_actual
 from core.models import PerfilUsuario
 
@@ -53,7 +56,10 @@ class SeccionForm(forms.ModelForm):
             perfil__rol=PerfilUsuario.ESTUDIANTE, perfil__activo=True, is_active=True,
         ).order_by('last_name', 'first_name', 'username')
         estudiantes.label_from_instance = lambda u: u.get_full_name() or u.username
-        estudiantes.help_text = 'Elige los estudiantes del paralelo (Ctrl/Cmd para varios).'
+        estudiantes.help_text = format_html(
+            'Elige los estudiantes del paralelo (Ctrl/Cmd para varios). {}',
+            _ayuda_por_rol('Estudiante'),
+        )
         conservar_seleccion_actual(self)
 
 

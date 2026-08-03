@@ -309,3 +309,19 @@ class ModalesAcademicoTests(TestCase):
         self.assertTrue(respuesta.json()['result'], respuesta.json())
         inscripcion.refresh_from_db()
         self.assertEqual(inscripcion.estado, InscripcionMalla.FINALIZADA)
+
+
+class AyudaDeRolEnFormulariosTests(TestCase):
+    """Cuando falta alguien en un desplegable filtrado por rol, el modal debe
+    decir por que y a donde ir, en vez de dejar al usuario adivinando."""
+
+    def test_el_modal_de_inscripcion_explica_el_filtro_y_enlaza_a_usuarios(self):
+        institucion = Institucion.objects.create(nombre='UTA')
+        admin = User.objects.create_user('jefe', password='x')
+        PerfilUsuario.objects.create(usuario=admin, institucion=institucion, rol=PerfilUsuario.ADMIN)
+        self.client.force_login(admin)
+
+        html = self.client.get(reverse('adm_inscripciones'), {'action': 'add'}).content.decode()
+
+        self.assertIn('Solo aparecen los usuarios activos con perfil de', html)
+        self.assertIn(reverse('seguridad:usuarios'), html)
