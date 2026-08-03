@@ -1,5 +1,6 @@
 from django import forms
 
+from core.funciones import conservar_seleccion_actual
 from core.models import PerfilUsuario
 
 from .models import (
@@ -53,6 +54,7 @@ class SeccionForm(forms.ModelForm):
         ).order_by('last_name', 'first_name', 'username')
         estudiantes.label_from_instance = lambda u: u.get_full_name() or u.username
         estudiantes.help_text = 'Elige los estudiantes del paralelo (Ctrl/Cmd para varios).'
+        conservar_seleccion_actual(self)
 
 
 class AsignacionForm(forms.ModelForm):
@@ -76,6 +78,7 @@ class AsignacionForm(forms.ModelForm):
         self.fields['fecha_limite'].help_text = 'Opcional. Despues de esta fecha la tarea queda cerrada.'
         self.fields['ponderacion'].label = 'Peso en la nota (%)'
         self.fields['nota_minima_aprobacion'].label = 'Nota minima para aprobar'
+        conservar_seleccion_actual(self)
 
 
 class ResultadoAprendizajeForm(forms.ModelForm):
@@ -102,6 +105,7 @@ class EquipoForm(forms.ModelForm):
         if estudiantes is not None:
             integrantes.queryset = estudiantes
         integrantes.label_from_instance = lambda u: u.get_full_name() or u.username
+        conservar_seleccion_actual(self)
 
 
 class SimulacionForm(forms.ModelForm):

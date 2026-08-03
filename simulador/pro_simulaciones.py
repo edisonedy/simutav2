@@ -12,7 +12,7 @@ from decimal import Decimal
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
-from core.funciones import ok_json, bad_json
+from core.funciones import ok_json, bad_json, conservar_seleccion_actual
 from academico.models import MateriaMalla, ProfesorMateria
 from simulador import cursos_service
 from simulador.models import (
@@ -45,8 +45,13 @@ def _materias_qs(profesor):
 
 
 def _limit_form_materia(form, profesor):
-    form.fields['materia_malla'].queryset = _materias_qs(profesor)
-    return form
+    form.fields['materia_malla'].queryset = _materias_qs(profesor).select_related(
+        'malla', 'materia', 'nivel',
+    )
+    # Al editar, la materia que ya tiene la simulacion puede quedar fuera del
+    # alcance del profesor (o estar inactiva). Sin esto el select sale vacio y
+    # guardar falla, porque materia_malla es obligatoria.
+    return conservar_seleccion_actual(form)
 
 
 def _simplificar_form_creacion(form):

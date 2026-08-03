@@ -1,4 +1,6 @@
 from django.contrib import messages
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models import Q
 from django.http import HttpResponseRedirect, JsonResponse
 
 
@@ -49,3 +51,36 @@ def respuesta_error(request, url_retorno, mensaje='Error al procesar la solicitu
         return bad_json(mensaje=mensaje, data=data)
     messages.error(request, mensaje)
     return HttpResponseRedirect(url_retorno)
+
+
+def conservar_seleccion_actual(form):
+    """Vuelve a meter en los desplegables el valor que el registro YA tiene.
+
+    Los formularios recortan sus querysets (por rol, por activo, por materias
+    asignadas). Al editar, si el valor guardado quedo fuera de ese recorte el
+    select aparece vacio y guardar revienta con "Escoja una opcion valida".
+    Solo afecta a la edicion: en un alta no hay instancia y no se toca nada.
+    """
+    instancia = getattr(form, 'instance', None)
+    if instancia is None or not instancia.pk:
+        return form
+    for nombre, campo in form.fields.items():
+        queryset = getattr(campo, 'queryset', None)
+        if queryset is None:
+            continue
+        try:
+            campo_modelo = instancia._meta.get_field(nombre)
+        except FieldDoesNotExist:
+            continue
+        if campo_modelo.many_to_many:
+            actuales = list(getattr(instancia, nombre).values_list('pk', flat=True))
+        elif campo_modelo.is_relation:
+            actuales = [getattr(instancia, f'{nombre}_id', None)]
+        else:
+            continue
+        faltantes = [pk for pk in actuales if pk and not queryset.filter(pk=pk).exists()]
+        if faltantes:
+            campo.queryset = queryset.model.objects.filter(
+                Q(pk__in=queryset.values('pk')) | Q(pk__in=faltantes)
+            )
+    return form

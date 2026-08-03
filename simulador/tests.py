@@ -1396,3 +1396,83 @@ class ReaccionNarradaTests(TestCase):
         from simulador.alu_simulaciones import _reaccion_narrada
         p = self._paso({'defectos': 15}, {'defectos': 15}, 0, valido=False)
         self.assertEqual(_reaccion_narrada(p, self.sim), '')
+
+
+class EdicionMateriaSimulacionTests(TestCase):
+    """El modal de editar debe mostrar la materia que ya tiene la simulacion,
+    aunque quede fuera de las materias asignadas al profesor: materia_malla es
+    obligatoria y con el select vacio no se puede guardar nada."""
+
+    def setUp(self):
+        self.profesor = User.objects.create_user(username='profesor_edicion', is_staff=True)
+        institucion = Institucion.objects.create(nombre='Institucion edicion', usuario_creacion=self.profesor)
+        carrera = Carrera.objects.create(
+            institucion=institucion, nombre='Carrera edicion', codigo='CE', usuario_creacion=self.profesor)
+        malla = Malla.objects.create(
+            carrera=carrera, nombre='Malla edicion', codigo='ME', usuario_creacion=self.profesor)
+        nivel = NivelMalla.objects.create(
+            malla=malla, numero=1, nombre='Nivel 1', usuario_creacion=self.profesor)
+        periodo = PeriodoAcademico.objects.create(
+            institucion=institucion,
+            nombre='Periodo edicion',
+            fecha_inicio=date(2026, 1, 1),
+            fecha_fin=date(2026, 6, 30),
+            usuario_creacion=self.profesor,
+        )
+        asignada = Materia.objects.create(
+            institucion=institucion, codigo='E1', nombre='Materia asignada', usuario_creacion=self.profesor)
+        suelta = Materia.objects.create(
+            institucion=institucion, codigo='E2', nombre='Materia suelta', usuario_creacion=self.profesor)
+        self.mm_asignada = MateriaMalla.objects.create(
+            malla=malla, nivel=nivel, materia=asignada, usuario_creacion=self.profesor)
+        self.mm_suelta = MateriaMalla.objects.create(
+            malla=malla, nivel=nivel, materia=suelta, usuario_creacion=self.profesor)
+        ProfesorMateria.objects.create(
+            profesor=self.profesor, materia_malla=self.mm_asignada, periodo=periodo,
+            usuario_creacion=self.profesor)
+        # El profesor es dueño de la simulacion, pero no esta asignado a su materia.
+        self.simulacion = Simulacion.objects.create(
+            materia_malla=self.mm_suelta,
+            profesor=self.profesor,
+            tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Sim de materia suelta',
+            contexto='Contexto',
+            objetivo='Objetivo',
+            resultado_aprendizaje='Resultado',
+            situacion_inicial='Situacion inicial',
+            instrucciones_ia='Evaluar',
+            usuario_creacion=self.profesor,
+        )
+        self.client = Client()
+        self.client.force_login(self.profesor)
+
+    def test_modal_editar_preselecciona_la_materia_actual(self):
+        respuesta = self.client.get(
+            f'/simulador/pro_simulaciones?action=edit&id={self.simulacion.pk}',
+            headers={'x-requested-with': 'XMLHttpRequest'},
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        html = respuesta.content.decode()
+        self.assertIn(f'value="{self.mm_suelta.pk}" selected', html)
+
+    def test_guardar_conserva_la_materia_actual(self):
+        respuesta = self.client.post('/simulador/pro_simulaciones', {
+            'action': 'edit',
+            'id': self.simulacion.pk,
+            'materia_malla': self.mm_suelta.pk,
+            'tipo_simulacion': Simulacion.TIPO_CON_IA_DINAMICA,
+            'titulo': 'Titulo editado',
+            'tema': 'Tema',
+            'nivel_dificultad': self.simulacion.nivel_dificultad,
+            'maximo_decisiones': self.simulacion.maximo_decisiones,
+            'tiempo_estimado': self.simulacion.tiempo_estimado,
+            'rol_estudiante': 'Analista',
+            'contexto': 'Contexto',
+            'objetivo': 'Objetivo',
+            'situacion_inicial': 'Situacion inicial',
+        }, headers={'x-requested-with': 'XMLHttpRequest'})
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertTrue(respuesta.json()['result'], respuesta.json())
+        self.simulacion.refresh_from_db()
+        self.assertEqual(self.simulacion.titulo, 'Titulo editado')
+        self.assertEqual(self.simulacion.materia_malla_id, self.mm_suelta.pk)

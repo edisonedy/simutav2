@@ -1,5 +1,6 @@
 from django import forms
 
+from core.funciones import conservar_seleccion_actual
 from core.models import PerfilUsuario
 
 from .models import (
@@ -28,6 +29,7 @@ class ActiveQuerysetsMixin:
             queryset = getattr(field, 'queryset', None)
             if queryset is not None and hasattr(queryset.model, 'activo'):
                 field.queryset = queryset.filter(activo=True)
+        conservar_seleccion_actual(self)
 
 
 def validate_date_range(cleaned_data):
@@ -86,6 +88,7 @@ class MateriaMallaForm(ActiveQuerysetsMixin, forms.ModelForm):
                 institucion=self.malla.carrera.institucion,
                 activo=True,
             )
+            conservar_seleccion_actual(self)
 
     class Meta:
         model = MateriaMalla
@@ -128,6 +131,7 @@ class InscripcionMallaForm(ActiveQuerysetsMixin, forms.ModelForm):
             is_active=True,
         ).order_by('last_name', 'first_name', 'username')
         estudiante.label_from_instance = self._etiqueta_estudiante
+        conservar_seleccion_actual(self)
 
     @staticmethod
     def _etiqueta_estudiante(usuario):
@@ -160,6 +164,7 @@ class ProfesorMateriaForm(ActiveQuerysetsMixin, forms.ModelForm):
             is_active=True,
         ).order_by('last_name', 'first_name', 'username')
         profesor.label_from_instance = lambda u: u.get_full_name() or u.username
+        conservar_seleccion_actual(self)
 
     def clean(self):
         cleaned = super().clean()

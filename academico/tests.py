@@ -179,3 +179,30 @@ class ModalesAcademicoTests(TestCase):
     def test_post_a_la_raiz_de_academico_es_404(self):
         """Reproduce el bug original: action='.' resolvia a /academico/."""
         self.assertEqual(self.client.post('/academico/', {'action': 'add'}).status_code, 404)
+
+    def test_editar_conserva_al_estudiante_aunque_ya_no_tenga_ese_rol(self):
+        """El dropdown solo lista estudiantes. Si a un inscrito le cambian el rol
+        (o lo desactivan), el select salia vacio y guardar era imposible."""
+        inscripcion = InscripcionMalla.objects.create(
+            estudiante=self.estudiante, malla=self.malla, periodo=self.periodo,
+        )
+        perfil = self.estudiante.perfil
+        perfil.rol = PerfilUsuario.ADMIN
+        perfil.save(update_fields=['rol'])
+
+        url = reverse('adm_inscripciones')
+        modal = self.client.get(url, {'action': 'edit', 'pk': inscripcion.pk})
+        self.assertIn(f'value="{self.estudiante.pk}" selected', modal.content.decode())
+
+        respuesta = self.client.post(url, {
+            'action': 'edit',
+            'pk': inscripcion.pk,
+            'estudiante': self.estudiante.pk,
+            'malla': self.malla.pk,
+            'periodo': self.periodo.pk,
+            'estado': InscripcionMalla.FINALIZADA,
+            'activo': 'on',
+        }, headers={'x-requested-with': 'XMLHttpRequest'})
+        self.assertTrue(respuesta.json()['result'], respuesta.json())
+        inscripcion.refresh_from_db()
+        self.assertEqual(inscripcion.estado, InscripcionMalla.FINALIZADA)
