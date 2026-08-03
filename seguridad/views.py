@@ -93,6 +93,29 @@ def usuarios(request):
     )
     return render(request, 'seguridad/usuarios/view.html', {
         'title': 'Usuarios',
-        'list': lista,
-        'sin_perfil': sum(1 for u in lista if not hasattr(u, 'perfil')),
+        'total': len(lista),
+        'grupos': _agrupar_por_perfil(lista),
     })
+
+
+GRUPOS_PERFIL = [
+    (PerfilUsuario.ADMIN, 'Administradores', 'Administran todo el sistema.'),
+    (PerfilUsuario.COORDINADOR, 'Coordinadores', 'Administran el catalogo academico.'),
+    (PerfilUsuario.PROFESOR, 'Profesores', 'Crean simulaciones y llevan sus cursos.'),
+    (PerfilUsuario.ESTUDIANTE, 'Estudiantes', 'Solo entran a sus simulaciones.'),
+    (None, 'Sin perfil', 'El sistema no sabe que rol darles: asignaselo para que puedan entrar.'),
+]
+
+
+def _agrupar_por_perfil(usuarios):
+    """Una sola pantalla, ordenada por perfil. Los grupos vacios no se muestran."""
+    por_rol = {clave: [] for clave, _, _ in GRUPOS_PERFIL}
+    for usuario in usuarios:
+        perfil = getattr(usuario, 'perfil', None)
+        clave = perfil.rol if perfil else None
+        por_rol.setdefault(clave, []).append(usuario)
+    return [
+        {'clave': clave or 'SIN_PERFIL', 'titulo': titulo, 'ayuda': ayuda, 'usuarios': por_rol[clave]}
+        for clave, titulo, ayuda in GRUPOS_PERFIL
+        if por_rol[clave]
+    ]

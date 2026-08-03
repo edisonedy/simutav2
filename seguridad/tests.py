@@ -75,6 +75,21 @@ class GestionPerfilesTests(TestCase):
         self.assertIn('sin_perfil', html)
         self.assertIn('Sin perfil', html)
 
+    def test_listado_agrupa_por_perfil_y_omite_los_grupos_vacios(self):
+        self._crear('docente1', PerfilUsuario.PROFESOR)
+        self._crear('alumno1', PerfilUsuario.ESTUDIANTE)
+        User.objects.create_user('huerfano', password='x')
+
+        grupos = self.client.get(self.url).context['grupos']
+        titulos = [g['titulo'] for g in grupos]
+
+        self.assertEqual(titulos, ['Administradores', 'Profesores', 'Estudiantes', 'Sin perfil'])
+        self.assertNotIn('Coordinadores', titulos, 'un grupo sin nadie no debe aparecer')
+        por_titulo = {g['titulo']: [u.username for u in g['usuarios']] for g in grupos}
+        self.assertEqual(por_titulo['Profesores'], ['docente1'])
+        self.assertEqual(por_titulo['Sin perfil'], ['huerfano'])
+        self.assertEqual(por_titulo['Administradores'], ['rector'])
+
     def test_desactivar_cierra_el_acceso_sin_borrar_nada(self):
         usuario, perfil = self._crear('saliente', PerfilUsuario.PROFESOR)
         respuesta = self.client.post(self.url, {

@@ -626,6 +626,9 @@
         .empty-title { font-weight: 700; font-size: 1.05rem; margin-bottom: .25rem; }
         .empty-text { color: var(--muted); font-size: .9rem; margin: 0 auto 1.1rem; max-width: 340px; }
         .row-hidden { display: none !important; }
+        .group-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+            flex-wrap: wrap; padding: .85rem 1rem; border-bottom: 1px solid var(--line); }
+        .group-head h2 { font-family: "Source Serif 4", Georgia, serif; font-weight: 700; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -717,6 +720,27 @@ function filtrar_tabla(input, tablaId) {
         if (coincide) visibles++;
     });
     const sinResultados = tabla.querySelector("tbody .no-match");
+    if (sinResultados) sinResultados.classList.toggle("row-hidden", visibles > 0 || q === "");
+}
+
+// Igual que filtrar_tabla pero sobre varios grupos: esconde el grupo entero
+// cuando ninguna de sus filas coincide.
+function filtrar_grupos(input, contenedorId) {
+    const q = input.value.toLowerCase().trim();
+    const contenedor = document.getElementById(contenedorId);
+    if (!contenedor) return;
+    let visibles = 0;
+    contenedor.querySelectorAll("[data-grupo]").forEach(function(grupo) {
+        let enGrupo = 0;
+        grupo.querySelectorAll("tbody tr[data-row]").forEach(function(fila) {
+            const coincide = fila.textContent.toLowerCase().indexOf(q) !== -1;
+            fila.classList.toggle("row-hidden", !coincide);
+            if (coincide) enGrupo++;
+        });
+        grupo.classList.toggle("row-hidden", enGrupo === 0);
+        visibles += enGrupo;
+    });
+    const sinResultados = contenedor.querySelector(".no-match");
     if (sinResultados) sinResultados.classList.toggle("row-hidden", visibles > 0 || q === "");
 }
 
