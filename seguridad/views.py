@@ -1,33 +1,98 @@
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.contrib.auth.models import User
+from django.db import transaction
+from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 
+from core.funciones import errores_formulario, respuesta_error, respuesta_ok
 from core.models import PerfilUsuario
 from core.permisos import solo_administrativos
-from seguridad.forms import UsuarioPerfilCreationForm
+from seguridad.forms import AsignarPerfilForm, PerfilUsuarioForm, UsuarioPerfilCreationForm
+
+MENSAJE_AUTOBLOQUEO = 'No puedes quitarte a ti mismo el acceso de administrador.'
+
+
+def _se_esta_bloqueando(request, perfil, rol_nuevo, activo):
+    """Evita que el ultimo administrador se deje fuera del sistema sin querer."""
+    if perfil.usuario_id != request.user.pk or request.user.is_superuser:
+        return False
+    sigue_mandando = activo and rol_nuevo in (PerfilUsuario.ADMIN, PerfilUsuario.COORDINADOR)
+    return not sigue_mandando
 
 
 @solo_administrativos
+@transaction.atomic
 def usuarios(request):
-    perfiles = PerfilUsuario.objects.select_related('usuario', 'institucion').all()
-    return render(request, 'seguridad/usuarios.html', {'perfiles': perfiles})
+    url_retorno = reverse('seguridad:usuarios')
 
+    if request.method == 'POST':
+        action = request.POST.get('action')
 
-@solo_administrativos
-def crear_usuario(request):
-    form = UsuarioPerfilCreationForm(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        usuario = form.save(commit=False)
-        usuario.first_name = form.cleaned_data['first_name']
-        usuario.last_name = form.cleaned_data['last_name']
-        usuario.email = form.cleaned_data['email']
-        usuario.save()
-        PerfilUsuario.objects.create(
-            usuario=usuario,
-            rol=form.cleaned_data['rol'],
-            institucion=form.cleaned_data['institucion'],
-            identificacion=form.cleaned_data['identificacion'],
-            telefono=form.cleaned_data['telefono'],
-            usuario_creacion=request.user,
-        )
-        return redirect('seguridad:usuarios')
-    return render(request, 'seguridad/crear_usuario.html', {'form': form})
+        if action == 'add':
+            form = UsuarioPerfilCreationForm(request.POST)
+            if form.is_valid():
+                form.save(creado_por=request.user)
+                return respuesta_ok(request, url_retorno, 'Usuario creado correctamente')
+            return respuesta_error(request, url_retorno, errores_formulario(form), {'errors': form.errors})
+
+        elif action == 'edit':
+            perfil = get_object_or_404(PerfilUsuario, pk=request.POST.get('pk'))
+            form = PerfilUsuarioForm(request.POST, instance=perfil)
+            if form.is_valid():
+                if _se_esta_bloqueando(request, perfil, form.cleaned_data['rol'], form.cleaned_data['activo']):
+                    return respuesta_error(request, url_retorno, MENSAJE_AUTOBLOQUEO)
+                form.save()
+                return respuesta_ok(request, url_retorno)
+            return respuesta_error(request, url_retorno, errores_formulario(form), {'errors': form.errors})
+
+        elif action == 'asignar':
+            form = AsignarPerfilForm(request.POST)
+            if form.is_valid():
+                form.save(creado_por=request.user)
+                return respuesta_ok(request, url_retorno, 'Perfil asignado correctamente')
+            return respuesta_error(request, url_retorno, errores_formulario(form), {'errors': form.errors})
+
+        elif action == 'delete':
+            perfil = get_object_or_404(PerfilUsuario, pk=request.POST.get('pk'))
+            if _se_esta_bloqueando(request, perfil, perfil.rol, False):
+                return respuesta_error(request, url_retorno, MENSAJE_AUTOBLOQUEO)
+            perfil.activo = False
+            perfil.save(update_fields=['activo'])
+            perfil.usuario.is_active = False
+            perfil.usuario.save(update_fields=['is_active'])
+            return respuesta_ok(request, url_retorno, 'Usuario desactivado correctamente')
+
+        return respuesta_error(request, url_retorno, 'Accion no valida')
+
+    action = request.GET.get('action')
+
+    if action == 'add':
+        return render(request, 'seguridad/usuarios/add.html', {'form': UsuarioPerfilCreationForm()})
+
+    elif action == 'edit':
+        perfil = get_object_or_404(PerfilUsuario, pk=request.GET.get('pk'))
+        return render(request, 'seguridad/usuarios/edit.html', {
+            'form': PerfilUsuarioForm(instance=perfil), 'object': perfil,
+        })
+
+    elif action == 'asignar':
+        usuario_fijo = None
+        if request.GET.get('pk'):
+            usuario_fijo = get_object_or_404(User, pk=request.GET.get('pk'), perfil__isnull=True)
+        return render(request, 'seguridad/usuarios/asignar.html', {
+            'form': AsignarPerfilForm(usuario_fijo=usuario_fijo), 'usuario_fijo': usuario_fijo,
+        })
+
+    elif action == 'delete':
+        perfil = get_object_or_404(PerfilUsuario, pk=request.GET.get('pk'))
+        return render(request, 'seguridad/usuarios/delete.html', {'object': perfil})
+
+    # El listado recorre USUARIOS, no perfiles: asi tambien salen los que no
+    # tienen ninguno (el superusuario creado por consola, por ejemplo).
+    lista = User.objects.select_related('perfil', 'perfil__institucion').order_by(
+        'last_name', 'first_name', 'username',
+    )
+    return render(request, 'seguridad/usuarios/view.html', {
+        'title': 'Usuarios',
+        'list': lista,
+        'sin_perfil': sum(1 for u in lista if not hasattr(u, 'perfil')),
+    })

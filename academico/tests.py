@@ -157,7 +157,8 @@ class PermisosAdministracionTests(TestCase):
         """El peor caso: darse de alta a si mismo una cuenta ADMIN."""
         self.client.force_login(self.estudiante)
         antes = User.objects.count()
-        respuesta = self.client.post(reverse('seguridad:crear_usuario'), {
+        respuesta = self.client.post(reverse('seguridad:usuarios'), {
+            'action': 'add',
             'username': 'pirata', 'password1': 'ClaveLarga123!', 'password2': 'ClaveLarga123!',
             'first_name': 'P', 'last_name': 'U', 'email': 'p@x.com',
             'rol': PerfilUsuario.ADMIN, 'institucion': self.institucion.pk,

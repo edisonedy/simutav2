@@ -1,0 +1,18 @@
+<form action="{% url 'seguridad:usuarios' %}" method="post" onsubmit="return enviar_formulario(this)">
+    {% csrf_token %}
+    <input type="hidden" name="pk" value="{{ object.pk }}">
+    <input type="hidden" name="action" value="delete">
+    <div class="modal-header">
+        <h5 class="modal-title">Desactivar usuario</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+        <p>Vas a desactivar a <strong>{{ object.usuario.get_full_name|default:object.usuario.username }}</strong>.</p>
+        <p class="text-muted mb-0">Deja de poder entrar al sistema, pero no se borra nada: sus
+        inscripciones e intentos se conservan y puedes reactivarlo despues desde Editar.</p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger">Desactivar</button>
+    </div>
+</form>
