@@ -5,7 +5,7 @@
 <div class="modal-body">
     <p><strong>{{ malla.nombre }}</strong></p>
 
-    <form id="mallaForm" action="." method="post" onsubmit="return enviar_formulario(this)">
+    <form id="mallaForm" action="{% url 'adm_mallas' %}" method="post" onsubmit="return enviar_formulario(this)">
         {% csrf_token %}
         <input type="hidden" name="pk" value="{{ malla.pk }}">
         <input type="hidden" name="action" value="edit">
@@ -24,7 +24,7 @@
         {% endfor %}
         </tbody>
     </table>
-    <form action="." method="post" onsubmit="return enviar_formulario(this)" class="row g-2 mb-3">
+    <form action="{% url 'adm_mallas' %}" method="post" onsubmit="return enviar_formulario(this)" class="row g-2 mb-3">
         {% csrf_token %}
         <input type="hidden" name="action" value="add_nivel">
         <input type="hidden" name="malla_id" value="{{ malla.pk }}">
@@ -44,7 +44,7 @@
         {% endfor %}
         </tbody>
     </table>
-    <form action="." method="post" onsubmit="return enviar_formulario(this)" class="row g-2 mb-3">
+    <form action="{% url 'adm_mallas' %}" method="post" onsubmit="return enviar_formulario(this)" class="row g-2 mb-3">
         {% csrf_token %}
         <input type="hidden" name="action" value="add_materia">
         <input type="hidden" name="malla_id" value="{{ malla.pk }}">

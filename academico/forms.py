@@ -1,5 +1,7 @@
 from django import forms
 
+from core.models import PerfilUsuario
+
 from .models import (
     Carrera,
     InscripcionMalla,
@@ -117,6 +119,22 @@ class InscripcionMallaForm(ActiveQuerysetsMixin, forms.ModelForm):
         model = InscripcionMalla
         fields = ['estudiante', 'malla', 'periodo', 'estado', 'activo']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        estudiante = self.fields['estudiante']
+        estudiante.queryset = estudiante.queryset.filter(
+            perfil__rol=PerfilUsuario.ESTUDIANTE,
+            perfil__activo=True,
+            is_active=True,
+        ).order_by('last_name', 'first_name', 'username')
+        estudiante.label_from_instance = self._etiqueta_estudiante
+
+    @staticmethod
+    def _etiqueta_estudiante(usuario):
+        nombre = usuario.get_full_name() or usuario.username
+        identificacion = getattr(getattr(usuario, 'perfil', None), 'identificacion', '')
+        return f'{nombre} ({identificacion})' if identificacion else nombre
+
     def clean(self):
         cleaned = super().clean()
         malla = cleaned.get('malla')
@@ -127,9 +145,21 @@ class InscripcionMallaForm(ActiveQuerysetsMixin, forms.ModelForm):
 
 
 class ProfesorMateriaForm(ActiveQuerysetsMixin, forms.ModelForm):
+    ROLES_DOCENTES = [PerfilUsuario.PROFESOR, PerfilUsuario.COORDINADOR, PerfilUsuario.ADMIN]
+
     class Meta:
         model = ProfesorMateria
         fields = ['profesor', 'materia_malla', 'periodo', 'activo']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        profesor = self.fields['profesor']
+        profesor.queryset = profesor.queryset.filter(
+            perfil__rol__in=self.ROLES_DOCENTES,
+            perfil__activo=True,
+            is_active=True,
+        ).order_by('last_name', 'first_name', 'username')
+        profesor.label_from_instance = lambda u: u.get_full_name() or u.username
 
     def clean(self):
         cleaned = super().clean()

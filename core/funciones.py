@@ -1,4 +1,5 @@
-from django.http import JsonResponse
+from django.contrib import messages
+from django.http import HttpResponseRedirect, JsonResponse
 
 
 def ok_json(data=None, mensaje='Guardado correctamente'):
@@ -15,3 +16,36 @@ def bad_json(mensaje='Error al procesar la solicitud', data=None):
     response = {'result': False, 'mensaje': mensaje}
     response.update(data)
     return JsonResponse(response)
+
+
+def errores_formulario(form):
+    """Devuelve los errores de un formulario como un texto legible para el usuario."""
+    mensajes = []
+    for campo, errores in form.errors.items():
+        etiqueta = form.fields[campo].label if campo in form.fields else 'General'
+        prefijo = f'{etiqueta}: ' if campo != '__all__' else ''
+        for error in errores:
+            mensajes.append(f'{prefijo}{error}')
+    return ' | '.join(mensajes) or 'Error en el formulario'
+
+
+def es_ajax(request):
+    """True si el formulario se envio desde un modal con fetch y espera JSON."""
+    return request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+
+def respuesta_ok(request, url_retorno, mensaje='Guardado correctamente'):
+    """Responde JSON al modal; si el navegador envio el formulario sin JavaScript
+    redirige al listado con el mensaje visible."""
+    if es_ajax(request):
+        return ok_json(mensaje=mensaje)
+    messages.success(request, mensaje)
+    return HttpResponseRedirect(url_retorno)
+
+
+def respuesta_error(request, url_retorno, mensaje='Error al procesar la solicitud', data=None):
+    """Contraparte de respuesta_ok para los errores."""
+    if es_ajax(request):
+        return bad_json(mensaje=mensaje, data=data)
+    messages.error(request, mensaje)
+    return HttpResponseRedirect(url_retorno)
