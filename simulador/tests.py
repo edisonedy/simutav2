@@ -1727,3 +1727,63 @@ class InvestigacionConPresupuestoTests(TestCase):
         self.assertEqual(respuesta.status_code, 404)
         self.intento.refresh_from_db()
         self.assertEqual(self.intento.investigaciones_compradas, [])
+
+
+class GeneracionInvestigacionesTests(TestCase):
+    """El mecanismo solo funciona si el presupuesto NO alcanza para todas. Eso no
+    puede quedar a criterio de la IA: se garantiza reescalando los costos."""
+
+    def setUp(self):
+        usuario = User.objects.create_user(username='prof_gen')
+        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=usuario)
+        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='CG', usuario_creacion=usuario)
+        malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MG', usuario_creacion=usuario)
+        nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=usuario)
+        materia = Materia.objects.create(institucion=institucion, codigo='G1', nombre='G', usuario_creacion=usuario)
+        mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
+        self.sim = Simulacion.objects.create(
+            materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Caso gen', contexto='c', objetivo='o', resultado_aprendizaje='r',
+            situacion_inicial='s', instrucciones_ia='i', estado=Simulacion.PUBLICADA,
+            usuario_creacion=usuario,
+        )
+
+    def _generar(self, items):
+        from unittest.mock import patch
+        from django.core.management import call_command
+        with patch('simulador.management.commands.generar_investigaciones.generar_investigaciones_ia',
+                   return_value=items):
+            call_command('generar_investigaciones', simulacion=self.sim.pk, presupuesto=100, verbosity=0)
+
+    def _items(self, costos):
+        return [{'sujeto': f'S{n}', 'nombre': f'Prueba {n}', 'descripcion': 'd',
+                 'hallazgo': f'Hallazgo {n}', 'costo': c} for n, c in enumerate(costos, start=1)]
+
+    def test_si_la_ia_cobra_de_menos_igual_no_alcanza(self):
+        from simulador.models import InvestigacionSimulacion
+        self._generar(self._items([5, 5, 5, 5, 5]))  # 25 en total, con presupuesto 100
+        total = sum(list(i.costo_recursos.values())[0]
+                    for i in InvestigacionSimulacion.objects.filter(simulacion=self.sim))
+        self.assertGreater(total, 100, 'el presupuesto no debe alcanzar para todas')
+        self.assertAlmostEqual(total, 250, delta=25)
+
+    def test_si_la_ia_cobra_de_mas_tampoco_se_dispara(self):
+        from simulador.models import InvestigacionSimulacion
+        self._generar(self._items([900, 800, 700, 600]))
+        total = sum(list(i.costo_recursos.values())[0]
+                    for i in InvestigacionSimulacion.objects.filter(simulacion=self.sim))
+        self.assertAlmostEqual(total, 250, delta=25)
+
+    def test_se_crea_el_presupuesto_si_el_caso_no_tenia(self):
+        from simulador.models import RecursoSimulacion
+        self._generar(self._items([10, 20, 30, 40]))
+        recurso = RecursoSimulacion.objects.get(simulacion=self.sim, codigo='presupuesto_investigacion')
+        self.assertEqual(float(recurso.valor_inicial), 100)
+
+    def test_descarta_las_que_vienen_incompletas(self):
+        from simulador.models import InvestigacionSimulacion
+        items = self._items([10, 20, 30, 40])
+        items[0]['hallazgo'] = ''
+        items[1]['nombre'] = ''
+        self._generar(items)
+        self.assertEqual(InvestigacionSimulacion.objects.filter(simulacion=self.sim).count(), 2)

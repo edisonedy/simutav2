@@ -735,6 +735,50 @@ def generar_caso_ia(materia_nombre, nivel=1):
     return None
 
 
+def _prompt_investigaciones(simulacion, alternativas, recurso, presupuesto):
+    """Pide averiguaciones PROPIAS del dominio del caso, no genericas."""
+    return (
+        'Diseña las AVERIGUACIONES que un estudiante puede pagar antes de decidir en esta '
+        'simulacion academica. Son pruebas, entrevistas, auditorias, encuestas o estudios que '
+        'revelan informacion OCULTA sobre las alternativas.\n\n'
+        f'Materia: {simulacion.materia_malla.materia.nombre}\n'
+        f'Caso: {simulacion.titulo}\n'
+        f'Contexto: {(simulacion.contexto or "")[:600]}\n'
+        f'Rol del estudiante: {simulacion.rol_estudiante}\n'
+        f'Alternativas entre las que debe elegir: {json.dumps(alternativas, ensure_ascii=False)}\n'
+        f'Presupuesto disponible: {presupuesto} (codigo de recurso "{recurso}")\n\n'
+        'Reglas:\n'
+        '- Entre 6 y 9 averiguaciones, propias de ESTA materia. Nada generico tipo "investigar mas".\n'
+        f'- El COSTO TOTAL debe ser entre 2 y 3 veces {presupuesto}, para que NO alcance para todas '
+        'y el estudiante tenga que elegir en que gastar.\n'
+        '- Cada hallazgo debe ser un dato CONCRETO y verificable (cifras, hechos, resultados), no una '
+        'opinion vaga. Debe cambiar la decision de quien lo lee.\n'
+        '- Reparte hallazgos buenos y malos: ninguna alternativa debe ser obviamente la mejor.\n'
+        '- "sujeto" es sobre QUIEN o QUE se averigua, en 3 palabras como maximo: un candidato, un '
+        'proveedor, un segmento, un area o una estacion de trabajo. Si aplica a todo el caso, pon '
+        '"Todos". NUNCA copies ahi el texto de una decision.\n'
+        '- "descripcion" dice que obtiene SIN revelar el hallazgo.\n\n'
+        'Devuelve SOLO JSON:\n'
+        '{"investigaciones": [{"sujeto": "...", "nombre": "...", "descripcion": "...", '
+        '"hallazgo": "...", "costo": 60}]}'
+    )
+
+
+def generar_investigaciones_ia(simulacion, alternativas, recurso, presupuesto):
+    """Devuelve la lista de averiguaciones para un caso, o None si la IA falla."""
+    prompt = _prompt_investigaciones(simulacion, alternativas, recurso, presupuesto)
+    for nombre in orden_proveedores():
+        try:
+            data = PROVEEDORES_IA[nombre]().completar_json(_limitar_prompt(prompt))
+            items = (data or {}).get('investigaciones')
+            if isinstance(items, list) and len(items) >= 4:
+                return items
+        except Exception as e:
+            logger.warning(f"Generacion de averiguaciones con '{nombre}' fallo: {e}")
+            continue
+    return None
+
+
 def evaluar_paso(intento, decision, justificacion):
     if orden_proveedores():
         try:
