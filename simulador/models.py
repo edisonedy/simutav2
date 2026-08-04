@@ -202,6 +202,13 @@ class Simulacion(ModeloBase):
     nivel_dificultad = models.CharField(max_length=20, choices=DIFICULTADES, default=DIFICULTAD_MEDIA)
     maximo_decisiones = models.IntegerField(default=5)
     tiempo_estimado = models.IntegerField(default=30, help_text='Tiempo estimado en minutos')
+    peso_rubrica_decision = models.PositiveSmallIntegerField(
+        'peso de la calidad de la decision (%)',
+        default=30,
+        help_text='Cuanto de la nota de cada ronda mide COMO decide el estudiante '
+                  '(postura, evidencia del caso, trade-off y consecuencia medible) en vez '
+                  'de que conceptos del temario menciono. El resto lo aportan tus conceptos.',
+    )
 
     rol_estudiante = models.CharField(max_length=200, blank=True)
     contexto = models.TextField(blank=True)

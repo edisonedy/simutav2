@@ -13,6 +13,7 @@ from simulador.models import Simulacion, IntentoSimulacion
 from simulador import cursos_service
 from simulador.forms import PasoSimulacionForm
 from simulador.services import (
+    CRITERIOS_DECISION,
     construir_estado_inicial,
     construir_recursos_iniciales,
     ejecutar_decision_arbol,
@@ -339,6 +340,10 @@ def _rubrica_visible(intento, numero):
         'conceptos': conceptos[:5],
         'indicadores': indicadores,
         'restricciones': restricciones,
+        # Los criterios del metodo del caso valen nota de verdad, asi que el
+        # estudiante debe verlos antes de responder, no descubrirlos despues.
+        'criterios_decision': CRITERIOS_DECISION,
+        'peso_decision': intento.simulacion.peso_rubrica_decision,
         'formato': [
             'Decisión concreta',
             'Evidencia del caso',

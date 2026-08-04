@@ -478,6 +478,85 @@ def obtener_conceptos_esperados_ronda(simulacion, numero_ronda, escenario=None):
     return conceptos
 
 
+# Rubrica transversal del metodo del caso: no evalua si el estudiante recito un
+# concepto del temario, sino COMO decide. Es la misma para todos los casos, asi
+# que el docente no tiene que escribirla, y agrega escalones a la nota: con solo
+# los conceptos del dominio (4 criterios de 25%) la nota saltaba de 25 en 25 y
+# caer a cero era facil.
+CRITERIOS_DECISION = [
+    {
+        'clave': 'postura',
+        'nombre': 'Toma una postura clara',
+        'descripcion': 'Decide algo concreto y accionable en vez de describir el problema '
+                       'o enumerar alternativas sin elegir.',
+        'peso': 25,
+    },
+    {
+        'clave': 'evidencia',
+        'nombre': 'Sustenta con evidencia del caso',
+        'descripcion': 'Apoya la decision en datos concretos del caso: cifras, indicadores '
+                       'o hechos de la situacion, no en generalidades.',
+        'peso': 25,
+    },
+    {
+        'clave': 'tradeoff',
+        'nombre': 'Reconoce el costo o el riesgo',
+        'descripcion': 'Nombra que sacrifica, que riesgo asume o a quien afecta su decision. '
+                       'No presenta la opcion como gratis y sin contras.',
+        'peso': 25,
+    },
+    {
+        'clave': 'consecuencia',
+        'nombre': 'Anticipa una consecuencia medible',
+        'descripcion': 'Dice que espera que pase con algun indicador del caso y como sabria '
+                       'si funciono.',
+        'peso': 25,
+    },
+]
+
+
+def _normalizar_evaluaciones_decision(evaluaciones):
+    """Deja las evaluaciones de la rubrica de decision indexadas por clave."""
+    validas = {c['clave'] for c in CRITERIOS_DECISION}
+    normalizadas = {}
+    for item in evaluaciones or []:
+        clave = str(item.get('clave') or '').strip().lower()
+        if clave not in validas:
+            continue
+        normalizadas[clave] = {
+            'cumple': bool(item.get('cumple')),
+            'evidencia': str(item.get('evidencia') or '').strip(),
+            'retroalimentacion': str(item.get('retroalimentacion') or '').strip(),
+        }
+    return normalizadas
+
+
+def evaluar_rubrica_decision(evaluaciones_decision):
+    """Puntaje 0-100 de la calidad de la decision. Cada criterio es binario a
+    proposito: la evidencia dice que los modelos juzgan bien en binario y se
+    pierden con los matices; la gradualidad sale de sumar varios criterios."""
+    juicios = _normalizar_evaluaciones_decision(evaluaciones_decision)
+    if not juicios:
+        return None
+    puntaje = 0
+    detalle = []
+    for criterio in CRITERIOS_DECISION:
+        juicio = juicios.get(criterio['clave'], {})
+        cumple = bool(juicio.get('cumple'))
+        obtenidos = criterio['peso'] if cumple else 0
+        puntaje += obtenidos
+        detalle.append({
+            'clave': criterio['clave'],
+            'nombre': criterio['nombre'],
+            'cumple': cumple,
+            'puntos_obtenidos': obtenidos,
+            'puntos_maximos': criterio['peso'],
+            'evidencia': juicio.get('evidencia', ''),
+            'retroalimentacion': juicio.get('retroalimentacion', ''),
+        })
+    return {'puntaje': puntaje, 'detalle': detalle}
+
+
 def _normalizar_evaluaciones_ia(evaluaciones_ia):
     normalizadas = {}
     for item in evaluaciones_ia or []:
@@ -499,7 +578,7 @@ def _normalizar_evaluaciones_ia(evaluaciones_ia):
     return normalizadas
 
 
-def evaluar_conceptos_esperados(simulacion, numero_ronda, decision, justificacion, situacion_actual, escenario=None, evaluaciones_ia=None):
+def evaluar_conceptos_esperados(simulacion, numero_ronda, decision, justificacion, situacion_actual, escenario=None, evaluaciones_ia=None, evaluaciones_decision=None):
     texto = _normalizar_texto(f'{decision} {justificacion}')
     conceptos = obtener_conceptos_esperados_ronda(simulacion, numero_ronda, escenario=escenario)
     evaluaciones_ia = _normalizar_evaluaciones_ia(evaluaciones_ia)
@@ -599,7 +678,25 @@ def evaluar_conceptos_esperados(simulacion, numero_ronda, decision, justificacio
         tope_critico = None
         puntaje = puntaje_sin_tope
 
+    # Mezcla con la rubrica de decision (metodo del caso). Solo aplica cuando la
+    # IA pudo juzgarla: la rubrica local por palabras clave no sabe si el
+    # estudiante tomo postura o reconocio un trade-off.
+    rubrica_decision = evaluar_rubrica_decision(evaluaciones_decision)
+    peso_decision = 0
+    if rubrica_decision and conceptos:
+        peso_decision = max(0, min(100, int(getattr(simulacion, 'peso_rubrica_decision', 0) or 0)))
+        if peso_decision:
+            proporcion = peso_decision / 100.0
+            puntaje = round(puntaje * (1 - proporcion) + rubrica_decision['puntaje'] * proporcion, 2)
+
     partes = []
+    if rubrica_decision and peso_decision:
+        cumplidos_decision = [d['nombre'] for d in rubrica_decision['detalle'] if d['cumple']]
+        faltantes_decision = [d['nombre'] for d in rubrica_decision['detalle'] if not d['cumple']]
+        if cumplidos_decision:
+            partes.append('Como decision: ' + ', '.join(cumplidos_decision).lower() + '.')
+        if faltantes_decision:
+            partes.append('Te falto: ' + ', '.join(faltantes_decision).lower() + '.')
     if cumplidos:
         partes.append('Conceptos cumplidos: ' + ', '.join(c.nombre for c in cumplidos) + '.')
     if parciales:
@@ -634,6 +731,9 @@ def evaluar_conceptos_esperados(simulacion, numero_ronda, decision, justificacio
         'impacto_sugerido': impacto_total,
         'evaluacion': ' '.join(partes),
         'metodo_evaluacion': 'ia_semantica_rubrica' if evaluaciones_ia else 'rubrica_palabras_clave',
+        'rubrica_decision': rubrica_decision['detalle'] if rubrica_decision else [],
+        'puntaje_decision': rubrica_decision['puntaje'] if rubrica_decision else None,
+        'peso_decision': peso_decision,
     }
 
 

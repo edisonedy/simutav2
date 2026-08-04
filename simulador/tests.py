@@ -1466,6 +1466,7 @@ class EdicionMateriaSimulacionTests(TestCase):
             'nivel_dificultad': self.simulacion.nivel_dificultad,
             'maximo_decisiones': self.simulacion.maximo_decisiones,
             'tiempo_estimado': self.simulacion.tiempo_estimado,
+            'peso_rubrica_decision': self.simulacion.peso_rubrica_decision,
             'rol_estudiante': 'Analista',
             'contexto': 'Contexto',
             'objetivo': 'Objetivo',
@@ -1476,3 +1477,80 @@ class EdicionMateriaSimulacionTests(TestCase):
         self.simulacion.refresh_from_db()
         self.assertEqual(self.simulacion.titulo, 'Titulo editado')
         self.assertEqual(self.simulacion.materia_malla_id, self.mm_suelta.pk)
+
+
+class RubricaDecisionTests(TestCase):
+    """Metodo del caso: la nota no depende solo de que conceptos del temario
+    menciono el estudiante, sino de como decide. Es transversal a todos los
+    casos, asi que el docente no tiene que escribirla."""
+
+    def setUp(self):
+        from simulador.services import CRITERIOS_DECISION
+        self.claves = [c['clave'] for c in CRITERIOS_DECISION]
+        usuario = User.objects.create_user(username='profesor_rubrica')
+        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=usuario)
+        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='C1', usuario_creacion=usuario)
+        malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M1', usuario_creacion=usuario)
+        nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N1', usuario_creacion=usuario)
+        materia = Materia.objects.create(institucion=institucion, codigo='X1', nombre='X', usuario_creacion=usuario)
+        mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
+        self.sim = Simulacion.objects.create(
+            materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Caso', contexto='c', objetivo='o', resultado_aprendizaje='r',
+            situacion_inicial='s', instrucciones_ia='i', peso_rubrica_decision=30,
+            usuario_creacion=usuario,
+        )
+        ConceptoEsperadoRonda.objects.create(
+            simulacion=self.sim, numero_ronda=1, nombre='Concepto del temario',
+            peso=100, palabras_clave={'any': ['palabra_que_no_dira']}, usuario_creacion=usuario,
+        )
+
+    def _juicios(self, cumplidos):
+        return [{'clave': c, 'cumple': c in cumplidos, 'evidencia': '', 'retroalimentacion': ''}
+                for c in self.claves]
+
+    def test_los_cuatro_criterios_suman_cien(self):
+        from simulador.services import evaluar_rubrica_decision
+        self.assertEqual(evaluar_rubrica_decision(self._juicios(self.claves))['puntaje'], 100)
+        self.assertEqual(evaluar_rubrica_decision(self._juicios([]))['puntaje'], 0)
+        self.assertEqual(evaluar_rubrica_decision(self._juicios(self.claves[:2]))['puntaje'], 50)
+
+    def test_sin_juicios_de_la_ia_no_se_aplica(self):
+        """La rubrica local por palabras clave no sabe juzgar como decide alguien,
+        asi que sin IA el comportamiento anterior queda intacto."""
+        from simulador.services import evaluar_rubrica_decision
+        self.assertIsNone(evaluar_rubrica_decision([]))
+        self.assertIsNone(evaluar_rubrica_decision(None))
+
+    def test_una_buena_decision_ya_no_saca_cero_sin_las_palabras(self):
+        from simulador.services import evaluar_conceptos_esperados
+        texto = 'Decido consolidar envios porque el servicio esta en 88%, acepto mas costo unitario '
+        sin_rubrica = evaluar_conceptos_esperados(
+            self.sim, 1, texto, texto, 'situacion', evaluaciones_ia=[], evaluaciones_decision=[])
+        con_rubrica = evaluar_conceptos_esperados(
+            self.sim, 1, texto, texto, 'situacion', evaluaciones_ia=[],
+            evaluaciones_decision=self._juicios(self.claves))
+
+        self.assertEqual(sin_rubrica['puntaje_sugerido'], 0)
+        self.assertEqual(con_rubrica['puntaje_sugerido'], 30)
+        self.assertEqual(con_rubrica['puntaje_decision'], 100)
+        self.assertEqual(con_rubrica['peso_decision'], 30)
+
+    def test_una_decision_vaga_sigue_en_cero(self):
+        from simulador.services import evaluar_conceptos_esperados
+        texto = 'Hay que mejorar todo.'
+        resultado = evaluar_conceptos_esperados(
+            self.sim, 1, texto, texto, 'situacion', evaluaciones_ia=[],
+            evaluaciones_decision=self._juicios([]))
+        self.assertEqual(resultado['puntaje_sugerido'], 0)
+
+    def test_el_peso_es_configurable_por_caso(self):
+        from simulador.services import evaluar_conceptos_esperados
+        texto = 'Decido algo concreto.'
+        for peso, esperado in ((0, 0), (50, 50), (100, 100)):
+            with self.subTest(peso=peso):
+                self.sim.peso_rubrica_decision = peso
+                resultado = evaluar_conceptos_esperados(
+                    self.sim, 1, texto, texto, 'situacion', evaluaciones_ia=[],
+                    evaluaciones_decision=self._juicios(self.claves))
+                self.assertEqual(resultado['puntaje_sugerido'], esperado)

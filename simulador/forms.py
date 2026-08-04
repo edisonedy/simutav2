@@ -129,6 +129,13 @@ class SimulacionForm(forms.ModelForm):
         self.fields['tema'].label = 'Tema'
         self.fields['tema'].help_text = 'Ejemplo: Evaluacion de proveedores, presupuesto y riesgo.'
         self.fields['nivel_dificultad'].label = 'Nivel de dificultad'
+        self.fields['peso_rubrica_decision'].label = 'Peso de la calidad de la decision (%)'
+        self.fields['peso_rubrica_decision'].help_text = (
+            'Metodo del caso: cuanto de la nota mide COMO decide el estudiante (toma postura, '
+            'usa evidencia del caso, reconoce el trade-off y anticipa una consecuencia medible) '
+            'en vez de que conceptos del temario menciono. Con 0 solo cuentan tus conceptos. '
+            'Recomendado: 30.'
+        )
         self.fields['maximo_decisiones'].label = 'Rondas que tendra el caso'
         self.fields['maximo_decisiones'].help_text = 'Cuantas decisiones o etapas tendra la simulacion.'
         self.fields['contexto'].label = 'Contexto del caso'
@@ -154,6 +161,7 @@ class SimulacionForm(forms.ModelForm):
             'materia_malla', 'plantilla_origen', 'perfil_materia_ia',
             'tipo_simulacion', 'titulo', 'tema',
             'nivel_dificultad', 'maximo_decisiones', 'tiempo_estimado',
+            'peso_rubrica_decision',
             'rol_estudiante', 'contexto', 'objetivo',
             'resultado_aprendizaje', 'situacion_inicial',
             'instrucciones_ia', 'nivel_ayuda_ia', 'tono_retroalimentacion',

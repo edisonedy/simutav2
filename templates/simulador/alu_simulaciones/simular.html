@@ -224,6 +224,17 @@
                     </ul>
                 </div>
                 {% endif %}
+                {% if rubrica_visible.peso_decision %}
+                <div class="mb-2">
+                    <div class="hud-label mb-1">Como decides ({{ rubrica_visible.peso_decision }}% de la nota)</div>
+                    <div class="d-flex flex-wrap gap-2">
+                    {% for c in rubrica_visible.criterios_decision %}
+                        <span class="chip chip-soft" title="{{ c.descripcion }}">{{ c.nombre }}</span>
+                    {% endfor %}
+                    </div>
+                    <div class="small text-muted mt-1">Esto se evalua por tu razonamiento, no por usar palabras tecnicas.</div>
+                </div>
+                {% endif %}
                 <div class="small text-muted">Una buena respuesta incluye: {{ rubrica_visible.formato|join:", " }}.</div>
             </div>
             {% endif %}

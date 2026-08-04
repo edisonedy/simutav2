@@ -170,6 +170,7 @@ class IAServiceLLM:
             justificacion,
             situacion,
             evaluaciones_ia=evaluaciones_conceptos,
+            evaluaciones_decision=resultado.get('decision') or [],
         )
         retro_ai = str(resultado.get('retroalimentacion_general') or '').strip()
         evaluacion = retro_ai or evaluacion_rubrica['evaluacion']
@@ -196,6 +197,10 @@ class IAServiceLLM:
                 'puntaje_conceptos': evaluacion_rubrica['puntaje_conceptos'],
                 'puntaje_sin_tope': evaluacion_rubrica['puntaje_sin_tope'],
                 'tope_critico': evaluacion_rubrica['tope_critico'],
+                'metodo_evaluacion': evaluacion_rubrica['metodo_evaluacion'],
+                'rubrica_decision': evaluacion_rubrica['rubrica_decision'],
+                'puntaje_decision': evaluacion_rubrica['puntaje_decision'],
+                'peso_decision': evaluacion_rubrica['peso_decision'],
                 'calculo': 'La nota e impactos se calculan con pesos, conceptos e indicadores configurados por el docente.',
             },
             'respuesta_ia_estructurada': resultado,
@@ -217,6 +222,7 @@ class IAServiceLLM:
         return 0
 
     def _schema_evaluacion_semantica(self):
+        from simulador.services import CRITERIOS_DECISION
         return {
             'type': 'object',
             'additionalProperties': False,
@@ -242,6 +248,23 @@ class IAServiceLLM:
                         },
                     },
                 },
+                'decision': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'additionalProperties': False,
+                        'required': ['clave', 'cumple', 'evidencia', 'retroalimentacion'],
+                        'properties': {
+                            'clave': {
+                                'type': 'string',
+                                'enum': [c['clave'] for c in CRITERIOS_DECISION],
+                            },
+                            'cumple': {'type': 'boolean'},
+                            'evidencia': {'type': 'string'},
+                            'retroalimentacion': {'type': 'string'},
+                        },
+                    },
+                },
                 'retroalimentacion_general': {'type': 'string'},
                 'siguiente_situacion': {'type': 'string'},
                 'finalizar': {'type': 'boolean'},
@@ -249,6 +272,11 @@ class IAServiceLLM:
         }
 
     def _construir_prompt_semantico(self, simulacion, situacion, decision, justificacion, ronda, conceptos, indicadores):
+        from simulador.services import CRITERIOS_DECISION
+        criterios_decision = [
+            {'clave': c['clave'], 'nombre': c['nombre'], 'descripcion': c['descripcion']}
+            for c in CRITERIOS_DECISION
+        ]
         rondas = (simulacion.parametros or {}).get('rondas') or []
         opciones_docente = []
         indice = ronda - 1
@@ -301,6 +329,11 @@ Justificacion:
 ## Conceptos configurados por el docente
 {json.dumps(conceptos, ensure_ascii=False, indent=2)}
 
+## Criterios de decision (metodo del caso)
+Ademas de los conceptos, juzga COMO decidio el estudiante. Estos criterios son
+los mismos para todos los casos y no dependen del temario:
+{json.dumps(criterios_decision, ensure_ascii=False, indent=2)}
+
 Devuelve SOLO JSON valido con esta estructura:
 {{
   "conceptos": [
@@ -312,6 +345,14 @@ Devuelve SOLO JSON valido con esta estructura:
       "retroalimentacion": "comentario breve para este concepto"
     }}
   ],
+  "decision": [
+    {{
+      "clave": "postura",
+      "cumple": true,
+      "evidencia": "frase del estudiante que lo demuestra",
+      "retroalimentacion": "que le falto, en una linea"
+    }}
+  ],
   "retroalimentacion_general": "retroalimentacion breve y concreta en espanol",
   "siguiente_situacion": "continuacion del caso si no finaliza",
   "finalizar": false
@@ -319,6 +360,10 @@ Devuelve SOLO JSON valido con esta estructura:
 
 Reglas:
 - Incluye todos los concepto_id recibidos.
+- Incluye las cuatro claves de decision: postura, evidencia, tradeoff, consecuencia.
+- Los criterios de decision son SI o NO, sin medias tintas: cumple true o false.
+- Un criterio de decision se cumple aunque el estudiante no use el vocabulario tecnico
+  del temario: se juzga el razonamiento, no las palabras.
 - factor debe estar entre 0 y 1: 1 cumple completo, 0.5 evidencia parcial, 0 no hay evidencia.
 - No inventes conceptos, indicadores, puntajes ni impactos.
 - No menciones nota numerica; SimutaV2 la calcula.
