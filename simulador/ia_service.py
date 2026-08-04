@@ -779,6 +779,55 @@ def generar_investigaciones_ia(simulacion, alternativas, recurso, presupuesto):
     return None
 
 
+def _prompt_datos_caso(simulacion, indicadores):
+    """Pide las alternativas comparables del caso: sin ellas el estudiante
+    redacta, no decide."""
+    return (
+        'Diseña las ALTERNATIVAS entre las que un estudiante debe elegir en esta simulacion '
+        'academica, y los criterios con que se comparan.\n\n'
+        f'Materia: {simulacion.materia_malla.materia.nombre}\n'
+        f'Caso: {simulacion.titulo}\n'
+        f'Contexto: {(simulacion.contexto or "")[:700]}\n'
+        f'Objetivo del estudiante: {(simulacion.objetivo or "")[:300]}\n'
+        f'Rol: {simulacion.rol_estudiante}\n'
+        f'Indicadores del caso (usa SOLO estos codigos): {json.dumps(indicadores, ensure_ascii=False)}\n\n'
+        'Reglas duras:\n'
+        '- Entre 3 y 4 alternativas REALES de esta materia, del tipo que un profesional debe '
+        'decidir de verdad (que metodo aplicar, que proveedor elegir, que estrategia seguir).\n'
+        '- NINGUNA puede ser la mejor en todo. Cada una gana en unos criterios y pierde en otros: '
+        'si hay una obviamente superior, el ejercicio no sirve.\n'
+        '- "valor_referencia" es el dato que la resume en pocos caracteres (una cifra, una tasa).\n'
+        '- "fortaleza" y "riesgo" con datos concretos del caso, no adjetivos.\n'
+        '- 4 criterios de comparacion con pesos que sumen 100.\n'
+        '- "resultados" puntua cada alternativa de 0 a 100 en CADA criterio.\n'
+        '- Las condiciones de exito y los efectos de eventos SOLO pueden usar los codigos de '
+        'indicador listados arriba.\n\n'
+        'Devuelve SOLO JSON:\n'
+        '{"alternativas": [{"nombre": "...", "subtitulo": "...", "valor_referencia": "...", '
+        '"fortaleza": "...", "riesgo": "...", "resultados": [{"criterio": "...", "valor": 80}]}],\n'
+        ' "criterios": [{"criterio": "...", "peso": 30, "evalua": "..."}],\n'
+        ' "condiciones_exito": [{"descripcion": "...", "indicador": "codigo", "operador": ">=", '
+        '"objetivo": 80}],\n'
+        ' "eventos": [{"nombre": "...", "ronda": 2, "mensaje": "...", '
+        '"efecto": {"codigo_indicador": -5}}]}'
+    )
+
+
+def generar_datos_caso_ia(simulacion, indicadores):
+    """Alternativas, criterios, condiciones de exito y eventos de un caso."""
+    prompt = _prompt_datos_caso(simulacion, indicadores)
+    for nombre in orden_proveedores():
+        try:
+            data = PROVEEDORES_IA[nombre]().completar_json(_limitar_prompt(prompt))
+            alternativas = (data or {}).get('alternativas')
+            if isinstance(alternativas, list) and len(alternativas) >= 3:
+                return data
+        except Exception as e:
+            logger.warning(f"Generacion de datos de caso con '{nombre}' fallo: {e}")
+            continue
+    return None
+
+
 def evaluar_paso(intento, decision, justificacion):
     if orden_proveedores():
         try:

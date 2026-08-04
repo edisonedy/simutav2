@@ -1787,3 +1787,95 @@ class GeneracionInvestigacionesTests(TestCase):
         items[1]['nombre'] = ''
         self._generar(items)
         self.assertEqual(InvestigacionSimulacion.objects.filter(simulacion=self.sim).count(), 2)
+
+
+class EditorDeRondasTests(TestCase):
+    """El modo de cada ronda (elegir / escribir / ambas) ya lo entendia el motor,
+    pero solo se podia cambiar editando JSON a mano. Ahora se configura."""
+
+    def setUp(self):
+        self.profesor = User.objects.create_user(username='prof_rondas', is_staff=True)
+        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=self.profesor)
+        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='CR', usuario_creacion=self.profesor)
+        malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MR', usuario_creacion=self.profesor)
+        nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=self.profesor)
+        materia = Materia.objects.create(institucion=institucion, codigo='R1', nombre='R', usuario_creacion=self.profesor)
+        mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=self.profesor)
+        self.sim = Simulacion.objects.create(
+            materia_malla=mm, profesor=self.profesor, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Caso rondas', contexto='c', objetivo='o', resultado_aprendizaje='r',
+            situacion_inicial='s', instrucciones_ia='i', maximo_decisiones=3,
+            usuario_creacion=self.profesor,
+        )
+        AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, texto='Opcion A', descripcion='d', usuario_creacion=self.profesor)
+        self.client = Client()
+        self.client.force_login(self.profesor)
+        self.url = '/simulador/pro_simulaciones'
+
+    def _guardar(self, modos, etiquetas=None):
+        datos = {'action': 'guardar_rondas', 'id': self.sim.pk}
+        for numero, modo in modos.items():
+            datos[f'modo_{numero}'] = modo
+            datos[f'etiqueta_decision_{numero}'] = (etiquetas or {}).get(numero, '')
+            datos[f'etiqueta_justificacion_{numero}'] = ''
+        return self.client.post(self.url, datos, headers={'x-requested-with': 'XMLHttpRequest'})
+
+    def test_el_profesor_define_el_modo_de_cada_ronda(self):
+        from simulador.alu_simulaciones import _modo_ronda
+        respuesta = self._guardar({1: 'escribir', 2: 'elegir', 3: 'hibrido'})
+        self.assertTrue(respuesta.json()['result'], respuesta.json())
+        self.sim.refresh_from_db()
+        self.assertEqual(_modo_ronda(self.sim, 1, True), 'escribir')
+        self.assertEqual(_modo_ronda(self.sim, 2, True), 'elegir')
+        self.assertEqual(_modo_ronda(self.sim, 3, True), 'hibrido')
+
+    def test_las_etiquetas_llegan_a_la_consola_del_alumno(self):
+        from simulador.alu_simulaciones import _etiquetas_ronda
+        self._guardar({1: 'escribir', 2: 'elegir', 3: 'hibrido'},
+                      etiquetas={1: 'Diagnostico de costos'})
+        self.sim.refresh_from_db()
+        self.assertEqual(_etiquetas_ronda(self.sim, 1)[0], 'Diagnostico de costos')
+
+    def test_sin_opciones_configuradas_elegir_cae_a_escribir(self):
+        """No se le puede pedir que elija si no hay entre que elegir."""
+        from simulador.alu_simulaciones import _modo_ronda
+        AccionSugeridaSimulacion.objects.filter(simulacion=self.sim).update(activo=False)
+        self._guardar({1: 'elegir', 2: 'elegir', 3: 'elegir'})
+        self.sim.refresh_from_db()
+        self.assertEqual(_modo_ronda(self.sim, 1, False), 'escribir')
+
+    def test_un_modo_invalido_cae_al_por_defecto(self):
+        from simulador.alu_simulaciones import _modo_ronda
+        self._guardar({1: 'cualquier_cosa', 2: 'hibrido', 3: 'hibrido'})
+        self.sim.refresh_from_db()
+        self.assertEqual(_modo_ronda(self.sim, 1, True), 'hibrido')
+
+    def test_no_pisa_lo_que_puso_el_generador(self):
+        """opciones_decision y situacion las escribe el generador de casos:
+        el editor de rondas no debe borrarlas."""
+        self.sim.parametros = {'rondas': [
+            {'situacion': 'La planta esta parada', 'opciones_decision': ['A', 'B'], 'modo': 'hibrido'},
+            {}, {},
+        ]}
+        self.sim.save(update_fields=['parametros'])
+        self._guardar({1: 'escribir', 2: 'hibrido', 3: 'hibrido'})
+        self.sim.refresh_from_db()
+        ronda = self.sim.parametros['rondas'][0]
+        self.assertEqual(ronda['modo'], 'escribir')
+        self.assertEqual(ronda['situacion'], 'La planta esta parada')
+        self.assertEqual(ronda['opciones_decision'], ['A', 'B'])
+
+    def test_la_pantalla_lista_una_tarjeta_por_ronda(self):
+        respuesta = self.client.get(self.url, {'action': 'rondas', 'id': self.sim.pk})
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(len(respuesta.context['rondas']), 3)
+
+    def test_un_estudiante_no_puede_cambiar_las_rondas(self):
+        estudiante = User.objects.create_user(username='alu_rondas')
+        cliente = Client()
+        cliente.force_login(estudiante)
+        respuesta = cliente.post(self.url, {
+            'action': 'guardar_rondas', 'id': self.sim.pk, 'modo_1': 'elegir',
+        }, headers={'x-requested-with': 'XMLHttpRequest'})
+        self.assertEqual(respuesta.status_code, 302)

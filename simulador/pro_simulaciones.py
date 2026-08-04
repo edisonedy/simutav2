@@ -103,6 +103,42 @@ def _impacto_desde_post(post, simulacion, prefijo='impacto'):
     return impacto
 
 
+MODOS_RONDA = [
+    ('elegir', 'Solo elegir', 'El estudiante escoge una de las opciones configuradas. No escribe nada. '
+                              'Util para rondas rapidas o para practicar el criterio de seleccion.'),
+    ('escribir', 'Solo escribir', 'No ve opciones: redacta su decision y la justifica. '
+                                  'Util para diagnostico inicial o cuando no quieres sugerir el camino.'),
+    ('hibrido', 'Elegir o escribir la suya', 'Ve las opciones y puede tomar una, o escribir su propia '
+                                             'decision. Siempre justifica. Es el modo por defecto.'),
+]
+CLAVES_MODO_RONDA = {clave for clave, _, _ in MODOS_RONDA}
+
+
+def _rondas_configurables(simulacion):
+    """Lo que el profesor puede ajustar en cada ronda. Los defaults son los
+    mismos que usa la consola del alumno, para que vea lo que va a salir."""
+    from simulador.alu_simulaciones import _etiquetas_ronda, _modo_ronda
+
+    hay_opciones = simulacion.acciones_sugeridas.filter(activo=True).exists()
+    filas = []
+    for numero in range(1, (simulacion.maximo_decisiones or 0) + 1):
+        etiqueta_decision, etiqueta_justificacion = _etiquetas_ronda(simulacion, numero)
+        modo_efectivo = _modo_ronda(simulacion, numero, hay_opciones)
+        configurado = 'hibrido'
+        rondas = (simulacion.parametros or {}).get('rondas') or []
+        if 0 <= numero - 1 < len(rondas) and isinstance(rondas[numero - 1], dict):
+            configurado = (rondas[numero - 1].get('modo') or 'hibrido').lower()
+        filas.append({
+            'numero': numero,
+            'modo': configurado if configurado in CLAVES_MODO_RONDA else 'hibrido',
+            'modo_efectivo': modo_efectivo,
+            'degradado': modo_efectivo != configurado,
+            'etiqueta_decision': etiqueta_decision,
+            'etiqueta_justificacion': etiqueta_justificacion,
+        })
+    return filas
+
+
 def _recursos_desde_post(post, simulacion, prefijo='costo'):
     costos = {}
     for recurso in simulacion.recursos.filter(activo=True):
@@ -299,6 +335,16 @@ def _pasos_configuracion(simulacion, rubrica_completa):
             'como_conecta': 'Hace que una buena decision tenga costo: no se puede arreglar todo sin sacrificar recursos.',
             'ok': n_rec > 0, 'opcional': True, 'aviso': False,
             'detalle': f'{n_rec} recurso(s)', 'url': url('recursos'),
+        },
+        {
+            'numero': 4.5, 'titulo': 'Como responde el estudiante en cada ronda',
+            'fase': 'caso',
+            'que_es': 'Si en cada ronda elige una opcion, escribe su propia decision, o ambas. '
+                      'Y como se llaman esos campos.',
+            'como_conecta': 'Define la interaccion: una ronda de diagnostico suele ser de escribir, '
+                            'y una de decision suele ser de elegir entre alternativas con trade-offs.',
+            'ok': bool((simulacion.parametros or {}).get('rondas')), 'opcional': True, 'aviso': False,
+            'detalle': f'{simulacion.maximo_decisiones} ronda(s)', 'url': url('rondas'),
         },
         {
             'numero': 5.5, 'titulo': 'Informacion que se puede comprar',
@@ -860,6 +906,29 @@ def view(request):
                 return ok_json(mensaje='Recurso agregado correctamente.')
             return bad_json(mensaje=str(form.errors))
 
+        elif action == 'guardar_rondas':
+            simulacion = _get_simulacion_profesor(request.user, _request_id(request))
+            parametros = dict(simulacion.parametros or {})
+            rondas = list(parametros.get('rondas') or [])
+            while len(rondas) < simulacion.maximo_decisiones:
+                rondas.append({})
+            for numero in range(1, simulacion.maximo_decisiones + 1):
+                indice = numero - 1
+                actual = rondas[indice] if isinstance(rondas[indice], dict) else {}
+                modo = (request.POST.get(f'modo_{numero}') or 'hibrido').lower()
+                if modo not in CLAVES_MODO_RONDA:
+                    modo = 'hibrido'
+                # Solo tocamos las claves del editor: opciones_decision, situacion
+                # y titulo los pone el generador y no se deben pisar.
+                actual['modo'] = modo
+                actual['etiqueta_decision'] = (request.POST.get(f'etiqueta_decision_{numero}') or '').strip()
+                actual['etiqueta_justificacion'] = (request.POST.get(f'etiqueta_justificacion_{numero}') or '').strip()
+                rondas[indice] = actual
+            parametros['rondas'] = rondas[:simulacion.maximo_decisiones]
+            simulacion.parametros = parametros
+            simulacion.save(update_fields=['parametros'])
+            return ok_json(mensaje='Rondas actualizadas correctamente.')
+
         elif action == 'add_investigacion':
             simulacion = _get_simulacion_profesor(request.user, _request_id(request))
             form = InvestigacionSimulacionForm(request.POST)
@@ -1231,6 +1300,14 @@ def view(request):
         data['form'] = form
         data['indicadores'] = IndicadorSimulacion.objects.filter(simulacion=simulacion)
         return render(request, 'simulador/pro_simulaciones/indicadores.html', data)
+
+    elif action == 'rondas':
+        simulacion = _get_simulacion_profesor(request.user, request.GET.get('id'))
+        data['simulacion'] = simulacion
+        data['rondas'] = _rondas_configurables(simulacion)
+        data['modos'] = MODOS_RONDA
+        data['hay_opciones'] = simulacion.acciones_sugeridas.filter(activo=True).exists()
+        return render(request, 'simulador/pro_simulaciones/rondas.html', data)
 
     elif action == 'investigaciones':
         simulacion = _get_simulacion_profesor(request.user, request.GET.get('id'))

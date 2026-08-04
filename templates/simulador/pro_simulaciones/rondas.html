@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker"><a href="{% url 'pro_simulaciones' %}?action=configuracion&id={{ simulacion.pk }}" class="text-decoration-none">Configuracion</a> / Rondas</div>
+        <h1 class="h3">Como responde el estudiante en cada ronda <span class="count-pill">{{ rondas|length }}</span></h1>
+    </div>
+</div>
+
+<div class="alert alert-info small">
+    Cada ronda puede pedir una cosa distinta. Lo habitual es abrir con
+    <strong>solo escribir</strong> para que el estudiante diagnostique sin que le sugieras el camino,
+    y despues pasar a <strong>elegir</strong> para que se enfrente a opciones con trade-offs.
+    {% if not hay_opciones %}
+        <div class="mt-2"><strong>Ojo:</strong> este caso no tiene opciones de decision configuradas,
+        asi que aunque elijas "elegir" el estudiante vera solo el campo de escribir. Configuralas en
+        <a href="{% url 'pro_simulaciones' %}?action=acciones&id={{ simulacion.pk }}">Decisiones sugeridas</a>.</div>
+    {% endif %}
+</div>
+
+<form method="post" action="{% url 'pro_simulaciones' %}?action=guardar_rondas&id={{ simulacion.pk }}" onsubmit="return enviar_formulario(this)">
+    {% csrf_token %}
+    <div class="row g-3">
+    {% for ronda in rondas %}
+        <div class="col-lg-6">
+            <div class="module-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="section-title mb-0">Ronda {{ ronda.numero }}</div>
+                    {% if ronda.degradado %}
+                        <span class="badge text-bg-warning" title="Configuraste otro modo, pero sin opciones no se puede aplicar">
+                            se aplica: {{ ronda.modo_efectivo }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    {% for clave, titulo, ayuda in modos %}
+                    <label class="play-option d-block mb-2 p-2">
+                        <input type="radio" name="modo_{{ ronda.numero }}" value="{{ clave }}"
+                               class="play-option-control" {% if ronda.modo == clave %}checked{% endif %}>
+                        <strong>{{ titulo }}</strong>
+                        <div class="empty-text">{{ ayuda }}</div>
+                    </label>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-2">
+                    <label class="play-label" for="etq_dec_{{ ronda.numero }}">Como llamar a la decision</label>
+                    <input class="form-control" type="text" id="etq_dec_{{ ronda.numero }}"
+                           name="etiqueta_decision_{{ ronda.numero }}" value="{{ ronda.etiqueta_decision }}"
+                           placeholder="Diagnostico, Decision, Plan...">
+                </div>
+                <div>
+                    <label class="play-label" for="etq_jus_{{ ronda.numero }}">Como llamar a la justificacion</label>
+                    <input class="form-control" type="text" id="etq_jus_{{ ronda.numero }}"
+                           name="etiqueta_justificacion_{{ ronda.numero }}" value="{{ ronda.etiqueta_justificacion }}"
+                           placeholder="Justificacion del diagnostico...">
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <div class="module-card data-card">
+                <div class="empty-state">
+                    <span class="empty-ico">&#128260;</span>
+                    <div class="empty-title">Este caso no tiene rondas</div>
+                    <p class="empty-text">Define cuantas rondas tendra el caso en Editar simulacion.</p>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+    {% if rondas %}
+    <div class="mt-3">
+        <button class="btn btn-primary">Guardar rondas</button>
+    </div>
+    {% endif %}
+</form>
+{% endblock %}
