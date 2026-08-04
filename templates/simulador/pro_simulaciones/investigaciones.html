@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker"><a href="{% url 'pro_simulaciones' %}?action=configuracion&id={{ simulacion.pk }}" class="text-decoration-none">Configuracion</a> / Averiguaciones</div>
+        <h1 class="h3">Informacion que el estudiante puede comprar <span class="count-pill">{{ investigaciones|length }}</span></h1>
+    </div>
+</div>
+
+<div class="alert alert-info small">
+    <strong>Para que sirve:</strong> si el estudiante ve toda la informacion de entrada, solo elige.
+    Si tiene presupuesto limitado y datos ocultos, tiene que decidir <em>en que gastar para averiguar</em>,
+    y eso ya es una decision real. Sirve igual para probar candidatos, auditar proveedores,
+    encuestar segmentos o estudiar un mercado.
+    {% if not recursos %}
+        <div class="mt-2"><strong>Ojo:</strong> este caso todavia no tiene recursos configurados, asi que
+        no hay presupuesto que gastar. Crea uno primero en
+        <a href="{% url 'pro_simulaciones' %}?action=recursos&id={{ simulacion.pk }}">Recursos</a>.</div>
+    {% endif %}
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="module-card data-card table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Sobre</th><th>Que averigua</th><th>Costo</th><th>Desde</th><th class="text-end"></th></tr></thead>
+                <tbody>
+                {% for item in investigaciones %}
+                    <tr>
+                        <td class="cell-strong">{{ item.sujeto|default:"-" }}</td>
+                        <td>
+                            {{ item.nombre }}
+                            <div class="empty-text">{{ item.hallazgo|truncatechars:90 }}</div>
+                        </td>
+                        <td>
+                            {% for codigo, valor in item.costo_recursos.items %}
+                                <span class="chip chip-soft">{{ valor }} {{ codigo }}</span>
+                            {% empty %}<span class="text-muted">gratis</span>{% endfor %}
+                        </td>
+                        <td>R{{ item.disponible_desde_ronda }}</td>
+                        <td class="text-end">
+                            <form method="post" action="{% url 'pro_simulaciones' %}?action=delete_investigacion&id={{ item.pk }}" onsubmit="return enviar_formulario(this)">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-outline-danger btn-action">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5">
+                        <div class="empty-state">
+                            <span class="empty-ico">&#128269;</span>
+                            <div class="empty-title">Aun no hay nada que averiguar</div>
+                            <p class="empty-text">Agrega pruebas, entrevistas, auditorias o encuestas para que el
+                            estudiante tenga que gastar presupuesto en conseguir evidencia.</p>
+                        </div>
+                    </td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="module-card p-3">
+            <div class="section-title mb-2">Nueva averiguacion</div>
+            <form method="post" action="{% url 'pro_simulaciones' %}?action=add_investigacion&id={{ simulacion.pk }}" onsubmit="return enviar_formulario(this)">
+                {% csrf_token %}
+                {{ form.as_p }}
+                {% if recursos %}
+                <div class="mb-2">
+                    <div class="hud-label mb-1">Cuanto cuesta</div>
+                    {% for r in recursos %}
+                        <div class="impacto-row">
+                            <label class="flex-grow-1" for="costo_{{ r.codigo }}">{{ r.nombre }} <span class="text-muted">({{ r.unidad }})</span></label>
+                            <input class="impacto-input" type="number" step="any" name="costo_{{ r.codigo }}" id="costo_{{ r.codigo }}">
+                        </div>
+                    {% endfor %}
+                    <div class="small text-muted">Deja en blanco lo que no consuma.</div>
+                </div>
+                {% endif %}
+                <button class="btn btn-primary w-100">Agregar</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

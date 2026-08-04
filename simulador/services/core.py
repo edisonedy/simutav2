@@ -386,6 +386,81 @@ def aplicar_costo_recursos(recursos_actuales, costo):
     return recursos
 
 
+def investigaciones_disponibles(intento):
+    """Las averiguaciones que el estudiante puede pagar en la ronda actual, con
+    su costo y, si ya las pago, el hallazgo revelado."""
+    from simulador.models import InvestigacionSimulacion
+
+    compradas = set(intento.investigaciones_compradas or [])
+    recursos = intento.recursos_actuales or {}
+    catalogo = InvestigacionSimulacion.objects.filter(
+        simulacion=intento.simulacion, activo=True,
+        disponible_desde_ronda__lte=intento.numero_ronda_actual,
+    )
+    items = []
+    for inv in catalogo:
+        pagada = inv.id in compradas
+        alcanza = puede_pagar(recursos, inv.costo_recursos)
+        items.append({
+            'id': inv.id,
+            'sujeto': inv.sujeto,
+            'nombre': inv.nombre,
+            'descripcion': inv.descripcion,
+            'costo': inv.costo_recursos or {},
+            'pagada': pagada,
+            'alcanza': alcanza,
+            'hallazgo': inv.hallazgo if pagada else '',
+        })
+    return items
+
+
+def puede_pagar(recursos_actuales, costo):
+    """True si el saldo alcanza para ese costo, sin quedar en negativo."""
+    recursos = recursos_actuales or {}
+    for clave, valor in (costo or {}).items():
+        if not isinstance(valor, (int, float)):
+            continue
+        disponible = recursos.get(clave)
+        if not isinstance(disponible, (int, float)) or float(disponible) < float(valor):
+            return False
+    return True
+
+
+def comprar_investigacion(intento, investigacion):
+    """Cobra la averiguacion y devuelve el hallazgo. No cobra dos veces."""
+    compradas = list(intento.investigaciones_compradas or [])
+    if investigacion.id in compradas:
+        return {'ok': False, 'mensaje': 'Ya pagaste esa averiguacion.',
+                'hallazgo': investigacion.hallazgo}
+    if not puede_pagar(intento.recursos_actuales, investigacion.costo_recursos):
+        return {'ok': False, 'mensaje': 'No te alcanza el presupuesto para esa averiguacion.',
+                'hallazgo': ''}
+
+    intento.recursos_actuales = aplicar_costo_recursos(
+        intento.recursos_actuales, investigacion.costo_recursos,
+    )
+    compradas.append(investigacion.id)
+    intento.investigaciones_compradas = compradas
+    intento.save(update_fields=['recursos_actuales', 'investigaciones_compradas'])
+    return {'ok': True, 'mensaje': 'Averiguacion realizada.',
+            'hallazgo': investigacion.hallazgo,
+            'recursos': intento.recursos_actuales}
+
+
+def hallazgos_conocidos(intento):
+    """Lo que el estudiante ya averiguo. Se le pasa a la IA para que pueda
+    juzgar si uso la evidencia que pago o decidio a ciegas."""
+    from simulador.models import InvestigacionSimulacion
+
+    compradas = intento.investigaciones_compradas or []
+    if not compradas:
+        return []
+    return [
+        {'sujeto': i.sujeto, 'averiguacion': i.nombre, 'hallazgo': i.hallazgo}
+        for i in InvestigacionSimulacion.objects.filter(id__in=compradas, activo=True)
+    ]
+
+
 def validar_recursos(simulacion, recursos):
     alertas = []
     for recurso in simulacion.recursos.filter(activo=True):

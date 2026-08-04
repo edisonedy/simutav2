@@ -118,6 +118,7 @@ class IAServiceLLM:
     def evaluar_ronda_dinamica(self, intento, decision, justificacion):
         from simulador.services import (
             evaluar_conceptos_esperados,
+            hallazgos_conocidos,
             situacion_de_ronda,
             validar_respuesta_estudiante,
         )
@@ -155,6 +156,7 @@ class IAServiceLLM:
         prompt = self._construir_prompt_semantico(
             simulacion, situacion, decision, justificacion,
             intento.numero_ronda_actual, conceptos_info, indicadores_info,
+            hallazgos_conocidos(intento),
         )
 
         # Si el proveedor falla (sin cuota, timeout, etc.) se lanza la excepcion
@@ -271,12 +273,20 @@ class IAServiceLLM:
             },
         }
 
-    def _construir_prompt_semantico(self, simulacion, situacion, decision, justificacion, ronda, conceptos, indicadores):
+    def _construir_prompt_semantico(self, simulacion, situacion, decision, justificacion, ronda, conceptos, indicadores, hallazgos=None):
         from simulador.services import CRITERIOS_DECISION
         criterios_decision = [
             {'clave': c['clave'], 'nombre': c['nombre'], 'descripcion': c['descripcion']}
             for c in CRITERIOS_DECISION
         ]
+        bloque_hallazgos = ''
+        if hallazgos:
+            bloque_hallazgos = (
+                '\n## Evidencia que el estudiante pago por averiguar\n'
+                + json.dumps(hallazgos, ensure_ascii=False, indent=2)
+                + '\nSi decidio ignorando esta evidencia que ya tenia, no le des por cumplido '
+                  'el criterio de evidencia.\n'
+            )
         rondas = (simulacion.parametros or {}).get('rondas') or []
         opciones_docente = []
         indice = ronda - 1
@@ -325,6 +335,7 @@ Justificacion:
 
 ## Indicadores configurados
 {json.dumps(indicadores, ensure_ascii=False, indent=2)}
+{bloque_hallazgos}
 
 ## Conceptos configurados por el docente
 {json.dumps(conceptos, ensure_ascii=False, indent=2)}

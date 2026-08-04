@@ -293,6 +293,49 @@ class IndicadorSimulacion(ModeloBase):
         return f'{self.nombre} ({self.valor_inicial})'
 
 
+class InvestigacionSimulacion(ModeloBase):
+    """Informacion oculta que el estudiante puede COMPRAR antes de decidir.
+
+    Es lo que convierte "elegir entre tres candidatos parecidos" en una decision
+    de verdad: con presupuesto limitado no se pueden pagar todas las
+    averiguaciones, asi que hay que apostar a cuales dan mas informacion por lo
+    que cuestan. Sirve igual para pruebas a candidatos, auditorias a proveedores,
+    encuestas a segmentos o estudios de mercado.
+    """
+    simulacion = models.ForeignKey(
+        Simulacion, on_delete=models.CASCADE, related_name='investigaciones',
+    )
+    sujeto = models.CharField(
+        max_length=120, blank=True, default='',
+        help_text='Sobre quien o que averigua: "Candidato B", "Proveedor Sur", '
+                  '"Segmento jovenes". Se usa para agrupar. Opcional.',
+    )
+    nombre = models.CharField(
+        max_length=200, help_text='Lo que el estudiante ve antes de pagar: "Prueba tecnica".',
+    )
+    descripcion = models.TextField(
+        blank=True, default='',
+        help_text='Que obtiene si la paga, sin revelar el hallazgo.',
+    )
+    hallazgo = models.TextField(
+        help_text='Lo que se revela al pagarla. Aqui va la informacion oculta.',
+    )
+    costo_recursos = models.JSONField(
+        default=dict, blank=True,
+        help_text='Cuanto cuesta, por codigo de recurso. Ejemplo: {"presupuesto": 60}.',
+    )
+    disponible_desde_ronda = models.PositiveIntegerField(default=1)
+    orden = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        verbose_name = 'investigacion'
+        verbose_name_plural = 'investigaciones'
+        ordering = ['simulacion', 'sujeto', 'orden', 'nombre']
+
+    def __str__(self):
+        return f'{self.sujeto} - {self.nombre}' if self.sujeto else self.nombre
+
+
 class RecursoSimulacion(ModeloBase):
     simulacion = models.ForeignKey(Simulacion, on_delete=models.CASCADE, related_name='recursos')
     codigo = models.CharField(max_length=50)
@@ -572,6 +615,7 @@ class IntentoSimulacion(ModeloBase):
     )
     estado_actual = models.JSONField(default=dict, blank=True)
     recursos_actuales = models.JSONField(default=dict, blank=True)
+    investigaciones_compradas = models.JSONField(default=list, blank=True)
     configuracion_snapshot = models.JSONField(default=dict, blank=True)
     situacion_actual = models.TextField(blank=True, default='')
     numero_ronda_actual = models.PositiveIntegerField(default=1)

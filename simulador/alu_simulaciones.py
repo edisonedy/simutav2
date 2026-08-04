@@ -9,13 +9,15 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404, render, redirect
 from core.funciones import ok_json, bad_json
 from academico.models import InscripcionMalla, MateriaMalla, PeriodoAcademico
-from simulador.models import Simulacion, IntentoSimulacion
+from simulador.models import InvestigacionSimulacion, Simulacion, IntentoSimulacion
 from simulador import cursos_service
 from simulador.forms import PasoSimulacionForm
 from simulador.services import (
     CRITERIOS_DECISION,
     calcular_bonificaciones,
+    comprar_investigacion,
     construir_estado_inicial,
+    investigaciones_disponibles,
     construir_recursos_iniciales,
     ejecutar_decision_arbol,
     ejecutar_ronda_ia_dinamica,
@@ -960,6 +962,34 @@ def view(request):
             messages.info(request, mensaje)
             return HttpResponseRedirect(f'?action=simular&intento_id={intento.pk}')
 
+        elif action == 'investigar':
+            intento = get_object_or_404(
+                IntentoSimulacion.objects.select_related('simulacion'),
+                pk=request.POST.get('intento_id'),
+                estudiante=request.user,
+                finalizado=False,
+            )
+            investigacion = get_object_or_404(
+                InvestigacionSimulacion,
+                pk=request.POST.get('investigacion_id'),
+                simulacion=intento.simulacion,
+                activo=True,
+                disponible_desde_ronda__lte=intento.numero_ronda_actual,
+            )
+            resultado = comprar_investigacion(intento, investigacion)
+            if not resultado['ok']:
+                if _es_ajax(request):
+                    return bad_json(mensaje=resultado['mensaje'])
+                messages.error(request, resultado['mensaje'])
+                return HttpResponseRedirect(f'?action=simular&intento_id={intento.pk}')
+            if _es_ajax(request):
+                return ok_json(
+                    data={'hallazgo': resultado['hallazgo'], 'recursos': resultado['recursos']},
+                    mensaje=resultado['mensaje'],
+                )
+            messages.info(request, resultado['hallazgo'])
+            return HttpResponseRedirect(f'?action=simular&intento_id={intento.pk}')
+
         elif action == 'pedir_pista':
             intento = get_object_or_404(
                 IntentoSimulacion.objects.select_related('simulacion'),
@@ -1101,6 +1131,7 @@ def view(request):
             data['cambios_indicadores'] = [i for i in indicadores_estado if i['flecha']]
             data['pronostico_indicadores'] = indicadores_estado
             data['pedir_tradeoff'] = bool(indicadores_estado or intento.simulacion.recursos.filter(activo=True).exists())
+            data['investigaciones'] = investigaciones_disponibles(intento)
             if intento.simulacion.tipo_simulacion == Simulacion.TIPO_SIN_IA_ARBOL:
                 data['escenario'] = intento.escenario_actual
                 data['decisiones'] = intento.escenario_actual.decisiones.filter(activo=True) if intento.escenario_actual else []

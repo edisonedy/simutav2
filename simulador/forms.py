@@ -19,6 +19,7 @@ from .models import (
     EventoSimulacion,
     IndicadorSimulacion,
     IntentoSimulacion,
+    InvestigacionSimulacion,
     MatrizEvaluacionCaso,
     OpcionCasoSimulacion,
     PerfilMateriaIA,
@@ -277,6 +278,26 @@ class RecursoSimulacionForm(forms.ModelForm):
     class Meta:
         model = RecursoSimulacion
         fields = ['simulacion', 'nombre', 'codigo', 'valor_inicial', 'valor_minimo', 'valor_maximo', 'unidad', 'es_critico', 'activo']
+
+
+class InvestigacionSimulacionForm(forms.ModelForm):
+    """El costo no se pide como JSON: se arma con una casilla por recurso."""
+
+    class Meta:
+        model = InvestigacionSimulacion
+        fields = ['simulacion', 'sujeto', 'nombre', 'descripcion', 'hallazgo',
+                  'disponible_desde_ronda', 'orden', 'activo']
+        widgets = {
+            'descripcion': forms.Textarea(attrs={'rows': 2}),
+            'hallazgo': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['nombre'].label = 'Que puede averiguar'
+        self.fields['descripcion'].label = 'Que obtiene (sin revelar el hallazgo)'
+        self.fields['hallazgo'].label = 'Hallazgo que se revela al pagarla'
+        self.fields['disponible_desde_ronda'].label = 'Disponible desde la ronda'
 
 
 class RestriccionSimulacionForm(forms.ModelForm):

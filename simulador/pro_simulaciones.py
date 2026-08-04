@@ -19,14 +19,15 @@ from simulador import cursos_service
 from simulador.models import (
     Simulacion, IndicadorSimulacion, RestriccionSimulacion,
     ConceptoEsperadoRonda, CriterioEvaluacion, AccionSugeridaSimulacion, CondicionExitoSimulacion,
-    DecisionConfigurada, EscenarioSimulacion, EventoSimulacion, IntentoSimulacion, RecursoSimulacion,
+    DecisionConfigurada, EscenarioSimulacion, EventoSimulacion, IntentoSimulacion,
+    InvestigacionSimulacion, RecursoSimulacion,
     MatrizEvaluacionCaso, OpcionCasoSimulacion, PasoSimulacion, RetoRefuerzo,
 )
 from simulador.forms import (
     SimulacionForm, IndicadorSimulacionForm, RestriccionSimulacionForm,
     ConceptoEsperadoRondaForm, CriterioEvaluacionForm, AccionSugeridaForm, CondicionExitoForm,
     DecisionConfiguradaForm, EscenarioSimulacionForm, EventoSimulacionForm, RecursoSimulacionForm,
-    MatrizEvaluacionCasoForm, OpcionCasoSimulacionForm,
+    MatrizEvaluacionCasoForm, OpcionCasoSimulacionForm, InvestigacionSimulacionForm,
 )
 from simulador.generator_service import generar_simulacion_desde_plantilla, serializar_configuracion_simulacion
 
@@ -249,6 +250,7 @@ def _pasos_configuracion(simulacion, rubrica_completa):
     n_con = simulacion.conceptos_esperados.filter(activo=True).count()
     n_acc = simulacion.acciones_sugeridas.filter(activo=True).count()
     n_evt = simulacion.eventos.filter(activo=True).count()
+    n_inv = simulacion.investigaciones.filter(activo=True).count()
     n_opc_caso = simulacion.opciones_caso.filter(activo=True).count()
     n_mat_caso = simulacion.matriz_caso.filter(activo=True).count()
     caso_ok = all([simulacion.contexto, simulacion.objetivo, simulacion.situacion_inicial])
@@ -297,6 +299,16 @@ def _pasos_configuracion(simulacion, rubrica_completa):
             'como_conecta': 'Hace que una buena decision tenga costo: no se puede arreglar todo sin sacrificar recursos.',
             'ok': n_rec > 0, 'opcional': True, 'aviso': False,
             'detalle': f'{n_rec} recurso(s)', 'url': url('recursos'),
+        },
+        {
+            'numero': 5.5, 'titulo': 'Informacion que se puede comprar',
+            'fase': 'caso',
+            'que_es': 'Pruebas, entrevistas, auditorias o encuestas que revelan datos ocultos y cuestan presupuesto.',
+            'como_conecta': 'Convierte "elegir entre alternativas parecidas" en una decision real: como no alcanza para '
+                            'todas, el estudiante debe apostar a cuales le dan mas informacion por lo que cuestan.',
+            'ok': n_inv > 0, 'opcional': True, 'aviso': n_inv > 0 and n_rec == 0,
+            'detalle': (f'{n_inv} averiguacion(es)' + (' - falta configurar un recurso para cobrarlas' if n_inv and not n_rec else '')),
+            'url': url('investigaciones'),
         },
         {
             'numero': 6, 'titulo': 'Restricciones',
@@ -848,6 +860,24 @@ def view(request):
                 return ok_json(mensaje='Recurso agregado correctamente.')
             return bad_json(mensaje=str(form.errors))
 
+        elif action == 'add_investigacion':
+            simulacion = _get_simulacion_profesor(request.user, _request_id(request))
+            form = InvestigacionSimulacionForm(request.POST)
+            if form.is_valid():
+                investigacion = form.save(commit=False)
+                investigacion.simulacion = simulacion
+                investigacion.costo_recursos = _recursos_desde_post(request.POST, simulacion)
+                investigacion.usuario_creacion = request.user
+                investigacion.save()
+                return ok_json(mensaje='Averiguacion agregada correctamente.')
+            return bad_json(mensaje=str(form.errors))
+
+        elif action == 'delete_investigacion':
+            investigacion = _get_objeto_de_simulacion(request.user, InvestigacionSimulacion, _request_id(request))
+            investigacion.activo = False
+            investigacion.save(update_fields=['activo'])
+            return ok_json(mensaje='Averiguacion eliminada correctamente.')
+
         elif action == 'delete_recurso':
             recurso = _get_objeto_de_simulacion(request.user, RecursoSimulacion, _request_id(request))
             recurso.activo = False
@@ -1201,6 +1231,16 @@ def view(request):
         data['form'] = form
         data['indicadores'] = IndicadorSimulacion.objects.filter(simulacion=simulacion)
         return render(request, 'simulador/pro_simulaciones/indicadores.html', data)
+
+    elif action == 'investigaciones':
+        simulacion = _get_simulacion_profesor(request.user, request.GET.get('id'))
+        form = InvestigacionSimulacionForm()
+        _hide_simulacion_field(form, simulacion)
+        data['simulacion'] = simulacion
+        data['form'] = form
+        data['recursos'] = RecursoSimulacion.objects.filter(simulacion=simulacion, activo=True)
+        data['investigaciones'] = InvestigacionSimulacion.objects.filter(simulacion=simulacion, activo=True)
+        return render(request, 'simulador/pro_simulaciones/investigaciones.html', data)
 
     elif action == 'recursos':
         simulacion = _get_simulacion_profesor(request.user, request.GET.get('id'))

@@ -1627,3 +1627,103 @@ class BonificacionesProcesoTests(TestCase):
         self._paso(1, 50, pronostico='acierto', reflexion='algo')
         self._paso(2, 90, pronostico='acierto', reflexion='algo')
         self.assertEqual(calcular_bonificaciones(self.intento)['total'], 0)
+
+
+class InvestigacionConPresupuestoTests(TestCase):
+    """Informacion oculta que se compra: es lo que convierte "elegir entre
+    alternativas parecidas" en una decision real, porque el presupuesto no
+    alcanza para averiguarlo todo."""
+
+    def setUp(self):
+        from simulador.models import InvestigacionSimulacion, RecursoSimulacion
+        usuario = User.objects.create_user(username='prof_inv')
+        self.alumno = User.objects.create_user(username='alu_inv')
+        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=usuario)
+        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='CI', usuario_creacion=usuario)
+        malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MI', usuario_creacion=usuario)
+        nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=usuario)
+        materia = Materia.objects.create(institucion=institucion, codigo='I1', nombre='I', usuario_creacion=usuario)
+        mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
+        self.sim = Simulacion.objects.create(
+            materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Seleccion', contexto='c', objetivo='o', resultado_aprendizaje='r',
+            situacion_inicial='s', instrucciones_ia='i', estado=Simulacion.PUBLICADA,
+            usuario_creacion=usuario,
+        )
+        RecursoSimulacion.objects.create(
+            simulacion=self.sim, codigo='presupuesto', nombre='Presupuesto',
+            valor_inicial=100, valor_minimo=0, valor_maximo=100, usuario_creacion=usuario)
+        self.barata = InvestigacionSimulacion.objects.create(
+            simulacion=self.sim, sujeto='Candidato A', nombre='Entrevista',
+            hallazgo='Culpa a sus companeros de todo.',
+            costo_recursos={'presupuesto': 40}, usuario_creacion=usuario)
+        self.cara = InvestigacionSimulacion.objects.create(
+            simulacion=self.sim, sujeto='Todos', nombre='Assessment center',
+            hallazgo='B lidera el grupo con naturalidad.',
+            costo_recursos={'presupuesto': 90}, usuario_creacion=usuario)
+        self.tardia = InvestigacionSimulacion.objects.create(
+            simulacion=self.sim, sujeto='Candidato B', nombre='Segunda entrevista',
+            hallazgo='Confirma su interes.', costo_recursos={'presupuesto': 10},
+            disponible_desde_ronda=3, usuario_creacion=usuario)
+        self.intento = IntentoSimulacion.objects.create(
+            estudiante=self.alumno, simulacion=self.sim,
+            recursos_actuales={'presupuesto': 100.0}, usuario_creacion=self.alumno)
+
+    def test_el_hallazgo_esta_oculto_hasta_que_se_paga(self):
+        from simulador.services import investigaciones_disponibles
+        antes = {i['nombre']: i for i in investigaciones_disponibles(self.intento)}
+        self.assertEqual(antes['Entrevista']['hallazgo'], '')
+        self.assertFalse(antes['Entrevista']['pagada'])
+
+    def test_comprar_cobra_y_revela(self):
+        from simulador.services import comprar_investigacion
+        resultado = comprar_investigacion(self.intento, self.barata)
+        self.assertTrue(resultado['ok'])
+        self.assertIn('Culpa a sus companeros', resultado['hallazgo'])
+        self.intento.refresh_from_db()
+        self.assertEqual(self.intento.recursos_actuales['presupuesto'], 60)
+        self.assertEqual(self.intento.investigaciones_compradas, [self.barata.id])
+
+    def test_no_se_cobra_dos_veces(self):
+        from simulador.services import comprar_investigacion
+        comprar_investigacion(self.intento, self.barata)
+        repetida = comprar_investigacion(self.intento, self.barata)
+        self.assertFalse(repetida['ok'])
+        self.intento.refresh_from_db()
+        self.assertEqual(self.intento.recursos_actuales['presupuesto'], 60)
+
+    def test_el_presupuesto_obliga_a_elegir(self):
+        """Con 100 no alcanza para las dos: hay que decidir cual conviene mas."""
+        from simulador.services import comprar_investigacion
+        self.assertTrue(comprar_investigacion(self.intento, self.barata)['ok'])
+        segunda = comprar_investigacion(self.intento, self.cara)
+        self.assertFalse(segunda['ok'])
+        self.assertIn('alcanza', segunda['mensaje'])
+        self.assertEqual(segunda['hallazgo'], '')
+
+    def test_las_de_rondas_futuras_no_aparecen_todavia(self):
+        from simulador.services import investigaciones_disponibles
+        nombres = [i['nombre'] for i in investigaciones_disponibles(self.intento)]
+        self.assertNotIn('Segunda entrevista', nombres)
+        self.intento.numero_ronda_actual = 3
+        self.assertIn('Segunda entrevista', [i['nombre'] for i in investigaciones_disponibles(self.intento)])
+
+    def test_la_ia_recibe_solo_lo_que_el_estudiante_pago(self):
+        from simulador.services import comprar_investigacion, hallazgos_conocidos
+        self.assertEqual(hallazgos_conocidos(self.intento), [])
+        comprar_investigacion(self.intento, self.barata)
+        conocidos = hallazgos_conocidos(self.intento)
+        self.assertEqual(len(conocidos), 1)
+        self.assertEqual(conocidos[0]['sujeto'], 'Candidato A')
+
+    def test_el_estudiante_no_puede_investigar_en_un_intento_ajeno(self):
+        otro = User.objects.create_user(username='otro_alu')
+        client = Client()
+        client.force_login(otro)
+        respuesta = client.post('/simulador/alu_simulaciones', {
+            'action': 'investigar', 'intento_id': self.intento.pk,
+            'investigacion_id': self.barata.pk,
+        }, headers={'x-requested-with': 'XMLHttpRequest'})
+        self.assertEqual(respuesta.status_code, 404)
+        self.intento.refresh_from_db()
+        self.assertEqual(self.intento.investigaciones_compradas, [])
