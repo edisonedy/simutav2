@@ -163,6 +163,20 @@
             <h2 class="h5">Puntaje academico</h2>
             <div class="display-6">{{ intento.puntuacion_final|floatformat:2 }}</div>
             <div class="small text-muted mb-2">Evalua que tan bien cumpliste la rubrica y los conceptos esperados.</div>
+            {% if bonificaciones.detalle %}
+            <div class="mb-2">
+                <div class="hud-label mb-1">De donde salio tu nota</div>
+                <ul class="list-unstyled small mb-1">
+                {% for b in bonificaciones.detalle %}
+                    <li class="d-flex justify-content-between gap-2">
+                        <span title="{{ b.explicacion }}">{{ b.etiqueta }} <span class="text-muted">({{ b.logrados }} de {{ b.de }})</span></span>
+                        <strong class="{% if b.puntos %}text-success{% else %}text-muted{% endif %}">+{{ b.puntos|floatformat:1 }}</strong>
+                    </li>
+                {% endfor %}
+                </ul>
+                <div class="small text-muted">Estas bonificaciones solo suman: premian el proceso, no bajan tu nota.</div>
+            </div>
+            {% endif %}
             {% with nivel=intento.nivel_resultado %}
             <p class="mb-0">
                 <strong>Nivel:</strong>

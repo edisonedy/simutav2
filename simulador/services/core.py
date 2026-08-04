@@ -1184,7 +1184,66 @@ def calcular_puntaje_final(intento):
     if not pasos_validos:
         return 0.0
     promedio_pasos = mean(float(p.puntaje_paso) for p in pasos_validos)
-    return round(max(0, min(100, promedio_pasos)), 2)
+    base = max(0, min(100, promedio_pasos))
+    bonos = calcular_bonificaciones(intento, pasos_validos)
+    return round(max(0, min(100, base + bonos['total'])), 2)
+
+
+def calcular_bonificaciones(intento, pasos_validos=None):
+    """Premia el proceso, no solo el acierto: pronosticar bien antes de decidir,
+    reflexionar despues de ver las consecuencias, y corregir el rumbo entre
+    rondas. Son puntos que SUMAN sobre la nota base, nunca restan, porque el
+    pronostico y la reflexion son opcionales para el estudiante.
+    """
+    simulacion = intento.simulacion
+    if pasos_validos is None:
+        pasos_validos = list(intento.pasos.filter(es_valido=True))
+    pasos = sorted(pasos_validos, key=lambda p: p.numero)
+    detalle = []
+
+    def _bono(clave, etiqueta, tope, logrados, total, explicacion):
+        tope = int(tope or 0)
+        if not tope or not total:
+            return 0.0
+        puntos = round(tope * (logrados / total), 2)
+        detalle.append({
+            'clave': clave, 'etiqueta': etiqueta, 'puntos': puntos, 'tope': tope,
+            'logrados': logrados, 'de': total, 'explicacion': explicacion,
+        })
+        return puntos
+
+    aciertos = sum(
+        1 for p in pasos
+        if (p.pronostico_resultado or {}).get('estado') == 'acierto'
+    )
+    con_pronostico = sum(1 for p in pasos if (p.pronostico_resultado or {}).get('estado'))
+    total_pronostico = _bono(
+        'pronostico', 'Pronostico acertado', getattr(simulacion, 'bonus_pronostico', 0),
+        aciertos, con_pronostico or len(pasos),
+        'Anticipaste hacia donde se moveria el indicador antes de decidir.',
+    )
+
+    reflexiones = sum(1 for p in pasos if (p.reflexion or '').strip())
+    total_reflexion = _bono(
+        'reflexion', 'Reflexion despues de decidir', getattr(simulacion, 'bonus_reflexion', 0),
+        reflexiones, len(pasos),
+        'Explicaste por que reacciono asi la empresa y que cambiarias.',
+    )
+
+    mejoras = sum(
+        1 for anterior, actual in zip(pasos, pasos[1:])
+        if float(actual.puntaje_paso) > float(anterior.puntaje_paso)
+    )
+    total_adaptacion = _bono(
+        'adaptacion', 'Mejora entre rondas', getattr(simulacion, 'bonus_adaptacion', 0),
+        mejoras, max(len(pasos) - 1, 0),
+        'Corregiste el rumbo: cada ronda fue mejor que la anterior.',
+    )
+
+    return {
+        'total': round(total_pronostico + total_reflexion + total_adaptacion, 2),
+        'detalle': detalle,
+    }
 
 
 def obtener_nivel_resultado(puntaje):

@@ -1467,6 +1467,9 @@ class EdicionMateriaSimulacionTests(TestCase):
             'maximo_decisiones': self.simulacion.maximo_decisiones,
             'tiempo_estimado': self.simulacion.tiempo_estimado,
             'peso_rubrica_decision': self.simulacion.peso_rubrica_decision,
+            'bonus_pronostico': self.simulacion.bonus_pronostico,
+            'bonus_reflexion': self.simulacion.bonus_reflexion,
+            'bonus_adaptacion': self.simulacion.bonus_adaptacion,
             'rol_estudiante': 'Analista',
             'contexto': 'Contexto',
             'objetivo': 'Objetivo',
@@ -1554,3 +1557,73 @@ class RubricaDecisionTests(TestCase):
                     self.sim, 1, texto, texto, 'situacion', evaluaciones_ia=[],
                     evaluaciones_decision=self._juicios(self.claves))
                 self.assertEqual(resultado['puntaje_sugerido'], esperado)
+
+
+class BonificacionesProcesoTests(TestCase):
+    """La nota no premia solo acertar: tambien pronosticar antes de decidir,
+    reflexionar despues y corregir el rumbo entre rondas. Son bonificaciones y
+    no pesos porque esos campos son opcionales para el estudiante."""
+
+    def setUp(self):
+        usuario = User.objects.create_user(username='alumno_bonos')
+        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=usuario)
+        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='CB', usuario_creacion=usuario)
+        malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MB', usuario_creacion=usuario)
+        nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=usuario)
+        materia = Materia.objects.create(institucion=institucion, codigo='B1', nombre='B', usuario_creacion=usuario)
+        mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
+        self.sim = Simulacion.objects.create(
+            materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Caso bonos', contexto='c', objetivo='o', resultado_aprendizaje='r',
+            situacion_inicial='s', instrucciones_ia='i', usuario_creacion=usuario,
+            bonus_pronostico=8, bonus_reflexion=6, bonus_adaptacion=6,
+        )
+        self.intento = IntentoSimulacion.objects.create(
+            estudiante=usuario, simulacion=self.sim, usuario_creacion=usuario)
+
+    def _paso(self, numero, puntaje, pronostico=None, reflexion=''):
+        return PasoSimulacion.objects.create(
+            intento=self.intento, numero=numero, es_valido=True, puntaje_paso=puntaje,
+            decision_estudiante='d', justificacion_estudiante='j',
+            pronostico_resultado={'estado': pronostico} if pronostico else {},
+            reflexion=reflexion, usuario_creacion=self.intento.estudiante,
+        )
+
+    def test_sin_proceso_no_hay_bonificacion(self):
+        from simulador.services import calcular_bonificaciones, calcular_puntaje_final
+        self._paso(1, 60)
+        self._paso(2, 60)
+        self.assertEqual(calcular_bonificaciones(self.intento)['total'], 0)
+        self.assertEqual(calcular_puntaje_final(self.intento), 60)
+
+    def test_el_proceso_completo_suma_los_veinte_puntos(self):
+        from simulador.services import calcular_bonificaciones, calcular_puntaje_final
+        self._paso(1, 50, pronostico='acierto', reflexion='Aprendi que...')
+        self._paso(2, 60, pronostico='acierto', reflexion='Ahora entiendo...')
+        bonos = calcular_bonificaciones(self.intento)
+        self.assertEqual(bonos['total'], 20)
+        self.assertEqual(calcular_puntaje_final(self.intento), 75)  # 55 de base + 20
+
+    def test_las_bonificaciones_son_proporcionales(self):
+        from simulador.services import calcular_bonificaciones
+        self._paso(1, 60, pronostico='acierto', reflexion='algo')
+        self._paso(2, 50, pronostico='diferencia')
+        detalle = {b['clave']: b['puntos'] for b in calcular_bonificaciones(self.intento)['detalle']}
+        self.assertEqual(detalle['pronostico'], 4)   # 1 acierto de 2 pronosticos
+        self.assertEqual(detalle['reflexion'], 3)    # 1 reflexion de 2 pasos
+        self.assertEqual(detalle['adaptacion'], 0)   # empeoro
+
+    def test_nunca_pasa_de_cien(self):
+        from simulador.services import calcular_puntaje_final
+        self._paso(1, 98, pronostico='acierto', reflexion='x')
+        self._paso(2, 100, pronostico='acierto', reflexion='y')
+        self.assertEqual(calcular_puntaje_final(self.intento), 100)
+
+    def test_el_docente_puede_desactivarlas(self):
+        from simulador.services import calcular_bonificaciones
+        Simulacion.objects.filter(pk=self.sim.pk).update(
+            bonus_pronostico=0, bonus_reflexion=0, bonus_adaptacion=0)
+        self.intento.simulacion.refresh_from_db()
+        self._paso(1, 50, pronostico='acierto', reflexion='algo')
+        self._paso(2, 90, pronostico='acierto', reflexion='algo')
+        self.assertEqual(calcular_bonificaciones(self.intento)['total'], 0)

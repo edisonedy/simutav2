@@ -14,6 +14,7 @@ from simulador import cursos_service
 from simulador.forms import PasoSimulacionForm
 from simulador.services import (
     CRITERIOS_DECISION,
+    calcular_bonificaciones,
     construir_estado_inicial,
     construir_recursos_iniciales,
     ejecutar_decision_arbol,
@@ -1131,6 +1132,7 @@ def view(request):
             data['indicadores_finales'] = _indicadores_finales(intento)
             data['explicacion_resultado'] = _explicacion_resultado(intento)
             data['calidad_metacognitiva'] = _calidad_metacognitiva(intento)
+            data['bonificaciones'] = calcular_bonificaciones(intento)
             data['casos_equivalentes'] = _casos_equivalentes(intento, request.user)
             return render(request, 'simulador/alu_simulaciones/resultado.html', data)
 

@@ -209,6 +209,24 @@ class Simulacion(ModeloBase):
                   '(postura, evidencia del caso, trade-off y consecuencia medible) en vez '
                   'de que conceptos del temario menciono. El resto lo aportan tus conceptos.',
     )
+    # Bonificaciones a la nota FINAL. Son bonificacion y no peso a proposito: el
+    # pronostico y la reflexion son opcionales para el estudiante, asi que
+    # cobrarlos como porcentaje castigaria a quien los deja en blanco y premiaria
+    # saltarselos. Como bonificacion solo pueden sumar.
+    bonus_pronostico = models.PositiveSmallIntegerField(
+        'bonificacion por pronosticar bien (puntos)', default=8,
+        help_text='Puntos extra si el estudiante anticipa correctamente hacia donde se movera '
+                  'un indicador antes de decidir. 0 lo desactiva.',
+    )
+    bonus_reflexion = models.PositiveSmallIntegerField(
+        'bonificacion por reflexionar (puntos)', default=6,
+        help_text='Puntos extra por escribir su reflexion despues de ver las consecuencias.',
+    )
+    bonus_adaptacion = models.PositiveSmallIntegerField(
+        'bonificacion por adaptarse (puntos)', default=6,
+        help_text='Puntos extra si mejora de una ronda a la siguiente: premia corregir el rumbo, '
+                  'no solo acertar de entrada.',
+    )
 
     rol_estudiante = models.CharField(max_length=200, blank=True)
     contexto = models.TextField(blank=True)
