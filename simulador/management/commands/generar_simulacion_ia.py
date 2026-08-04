@@ -19,258 +19,47 @@ from simulador.models import (
 
 logger = logging.getLogger(__name__)
 
+# El esquema de la simulación es genérico: la secuencia y el tipo de interacción
+# nacen del aprendizaje que se desea evidenciar, no de fases heredadas.
 PROMPT_TEMPLATE = """
-Eres un generador experto de simulaciones académicas universitarias para SimutaV2.
+Eres un diseñador de simulaciones universitarias de toma de decisiones para SimutaV2.
 
-Debes crear una simulación realista para una materia específica de una malla académica.
-
-DATOS DE ENTRADA:
 Materia: {materia}
 Carrera: {carrera}
 Malla: {malla}
 Nivel: {nivel}
 Dificultad: {dificultad}
-Rondas máximas: 3
 
-OBJETIVO:
-Crear una simulación académica realista, aplicada y evaluable. La simulación debe parecer un caso real de empresa, institución, emprendimiento, área técnica o proceso profesional relacionado directamente con la materia.
+Crea un caso profesional realista en el que el estudiante deba interpretar información,
+elegir entre alternativas con ventajas y costos, justificar con conceptos de la materia y
+observar consecuencias. No es un examen de preguntas teóricas ni existe una secuencia
+universal de diagnóstico, decisión y plan.
 
-REGLAS GENERALES:
-
-* No hagas preguntas teóricas.
-* No uses el mismo caso para todas las materias.
-* No uses siempre los mismos indicadores.
-* Los indicadores deben ser propios de la materia.
-* El caso debe tener datos concretos: porcentajes, costos, tiempos, ventas, errores, defectos, clientes, empleados, liquidez, productividad, reclamos, riesgos o resultados.
-* El texto debe ser corto, claro y realista.
-* No des la solución al estudiante.
-* El estudiante debe diagnosticar, decidir e implementar.
-* La simulación debe tener 3 rondas:
-
-  1. Diagnóstico
-  2. Decisión
-  3. Implementación
-* Cada ronda debe tener una pregunta clara.
-* Cada ronda debe tener conceptos esperados con peso total 100.
-* Las palabras clave deben ser específicas de la materia.
-* Devuelve solo JSON válido. No agregues explicación fuera del JSON.
-
-INDICADORES:
-Debes crear indicadores propios según la materia. Ejemplos:
-
-* Administración Financiera: liquidez_corriente, flujo_caja, rentabilidad, endeudamiento, capital_trabajo, cartera_vencida.
-* Contabilidad de Costos: costo_unitario, costos_sobre_ventas, margen_bruto, margen_contribucion, punto_equilibrio, rotacion_inventario.
-* Administración de la Producción: defectos_produccion, entregas_tardias, capacidad_utilizada, inventario, productividad, tiempo_ciclo.
-* Talento Humano: rotacion_personal, ausentismo, desempeno_laboral, clima_laboral, capacitacion, retencion_talento.
-* Django: tiempo_respuesta, errores_500, consultas_sql, disponibilidad, seguridad, cobertura_pruebas.
-* Derecho Laboral: reclamos_laborales, contratos_incompletos, horas_extra_pendientes, riesgo_legal, cumplimiento_normativo.
-* Estadística Descriptiva: promedio, mediana, desviacion_estandar, rango_datos, variacion_datos.
-* Gerencia de la Calidad: tasa_defectos, reclamos_clientes, reprocesos, cumplimiento_estandares, satisfaccion_cliente.
-* Investigación Operativa: costo_transporte, capacidad_recurso, tiempo_ruta, demanda_atendida, solucion_optima.
-* Marketing: conversion_clientes, ventas, alcance_campana, costo_adquisicion_cliente, satisfaccion_cliente.
-
-ESTRUCTURA JSON OBLIGATORIA:
-
-{{
-"titulo": "",
-"tema": "",
-"rol_estudiante": "",
-"contexto": "",
-"objetivo": "",
-"resultado_aprendizaje": "",
-"situacion_inicial": "",
-
-"indicadores": [
-{{
-"codigo": "",
-"nombre": "",
-"valor_inicial": 50,
-"valor_minimo": 0,
-"valor_maximo": 100,
-"direccion_optima": "ALTO",
-"unidad": "",
-"descripcion": ""
-}}
-],
-
-"restricciones": [
-{{
-"descripcion": "",
-"codigo_indicador": "",
-"operador": ">=",
-"valor_limite": 0,
-"penalizacion": 10
-}}
-],
-
-"rondas": [
-{{
-"numero": 1,
-"titulo": "Diagnóstico",
-"pregunta": "",
-"placeholder_respuesta": "Describe el problema principal, causas e indicadores.",
-"placeholder_justificacion": "Explica por qué ese diagnóstico es importante.",
-"conceptos_esperados": [
-{{
-"nombre": "Diagnóstico del problema",
-"descripcion": "",
-"peso": 35,
-"critico": true,
-"palabras_clave": ""
-}},
-{{
-"nombre": "Indicadores y datos",
-"descripcion": "",
-"peso": 20,
-"critico": false,
-"palabras_clave": ""
-}},
-{{
-"nombre": "Justificación inicial",
-"descripcion": "",
-"peso": 15,
-"critico": false,
-"palabras_clave": ""
-}},
-{{
-"nombre": "Uso de conceptos de la materia",
-"descripcion": "",
-"peso": 30,
-"critico": true,
-"palabras_clave": ""
-}}
-]
-}},
-{{
-"numero": 2,
-"titulo": "Decisión",
-"pregunta": "",
-"placeholder_respuesta": "Compara alternativas y elige una decisión concreta.",
-"placeholder_justificacion": "Explica por qué esa decisión es viable.",
-"conceptos_esperados": [
-{{
-"nombre": "Alternativas comparadas",
-"descripcion": "",
-"peso": 30,
-"critico": true,
-"palabras_clave": ""
-}},
-{{
-"nombre": "Decisión concreta",
-"descripcion": "",
-"peso": 30,
-"critico": true,
-"palabras_clave": ""
-}},
-{{
-"nombre": "Gestión de riesgos",
-"descripcion": "",
-"peso": 20,
-"critico": false,
-"palabras_clave": ""
-}},
-{{
-"nombre": "Justificación de la decisión",
-"descripcion": "",
-"peso": 20,
-"critico": false,
-"palabras_clave": ""
-}}
-]
-}},
-{{
-"numero": 3,
-"titulo": "Implementación",
-"pregunta": "",
-"placeholder_respuesta": "Describe el plan de acción, responsables, tiempos y controles.",
-"placeholder_justificacion": "Explica cómo se controlará y corregirá el plan.",
-"conceptos_esperados": [
-{{
-"nombre": "Plan de acción",
-"descripcion": "",
-"peso": 30,
-"critico": true,
-"palabras_clave": ""
-}},
-{{
-"nombre": "Indicadores de seguimiento",
-"descripcion": "",
-"peso": 25,
-"critico": true,
-"palabras_clave": ""
-}},
-{{
-"nombre": "Control y corrección",
-"descripcion": "",
-"peso": 25,
-"critico": false,
-"palabras_clave": ""
-}},
-{{
-"nombre": "Cierre justificable",
-"descripcion": "",
-"peso": 20,
-"critico": false,
-"palabras_clave": ""
-}}
-]
-}}
-],
-
-"decisiones_sugeridas": [
-{{
-"texto": "",
-"descripcion": "",
-"impacto_base": {{}}
-}}
-],
-
-"respuestas_prueba": {{
-"mala": {{
-"ronda_1": "",
-"ronda_2": "",
-"ronda_3": ""
-}},
-"media": {{
-"ronda_1": "",
-"ronda_2": "",
-"ronda_3": ""
-}},
-"buena": {{
-"ronda_1": "",
-"ronda_2": "",
-"ronda_3": ""
-}}
-}}
-}}
-
-REGLAS PARA INDICADORES:
-
-* Genera entre 4 y 6 indicadores propios de la materia.
-* Cada indicador debe tener código en minúsculas y sin espacios.
-* Cada indicador debe tener valor inicial realista.
-* La unidad debe ser clara: %, USD, días, horas, pts, ratio, cantidad.
-* La dirección óptima debe ser "ALTO" si mientras más alto mejor, o "BAJO" si mientras más bajo mejor.
-* Las restricciones deben usar esos indicadores propios.
-* El contexto y la situación inicial deben mencionar los valores iniciales de los indicadores.
-
-REGLAS PARA PALABRAS CLAVE:
-
-* Las palabras clave deben estar separadas por comas.
-* No uses solo palabras genéricas como: administración, gestión, porque, teoría.
-* Usa palabras propias de la materia y del caso.
-* Incluye variantes importantes: indicador, indicadores, control, controles, corregir, corrección, mejora, mejorar.
-* Cada concepto debe tener entre 6 y 12 palabras clave.
-
-REGLAS PARA LAS RESPUESTAS DE PRUEBA:
-
-* La respuesta mala debe ser muy general.
-* La respuesta media debe mencionar algunos datos e indicadores.
-* La respuesta buena debe mencionar problema, causas, indicadores, decisión, riesgos, plan, responsables y control.
-* Estas respuestas servirán para probar que la rúbrica no sea demasiado fácil ni demasiado dura.
-
-IMPORTANTE:
-La simulación debe quedar lista para guardarse en Django como una simulación real por materia de la malla.
+Reglas:
+- Define únicamente las rondas necesarias según el aprendizaje y el caso. Puede ser una o
+  varias; nunca agregues rondas de relleno. Sus títulos deben describir la acción real de esa
+  ronda (por ejemplo: comparar ofertas, responder a una variación,
+  priorizar controles); no reutilices fases genéricas por costumbre.
+- Cada ronda representa una decisión o aplicación distinta. Agrega datos o consecuencias
+  nuevas para que no se repitan las mismas alternativas sin motivo.
+- Configura el modo de cada ronda: "elegir", "escribir" o "hibrido". Usa "hibrido" cuando
+  corresponda elegir y justificar; "escribir" solo cuando una respuesta construida sea
+  indispensable para demostrar el aprendizaje.
+- En las rondas de modo "elegir" o "hibrido", las decisiones sugeridas deben indicar
+  "numero_ronda" y ofrecer 3 o 4 alternativas comparables. Ninguna puede ser superior en
+  todos los criterios. Una ronda de escritura puede no tener alternativas predefinidas.
+- Los cálculos y conceptos son evidencia para decidir, no ejercicios aislados.
+- Usa entre 4 y 6 indicadores propios de la materia. Todo impacto debe usar exclusivamente
+  sus códigos y ser determinista.
+- En cada ronda incluye propósito de aprendizaje, situación, etiquetas de los campos,
+  si la justificación es obligatoria y qué bloques de interfaz deben mostrarse.
+- Activa pronóstico, trade-off, reflexión o investigación solo si aportan al aprendizaje de
+  esa ronda; de forma predeterminada deben estar desactivados.
+- Los conceptos esperados de cada ronda deben tener pesos que sumen 100 y describir evidencia
+  observable, no palabras genéricas.
+- El objetivo y el resultado de aprendizaje deben indicar qué decisión profesional podrá
+  tomar el estudiante y con qué evidencia se comprobará.
+- Devuelve únicamente JSON válido conforme al esquema solicitado, sin texto adicional.
 """
 
 
@@ -377,7 +166,10 @@ def _schema_simulacion():
                         'valor_inicial': {'type': 'number'},
                         'valor_minimo': {'type': 'number'},
                         'valor_maximo': {'type': 'number'},
-                        'direccion_optima': {'type': 'string', 'enum': ['ALTO', 'BAJO']},
+                        'direccion_optima': {'type': 'string', 'enum': ['ALTO', 'BAJO', 'OBJETIVO', 'RANGO']},
+                        'valor_objetivo': {'type': ['number', 'null']},
+                        'valor_objetivo_min': {'type': ['number', 'null']},
+                        'valor_objetivo_max': {'type': ['number', 'null']},
                         'unidad': {'type': 'string'},
                         'descripcion': {'type': 'string'},
                     },
@@ -405,11 +197,24 @@ def _schema_simulacion():
                 'items': {
                     'type': 'object',
                     'properties': {
-                        'numero': {'type': 'number'},
+                        'numero': {'type': 'integer'},
                         'titulo': {'type': 'string'},
-                        'pregunta': {'type': 'string'},
-                        'placeholder_respuesta': {'type': 'string'},
-                        'placeholder_justificacion': {'type': 'string'},
+                        'proposito': {'type': 'string'},
+                        'situacion': {'type': 'string'},
+                        'modo': {'type': 'string', 'enum': ['elegir', 'escribir', 'hibrido']},
+                        'etiqueta_decision': {'type': 'string'},
+                        'etiqueta_justificacion': {'type': 'string'},
+                        'justificacion_obligatoria': {'type': 'boolean'},
+                        'mostrar_objetivos': {'type': 'boolean'},
+                        'mostrar_rubrica': {'type': 'boolean'},
+                        'mostrar_datos_caso': {'type': 'boolean'},
+                        'mostrar_resultados_alternativas': {'type': 'boolean'},
+                        'mostrar_indicadores': {'type': 'boolean'},
+                        'mostrar_recursos': {'type': 'boolean'},
+                        'mostrar_investigaciones': {'type': 'boolean'},
+                        'pedir_pronostico': {'type': 'boolean'},
+                        'pedir_tradeoff': {'type': 'boolean'},
+                        'pedir_reflexion': {'type': 'boolean'},
                         'conceptos_esperados': {
                             'type': 'array',
                             'items': {
@@ -426,7 +231,16 @@ def _schema_simulacion():
                             },
                         },
                     },
-                    'required': ['numero', 'titulo', 'pregunta', 'placeholder_respuesta', 'placeholder_justificacion', 'conceptos_esperados'],
+                    'required': [
+                        'numero', 'titulo', 'proposito', 'situacion', 'modo',
+                        'etiqueta_decision', 'etiqueta_justificacion',
+                        'justificacion_obligatoria', 'mostrar_objetivos',
+                        'mostrar_rubrica', 'mostrar_datos_caso',
+                        'mostrar_resultados_alternativas', 'mostrar_indicadores',
+                        'mostrar_recursos', 'mostrar_investigaciones',
+                        'pedir_pronostico', 'pedir_tradeoff', 'pedir_reflexion',
+                        'conceptos_esperados',
+                    ],
                     'additionalProperties': False,
                 },
             },
@@ -435,57 +249,20 @@ def _schema_simulacion():
                 'items': {
                     'type': 'object',
                     'properties': {
+                        'numero_ronda': {'type': 'integer'},
                         'texto': {'type': 'string'},
                         'descripcion': {'type': 'string'},
                         'impacto_base': {'type': 'object'},
                     },
-                    'required': ['texto', 'descripcion', 'impacto_base'],
+                    'required': ['numero_ronda', 'texto', 'descripcion', 'impacto_base'],
                     'additionalProperties': False,
                 },
-            },
-            'respuestas_prueba': {
-                'type': 'object',
-                'properties': {
-                    'mala': {
-                        'type': 'object',
-                        'properties': {
-                            'ronda_1': {'type': 'string'},
-                            'ronda_2': {'type': 'string'},
-                            'ronda_3': {'type': 'string'},
-                        },
-                        'required': ['ronda_1', 'ronda_2', 'ronda_3'],
-                        'additionalProperties': False,
-                    },
-                    'media': {
-                        'type': 'object',
-                        'properties': {
-                            'ronda_1': {'type': 'string'},
-                            'ronda_2': {'type': 'string'},
-                            'ronda_3': {'type': 'string'},
-                        },
-                        'required': ['ronda_1', 'ronda_2', 'ronda_3'],
-                        'additionalProperties': False,
-                    },
-                    'buena': {
-                        'type': 'object',
-                        'properties': {
-                            'ronda_1': {'type': 'string'},
-                            'ronda_2': {'type': 'string'},
-                            'ronda_3': {'type': 'string'},
-                        },
-                        'required': ['ronda_1', 'ronda_2', 'ronda_3'],
-                        'additionalProperties': False,
-                    },
-                },
-                'required': ['mala', 'media', 'buena'],
-                'additionalProperties': False,
             },
         },
         'required': [
             'titulo', 'tema', 'rol_estudiante', 'contexto', 'objetivo',
             'resultado_aprendizaje', 'situacion_inicial',
             'indicadores', 'restricciones', 'rondas', 'decisiones_sugeridas',
-            'respuestas_prueba',
         ],
         'additionalProperties': False,
     }
@@ -514,8 +291,15 @@ def _crear_simulacion(data, materia_malla, profesor_id=None):
     dificultad_map = {'BAJA': 'BAJA', 'MEDIA': 'MEDIA', 'ALTA': 'ALTA'}
     dificultad = dificultad_map.get(data.get('dificultad', 'MEDIA'), 'MEDIA')
 
-    rondas_data = data.get('rondas', [])
-    max_rondas = max((r['numero'] for r in rondas_data), default=3)
+    rondas_data = [
+        {**ronda, 'numero': numero}
+        for numero, ronda in enumerate(data.get('rondas') or [], 1)
+        if isinstance(ronda, dict)
+    ]
+    if not rondas_data:
+        raise ValueError('La IA no genero ninguna ronda util.')
+    cantidad_rondas = len(rondas_data)
+    numeros_ronda = set(range(1, cantidad_rondas + 1))
 
     simulacion = Simulacion.objects.create(
         materia_malla=materia_malla,
@@ -524,7 +308,7 @@ def _crear_simulacion(data, materia_malla, profesor_id=None):
         titulo=data['titulo'],
         tema=data.get('tema', ''),
         nivel_dificultad=dificultad,
-        maximo_decisiones=max_rondas,
+        maximo_decisiones=cantidad_rondas,
         tiempo_estimado=25,
         rol_estudiante=data.get('rol_estudiante', ''),
         contexto=data.get('contexto', ''),
@@ -536,10 +320,32 @@ def _crear_simulacion(data, materia_malla, profesor_id=None):
             'modo': 'toma_decisiones',
             'rondas': [
                 {
-                    'numero': r['numero'],
+                    'numero': int(r['numero']),
                     'titulo': r['titulo'],
-                    'proposito': r.get('pregunta', ''),
-                    'situacion': r.get('pregunta', ''),
+                    'proposito': r.get('proposito') or r.get('pregunta', ''),
+                    'situacion': r.get('situacion') or r.get('pregunta', ''),
+                    'modo': r.get('modo', 'hibrido'),
+                    'etiqueta_decision': r.get('etiqueta_decision', 'Tu respuesta'),
+                    'etiqueta_justificacion': r.get(
+                        'etiqueta_justificacion', 'Explica tu razonamiento',
+                    ),
+                    'justificacion_obligatoria': bool(
+                        r.get('justificacion_obligatoria', True)
+                    ),
+                    'mostrar_objetivos': bool(r.get('mostrar_objetivos', True)),
+                    'mostrar_rubrica': bool(r.get('mostrar_rubrica', True)),
+                    'mostrar_datos_caso': bool(r.get('mostrar_datos_caso', True)),
+                    'mostrar_resultados_alternativas': bool(
+                        r.get('mostrar_resultados_alternativas', False)
+                    ),
+                    'mostrar_indicadores': bool(r.get('mostrar_indicadores', True)),
+                    'mostrar_recursos': bool(r.get('mostrar_recursos', True)),
+                    'mostrar_investigaciones': bool(
+                        r.get('mostrar_investigaciones', False)
+                    ),
+                    'pedir_pronostico': bool(r.get('pedir_pronostico', False)),
+                    'pedir_tradeoff': bool(r.get('pedir_tradeoff', False)),
+                    'pedir_reflexion': bool(r.get('pedir_reflexion', False)),
                 }
                 for r in rondas_data
             ],
@@ -563,6 +369,18 @@ def _crear_simulacion(data, materia_malla, profesor_id=None):
             valor_minimo=Decimal(str(ind.get('valor_minimo', 0))),
             valor_maximo=Decimal(str(ind.get('valor_maximo', 100))),
             direccion_optima=ind.get('direccion_optima', 'ALTO'),
+            valor_objetivo=(
+                Decimal(str(ind['valor_objetivo']))
+                if ind.get('valor_objetivo') is not None else None
+            ),
+            valor_objetivo_min=(
+                Decimal(str(ind['valor_objetivo_min']))
+                if ind.get('valor_objetivo_min') is not None else None
+            ),
+            valor_objetivo_max=(
+                Decimal(str(ind['valor_objetivo_max']))
+                if ind.get('valor_objetivo_max') is not None else None
+            ),
             es_critico=False,
             unidad=ind.get('unidad', ''),
             usuario_creacion=profesor,
@@ -579,15 +397,24 @@ def _crear_simulacion(data, materia_malla, profesor_id=None):
             usuario_creacion=profesor,
         )
 
-    for ronda in rondas_data:
+    total_rondas = max(1, len(rondas_data))
+    peso_base = Decimal('100') // Decimal(total_rondas)
+    peso_acumulado = Decimal('0')
+    for indice, ronda in enumerate(rondas_data):
+        peso_criterio = (
+            Decimal('100') - peso_acumulado
+            if indice == total_rondas - 1
+            else peso_base
+        )
         CriterioEvaluacion.objects.create(
             simulacion=simulacion,
             nombre=ronda.get('titulo', f'Ronda {ronda["numero"]}'),
-            descripcion=ronda.get('pregunta', ''),
-            peso=Decimal('100') / Decimal(max(1, max_rondas)),
+            descripcion=ronda.get('proposito') or ronda.get('pregunta', ''),
+            peso=peso_criterio,
             puntaje_maximo=100,
             usuario_creacion=profesor,
         )
+        peso_acumulado += peso_criterio
 
         for concepto in ronda.get('conceptos_esperados', []):
             palabras = concepto.get('palabras_clave', '')
@@ -606,9 +433,12 @@ def _crear_simulacion(data, materia_malla, profesor_id=None):
             )
 
     for decision in data.get('decisiones_sugeridas', []):
+        numero_ronda = int(decision.get('numero_ronda') or 1)
+        if numero_ronda not in numeros_ronda:
+            continue
         AccionSugeridaSimulacion.objects.create(
             simulacion=simulacion,
-            numero_ronda=1,
+            numero_ronda=numero_ronda,
             texto=decision.get('texto', ''),
             descripcion=decision.get('descripcion', ''),
             impacto_base=decision.get('impacto_base', {}),

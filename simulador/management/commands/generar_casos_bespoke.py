@@ -56,20 +56,28 @@ def _materias_genericas():
 @transaction.atomic
 def _crear_desde_spec(mm, spec, profesor, reemplazar):
     codigos_validos = set()
+    rondas_spec = [
+        {**ronda, 'numero': numero}
+        for numero, ronda in enumerate(spec.get('rondas') or [], 1)
+        if isinstance(ronda, dict)
+    ]
+    if not rondas_spec:
+        raise ValueError('La IA no genero ninguna ronda util.')
+    maximo_decisiones = len(rondas_spec)
     sim = Simulacion.objects.create(
         materia_malla=mm, profesor=profesor,
         tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
         titulo=(spec.get('empresa') and f"{spec.get('tema','Caso')} - {spec['empresa']}")[:300] or f'Caso - {mm.materia.nombre}',
         tema=str(spec.get('tema', ''))[:300],
         nivel_dificultad=Simulacion.DIFICULTAD_MEDIA,
-        maximo_decisiones=3, tiempo_estimado=30,
+        maximo_decisiones=maximo_decisiones, tiempo_estimado=30,
         rol_estudiante=str(spec.get('rol_estudiante', ''))[:200],
         contexto=spec.get('contexto', ''), objetivo=spec.get('objetivo', ''),
         resultado_aprendizaje=spec.get('resultado_aprendizaje', ''),
         situacion_inicial=spec.get('situacion_inicial', ''),
         instrucciones_ia='Evalua solo contra la rubrica configurada. La nota la calcula SimutaV2.',
         parametros={'empresa': spec.get('empresa', ''), 'area': mm.materia.nombre,
-                    'rondas': spec.get('rondas', []), 'origen': 'generar_casos_bespoke'},
+                    'rondas': rondas_spec, 'origen': 'generar_casos_bespoke'},
         estado=Simulacion.PUBLICADA, fecha_publicacion=timezone.now(),
         activo=True, usuario_creacion=profesor,
     )
@@ -106,7 +114,7 @@ def _crear_desde_spec(mm, spec, profesor, reemplazar):
                 out[str(k)] = v
         return out
 
-    for ronda in spec.get('rondas', []) or []:
+    for ronda in rondas_spec:
         try:
             numero = int(ronda.get('numero', 1))
         except (TypeError, ValueError):
@@ -128,14 +136,29 @@ def _crear_desde_spec(mm, spec, profesor, reemplazar):
             )
 
     for a in spec.get('acciones', []) or []:
+        try:
+            numero_ronda = int(a.get('numero_ronda'))
+        except (TypeError, ValueError):
+            continue
+        if numero_ronda not in range(1, maximo_decisiones + 1):
+            continue
         AccionSugeridaSimulacion.objects.create(
-            simulacion=sim, texto=str(a.get('texto', ''))[:300], descripcion=str(a.get('descripcion', ''))[:500],
+            simulacion=sim, numero_ronda=numero_ronda,
+            texto=str(a.get('texto', ''))[:300], descripcion=str(a.get('descripcion', ''))[:500],
             impacto_base=_filtra_impacto(a.get('impacto')), usuario_creacion=profesor,
         )
 
-    for nombre, peso in [('Diagnostico', 30), ('Decision', 30), ('Plan', 25), ('Justificacion', 15)]:
+    peso_base = (Decimal('100') / Decimal(maximo_decisiones)).quantize(Decimal('0.01'))
+    for indice_ronda, ronda in enumerate(rondas_spec, start=1):
+        nombre = str(ronda.get('titulo') or f"Ronda {ronda.get('numero', '')}")[:200]
+        peso = (
+            Decimal('100') - peso_base * Decimal(maximo_decisiones - 1)
+            if indice_ronda == maximo_decisiones else peso_base
+        )
         CriterioEvaluacion.objects.create(
-            simulacion=sim, nombre=nombre, descripcion=f'Criterio orientativo: {nombre}.', peso=peso,
+            simulacion=sim, nombre=nombre,
+            descripcion=str(ronda.get('proposito') or f'Criterio orientativo: {nombre}.')[:500],
+            peso=peso,
             usuario_creacion=profesor)
 
     if reemplazar:

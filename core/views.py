@@ -1,4 +1,6 @@
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from academico.models import Carrera, InscripcionMalla, Malla, Materia, PeriodoAcademico, ProfesorMateria
@@ -47,6 +49,20 @@ def dashboard(request):
         ).order_by('-fecha_inicio')[:8]
 
     return render(request, 'dashboard.html', contexto)
+
+
+@solo_administrativos
+def estado_ia(request):
+    """Estado real de los proveedores, visible solo para administradores."""
+    clave_cache = 'estado_proveedores_ia_v1'
+    refrescar = request.GET.get('refresh') == '1'
+    resultado = None if refrescar else cache.get(clave_cache)
+    desde_cache = resultado is not None
+    if resultado is None:
+        from simulador.ia_status import comprobar_estado_ia
+        resultado = comprobar_estado_ia()
+        cache.set(clave_cache, resultado, 60)
+    return JsonResponse({**resultado, 'desde_cache': desde_cache})
 
 
 @solo_administrativos

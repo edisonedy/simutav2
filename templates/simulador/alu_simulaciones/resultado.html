@@ -1,12 +1,16 @@
 {% extends "base.html" %}
 {% load simulador_extras %}
-{% block title %}Resultado - {{ intento.simulacion.titulo }}{% endblock %}
+{% block title %}Resultado - {{ caso.titulo }}{% endblock %}
 {% block content %}
 {% if not intento.finalizado %}
 <div class="alert alert-warning">Este intento aun no ha finalizado.</div>
 {% endif %}
 
 <h1 class="h3 mb-3">Resultado final</h1>
+
+{% if aviso_version %}
+<div class="alert alert-info"><strong>Resultado histórico:</strong> {{ aviso_version }}</div>
+{% endif %}
 
 <div class="d-flex flex-wrap gap-2 mb-3">
     <form method="post" action="{% url 'alu_simulaciones' %}?action=iniciar" onsubmit="return enviar_formulario(this)">
@@ -87,7 +91,7 @@
 </div>
 {% endif %}
 
-{% if gamificacion %}
+{% if gamificacion and calidad_metacognitiva.solicitada %}
 <div class="game-panel mb-3">
     <div class="game-rank">
         <div class="game-rank-icon">{{ gamificacion.icono }}</div>
@@ -119,13 +123,30 @@
 
 {% if objetivos_mision %}
 <div class="module-card p-3 mb-3" style="border-left:4px solid var(--gold)">
-    <div class="section-title mb-2">🎯 Resultado de la misión</div>
+    {% with primer=objetivos_mision.0 %}
+    <div class="section-title mb-2">
+        {% if primer.tipo == 'restriccion' %}🛡️ Límites técnicos del caso{% else %}🎯 Resultado de la misión{% endif %}
+    </div>
+    {% endwith %}
     {% for o in objetivos_mision %}
     <div class="mb-2">
         <div class="d-flex justify-content-between small">
-            <span>{% if o.cumplido %}✅ Logrado{% else %}⏳ Pendiente{% endif %} · {{ o.descripcion }}</span>
-            <span class="cell-num text-muted">{{ o.valor_actual }} / {{ o.meta }}</span>
+            <span>
+                {% if o.tipo == 'restriccion' %}
+                    {% if o.cumplido %}✅ Cumplido{% else %}⚠️ Incumplido{% endif %}
+                {% else %}
+                    {% if o.cumplido %}✅ Logrado{% else %}⏳ Pendiente{% endif %}
+                {% endif %}
+                · {{ o.descripcion }}
+            </span>
+            <span class="cell-num text-muted">{{ o.valor_actual_legible }} / {{ o.meta }}</span>
         </div>
+        {% if o.delta %}
+        <div class="small {% if o.evolucion == 'mejora' %}text-success{% else %}text-warning{% endif %}">
+            Frente al inicio ({{ o.valor_inicial_legible }}): {% if o.evolucion == 'mejora' %}mejoró{% else %}empeoró{% endif %} {% if o.delta > 0 %}+{% endif %}{{ o.delta }}.
+            {% if o.cumplido and o.evolucion == 'empeora' %}La meta sigue cumplida, aunque la evolución fue negativa.{% endif %}
+        </div>
+        {% endif %}
         <div class="progress" style="height:7px"><div class="progress-bar" style="width:{{ o.progreso_pct }}%;background:{% if o.cumplido %}var(--forest){% else %}var(--gold){% endif %}"></div></div>
     </div>
     {% endfor %}
@@ -136,18 +157,18 @@
 <div class="module-card p-3 mb-3">
     <div class="section-title mb-2">Cómo pensaste (metacognición)</div>
     <div class="row g-2 text-center">
-        <div class="col-4">
-            <div class="metric-value">{{ gamificacion.pronosticos_acertados }}/{{ gamificacion.pronosticos }}</div>
-            <div class="metric-label">Pronósticos acertados</div>
-        </div>
-        <div class="col-4">
-            <div class="metric-value">{{ gamificacion.reflexiones }}</div>
+        {% if calidad_metacognitiva.pronosticos_esperados %}<div class="col">
+            <div class="metric-value">{{ gamificacion.pronosticos_acertados }}/{{ calidad_metacognitiva.pronosticos_esperados }}</div>
+            <div class="metric-label">Pronósticos</div>
+        </div>{% endif %}
+        {% if calidad_metacognitiva.reflexiones_esperadas %}<div class="col">
+            <div class="metric-value">{{ gamificacion.reflexiones }}/{{ calidad_metacognitiva.reflexiones_esperadas }}</div>
             <div class="metric-label">Reflexiones escritas</div>
-        </div>
-        <div class="col-4">
-            <div class="metric-value">{{ gamificacion.tradeoffs }}</div>
+        </div>{% endif %}
+        {% if calidad_metacognitiva.tradeoffs_esperados %}<div class="col">
+            <div class="metric-value">{{ gamificacion.tradeoffs }}/{{ calidad_metacognitiva.tradeoffs_esperados }}</div>
             <div class="metric-label">Trade-offs explícitos</div>
-        </div>
+        </div>{% endif %}
     </div>
     {% if gamificacion.recomendaciones %}
     <ul class="small text-muted mb-0 mt-3">
@@ -160,7 +181,7 @@
 <div class="row g-3">
     <div class="col-lg-4">
         <div class="module-card p-3 mb-3">
-            <h2 class="h5">Puntaje academico</h2>
+            <h2 class="h5">Evaluación académica</h2>
             <div class="display-6">{{ intento.puntuacion_final|floatformat:2 }}</div>
             <div class="small text-muted mb-2">Evalua que tan bien cumpliste la rubrica y los conceptos esperados.</div>
             {% if bonificaciones.detalle %}
@@ -213,22 +234,22 @@
                 <div class="small text-muted mb-1">Indicadores que todavia requieren atencion:</div>
                 <ul class="mb-0 small">
                     {% for item in explicacion_resultado.alertas %}
-                        <li>{{ item.nombre }} quedo en {{ item.desempeno }}%</li>
+                        <li>{{ item.mensaje_alerta }}</li>
                     {% endfor %}
                 </ul>
             {% endif %}
         </div>
         {% endif %}
 
-        {% if calidad_metacognitiva %}
+        {% if calidad_metacognitiva and calidad_metacognitiva.solicitada %}
         <div class="module-card p-3 mb-3">
             <h2 class="h5">Calidad del razonamiento</h2>
             <div class="display-6">{{ calidad_metacognitiva.puntaje }}%</div>
             <div class="small text-muted mb-2">{{ calidad_metacognitiva.nivel }}</div>
             <div class="small">
-                Reflexiones: {{ calidad_metacognitiva.reflexiones }}/{{ calidad_metacognitiva.total }}<br>
-                Pronósticos acertados: {{ calidad_metacognitiva.pronosticos_acertados }}/{{ calidad_metacognitiva.pronosticos }}<br>
-                Trade-offs reales: {{ calidad_metacognitiva.tradeoffs_reales }}/{{ calidad_metacognitiva.tradeoffs }}
+                {% if calidad_metacognitiva.reflexiones_esperadas %}Reflexiones: {{ calidad_metacognitiva.reflexiones }}/{{ calidad_metacognitiva.reflexiones_esperadas }}<br>{% endif %}
+                {% if calidad_metacognitiva.pronosticos_esperados %}Pronósticos acertados: {{ calidad_metacognitiva.pronosticos_acertados }}/{{ calidad_metacognitiva.pronosticos_esperados }}<br>{% endif %}
+                {% if calidad_metacognitiva.tradeoffs_esperados %}Trade-offs registrados: {{ calidad_metacognitiva.tradeoffs }}/{{ calidad_metacognitiva.tradeoffs_esperados }}{% endif %}
             </div>
             <ul class="small mt-2 mb-0">
                 {% for r in calidad_metacognitiva.recomendaciones %}
@@ -236,6 +257,8 @@
                 {% endfor %}
             </ul>
         </div>
+        {% elif calidad_metacognitiva %}
+            <div class="small text-muted">Esta misión no solicitó pronósticos, reflexiones ni trade-offs adicionales.</div>
         {% endif %}
 
         <div class="module-card p-3 mb-3">
@@ -247,20 +270,65 @@
 
         {% if indicadores_finales %}
         <div class="module-card p-3">
-            <h2 class="h5">Estado final de indicadores</h2>
+            {% if indicadores_empresa %}<h2 class="h5">Indicadores finales del caso</h2>
             <div class="state-grid">
-                {% for ind in indicadores_finales %}
+                {% for ind in indicadores_empresa %}
                     <div class="border rounded p-2">
                         <div class="text-muted small">{{ ind.nombre }}{% if ind.critico %} <span class="game-crit">crítico</span>{% endif %}</div>
                         <div class="h5 mb-0">{{ ind.valor }}{% if ind.unidad %} <small class="text-muted">{{ ind.unidad }}</small>{% endif %}</div>
                     </div>
                 {% endfor %}
             </div>
+            <details class="mt-3">
+                <summary class="small fw-semibold" style="cursor:pointer">Cómo se calculó la salud</summary>
+                <div class="table-responsive mt-2">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Indicador</th><th>Desempeño</th><th>Peso</th><th>Aporte</th></tr></thead>
+                        <tbody>
+                        {% for ind in indicadores_empresa %}
+                            <tr>
+                                <td>{{ ind.nombre }}<div class="small text-muted">{{ ind.direccion_legible }}</div></td>
+                                <td>{{ ind.desempeno }} / 100</td>
+                                <td>{{ ind.peso_relativo }}%</td>
+                                <td>{{ ind.aporte_salud }} pts</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+            {% endif %}
+            {% if indicadores_academicos %}
+            <h2 class="h5 {% if indicadores_empresa %}mt-3{% endif %}">Indicadores académicos heredados</h2>
+            <div class="small text-muted mb-2">Se conservan por compatibilidad, separados de la situación empresarial.</div>
+            <div class="state-grid">
+                {% for ind in indicadores_academicos %}
+                <div class="border rounded p-2">
+                    <div class="text-muted small">{{ ind.nombre }}{% if ind.critico %} <span class="game-crit">crítico</span>{% endif %}</div>
+                    <div class="h5 mb-0">{{ ind.valor }}{% if ind.unidad %} <small class="text-muted">{{ ind.unidad }}</small>{% endif %}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
         {% endif %}
     </div>
 
     <div class="col-lg-8">
+        {% if selecciones_registradas %}
+        <div class="module-card p-3 mb-3">
+            <div class="section-title">Selecciones realizadas</div>
+            <div class="vstack gap-2 mt-2">
+                {% for seleccion in selecciones_registradas %}
+                <div class="border rounded p-2">
+                    <div class="small text-muted">Ronda {{ seleccion.ronda }}</div>
+                    <div class="fw-semibold">{{ seleccion.nombre }}</div>
+                    {% if seleccion.descripcion %}<div class="small">{{ seleccion.descripcion }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
         {% if intento.debriefing_final %}
         <div class="module-card p-3 mb-3">
             <div class="section-title">Debriefing</div>
@@ -278,7 +346,7 @@
         {% if casos_equivalentes %}
         <div class="module-card p-3 mb-3">
             <div class="section-title">Practica transferencia</div>
-            <div class="small text-muted mb-2">Aplica el mismo aprendizaje en otro caso para evitar memorizar una sola respuesta.</div>
+            <div class="small text-muted mb-2">Estas opciones crean un intento nuevo en una simulación diferente; no continúan el caso actual.</div>
             <div class="vstack gap-2">
                 {% for item in casos_equivalentes %}
                 <div class="border rounded p-2 d-flex justify-content-between align-items-start gap-2 flex-wrap">
@@ -293,7 +361,7 @@
                     <form method="post" action="{% url 'alu_simulaciones' %}?action=iniciar" onsubmit="return enviar_formulario(this)">
                         {% csrf_token %}
                         <input type="hidden" name="simulacion_id" value="{{ item.simulacion.pk }}">
-                        <button class="btn btn-outline-primary btn-sm">Practicar</button>
+                        <button class="btn btn-outline-primary btn-sm">Iniciar otro caso</button>
                     </form>
                 </div>
                 {% endfor %}
@@ -335,7 +403,10 @@
                             <td>{{ paso.decision_estudiante|truncatewords:15 }}</td>
                             <td>{{ paso.justificacion_estudiante|default:"Sin justificación escrita"|truncatewords:10 }}</td>
                             <td>{{ paso.evaluacion_ia|truncatewords:10 }}</td>
-                            <td class="small">{{ paso.impacto_calculado|dict_legible }}</td>
+                            <td class="small">
+                                <strong>Neto:</strong> {{ paso.impacto_calculado|dict_legible }}
+                                {% if paso.evaluacion_detalle.impacto_evento %}<br><span class="text-muted">Decisión: {{ paso.evaluacion_detalle.impacto_decision|dict_legible }} · Evento: {{ paso.evaluacion_detalle.impacto_evento|dict_legible }}</span>{% endif %}
+                            </td>
                             <td class="small">{{ paso.estado_antes|dict_legible }}</td>
                             <td class="small">{{ paso.estado_despues|dict_legible }}</td>
                             <td>{{ paso.puntaje_paso }}</td>
@@ -345,6 +416,9 @@
                         <tr>
                             <td></td>
                             <td colspan="10">
+                                {% if paso.evaluacion_detalle.decision_justificacion_coherentes == False %}
+                                <div class="alert alert-warning py-2 small"><strong>Coherencia:</strong> {{ paso.evaluacion_detalle.coherencia_motivo|default:"La justificación corresponde a otra decisión." }}</div>
+                                {% endif %}
                                 <div class="border rounded p-2 bg-light">
                                     <div class="section-title mb-2">Desglose de rubrica</div>
                                     <div class="table-responsive">
@@ -376,7 +450,8 @@
                                                     </td>
                                                     <td>{{ concepto.puntos_obtenidos }} / {{ concepto.puntos_maximos }}</td>
                                                     <td>
-                                                        <span class="small">{{ concepto.palabras_detectadas|lista_legible }}</span>
+                                                        {% if concepto.evidencia_ia %}<span class="small">{{ concepto.evidencia_ia }}</span>{% else %}<span class="small">{{ concepto.palabras_detectadas|lista_legible }}</span>{% endif %}
+                                                        {% if concepto.fuente_evidencia and concepto.fuente_evidencia != 'rubrica_local' %}<div class="small text-muted">Fuente: {{ concepto.fuente_evidencia }}</div>{% endif %}
                                                         {% if concepto.factor_coincidencia and concepto.factor_coincidencia < 1 and concepto.factor_coincidencia > 0 %}
                                                             <div class="small text-warning">Coincidencia parcial: {{ concepto.factor_coincidencia }}</div>
                                                         {% endif %}
@@ -386,10 +461,10 @@
                                                     </td>
                                                     <td>
                                                         {{ concepto.retroalimentacion|default:"-" }}
-                                                        {% if concepto.obligatorias_faltantes %}
+                                                        {% if paso.evaluacion_detalle.metodo_evaluacion != 'ia_semantica_rubrica' and concepto.obligatorias_faltantes %}
                                                             <div class="small text-danger">Falta mencionar: {{ concepto.obligatorias_faltantes|lista_legible }}</div>
                                                         {% endif %}
-                                                        {% if concepto.alternativas_faltantes %}
+                                                        {% if paso.evaluacion_detalle.metodo_evaluacion != 'ia_semantica_rubrica' and concepto.alternativas_faltantes %}
                                                             <div class="small text-danger">Debe incluir alguno de: {{ concepto.alternativas_faltantes|lista_legible }}</div>
                                                         {% endif %}
                                                         {% if concepto.prohibidas_detectadas %}

@@ -7,8 +7,8 @@
 </div>
 <div class="alert alert-info py-2 small">
     <strong>¿Qué son?</strong> Son los <strong>marcadores de la empresa</strong> que las decisiones del estudiante suben o bajan
-    (ej. riesgo, calidad, satisfacción). Define cada uno con su valor inicial, su mínimo y máximo, y si
-    <strong>es mejor cuando es alto o bajo</strong>. Marca como <strong>crítico</strong> los más importantes. Se recomiendan 4 a 6.
+    (ej. riesgo, calidad, satisfacción). Define cada uno con su valor inicial, mínimo y máximo, y si
+    <strong>conviene subir, bajar, acercarse a un objetivo o permanecer dentro de un rango</strong>. Marca como <strong>crítico</strong> los más importantes. Se recomiendan 4 a 6.
 </div>
 <div class="alert alert-light border py-2 small">
     <strong>Cómo leer los cambios:</strong> si en un concepto o decision un indicador tiene <strong>+5</strong>, ese valor sube.
@@ -30,8 +30,8 @@
         <div class="module-card p-3 table-responsive">
             <h2 class="h5">Indicadores actuales</h2>
             <table class="table table-hover align-middle">
-                <thead><tr><th>Nombre</th><th>Codigo</th><th>V.Inicial</th><th>V.Min</th><th>V.Max</th><th>Optimo</th><th>Critico</th><th>Unidad</th><th>Acciones</th></tr></thead>
-                <tbody>{% for item in indicadores %}<tr><td>{{ item.nombre }}</td><td><code>{{ item.codigo }}</code></td><td>{{ item.valor_inicial }}</td><td>{{ item.valor_minimo }}</td><td>{{ item.valor_maximo }}</td><td>{{ item.get_direccion_optima_display }}</td><td>{% if item.es_critico %}<span class="badge text-bg-danger">Si</span>{% else %}<span class="badge text-bg-secondary">No</span>{% endif %}</td><td>{{ item.unidad }}</td><td class="text-nowrap"><button class="btn btn-sm btn-outline-primary" onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=edit_indicador&id={{ item.pk }}')">Editar</button><form method="post" action="{% url 'pro_simulaciones' %}?action=delete_indicador&id={{ item.pk }}" class="d-inline" onsubmit="return enviar_formulario(this)">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Eliminar</button></form></td></tr>{% empty %}<tr><td colspan="9" class="text-muted">Sin indicadores.</td></tr>{% endfor %}</tbody>
+                <thead><tr><th>Nombre</th><th>Codigo</th><th>V.Inicial</th><th>V.Min</th><th>V.Max</th><th>Optimo</th><th>Objetivo/rango</th><th>Critico</th><th>Unidad</th><th>Acciones</th></tr></thead>
+                <tbody>{% for item in indicadores %}<tr><td>{{ item.nombre }}</td><td><code>{{ item.codigo }}</code></td><td>{{ item.valor_inicial }}</td><td>{{ item.valor_minimo }}</td><td>{{ item.valor_maximo }}</td><td>{{ item.get_direccion_optima_display }}</td><td>{% if item.direccion_optima == 'RANGO' %}{{ item.valor_objetivo_min }}–{{ item.valor_objetivo_max }}{% else %}{{ item.valor_objetivo|default:"—" }}{% endif %}</td><td>{% if item.es_critico %}<span class="badge text-bg-danger">Si</span>{% else %}<span class="badge text-bg-secondary">No</span>{% endif %}</td><td>{{ item.unidad }}</td><td class="text-nowrap"><button class="btn btn-sm btn-outline-primary" onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=edit_indicador&id={{ item.pk }}')">Editar</button><form method="post" action="{% url 'pro_simulaciones' %}?action=delete_indicador&id={{ item.pk }}" class="d-inline" onsubmit="return enviar_formulario(this)">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Eliminar</button></form></td></tr>{% empty %}<tr><td colspan="10" class="text-muted">Sin indicadores.</td></tr>{% endfor %}</tbody>
             </table>
         </div>
     </div>

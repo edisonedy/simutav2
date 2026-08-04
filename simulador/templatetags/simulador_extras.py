@@ -19,8 +19,11 @@ def sum_attr(queryset, attr):
 
 
 def _num(v):
-    if isinstance(v, float) and v.is_integer():
-        return int(v)
+    if isinstance(v, (int, float, Decimal)):
+        numero = Decimal(str(v)).quantize(Decimal('0.01'))
+        if numero == numero.to_integral():
+            return str(int(numero))
+        return f'{numero:.2f}'.rstrip('0').rstrip('.').replace('.', ',')
     return v
 
 

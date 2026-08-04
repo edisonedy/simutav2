@@ -21,12 +21,14 @@ def normalizar_texto(texto):
     return t
 
 
-def obtener_opciones_dinamicas(simulacion):
-    return deepcopy(simulacion.parametros or {}).get('opciones_dinamicas', [])
+def obtener_opciones_dinamicas(simulacion, parametros=None):
+    fuente = parametros if isinstance(parametros, dict) else (simulacion.parametros or {})
+    return deepcopy(fuente).get('opciones_dinamicas', [])
 
 
-def obtener_reglas_actualizacion(simulacion):
-    return deepcopy(simulacion.parametros or {}).get('reglas_actualizacion', {})
+def obtener_reglas_actualizacion(simulacion, parametros=None):
+    fuente = parametros if isinstance(parametros, dict) else (simulacion.parametros or {})
+    return deepcopy(fuente).get('reglas_actualizacion', {})
 
 
 def obtener_tipo_dinamica(simulacion):
@@ -37,9 +39,9 @@ def obtener_nombre_opciones(simulacion):
     return (simulacion.parametros or {}).get('nombre_opciones', 'opciones')
 
 
-def detectar_opcion_por_texto(simulacion, decision, justificacion):
+def detectar_opcion_por_texto(simulacion, decision, justificacion, parametros=None):
     """Busca coincidencia del texto del estudiante contra los aliases de cada opcion."""
-    opciones = obtener_opciones_dinamicas(simulacion)
+    opciones = obtener_opciones_dinamicas(simulacion, parametros)
     if not opciones:
         return None, 0.0
 
@@ -85,11 +87,15 @@ def detectar_opcion_por_texto(simulacion, decision, justificacion):
     return mejor_opcion, round(mejor_confianza, 2)
 
 
-def aplicar_opcion_dinamica(simulacion, estado_antes, decision, justificacion, numero_ronda):
+def aplicar_opcion_dinamica(
+    simulacion, estado_antes, decision, justificacion, numero_ronda, parametros=None,
+):
     """Aplica los indicadores de la opcion detectada al estado_antes y devuelve estado_despues e impacto."""
-    opcion, confianza = detectar_opcion_por_texto(simulacion, decision, justificacion)
+    opcion, confianza = detectar_opcion_por_texto(
+        simulacion, decision, justificacion, parametros,
+    )
 
-    reglas = obtener_reglas_actualizacion(simulacion)
+    reglas = obtener_reglas_actualizacion(simulacion, parametros)
     rondas_aplica = reglas.get('rondas_aplica', [])
     confianza_minima = reglas.get('confianza_minima', 0.6)
 

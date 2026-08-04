@@ -23,8 +23,26 @@
             <td colspan="6" class="bg-light">
                 <h3 class="h6">Pasos</h3>
                 <table class="table table-sm table-bordered mb-2">
-                    <thead><tr><th>Numero</th><th>Decision</th><th>Justificacion</th><th>Puntaje</th><th>Penalizacion</th></tr></thead>
-                    <tbody>{% for paso in intento.pasos.all %}<tr><td>{{ paso.numero }}</td><td>{{ paso.decision_estudiante }}</td><td>{{ paso.justificacion_estudiante }}</td><td>{{ paso.puntaje_paso }}</td><td>{{ paso.penalizacion_aplicada|default:"-" }}</td></tr>{% empty %}<tr><td colspan="5" class="text-muted">Sin pasos registrados.</td></tr>{% endfor %}</tbody>
+                    <thead><tr><th>Numero</th><th>Decision</th><th>Justificacion</th><th>Puntaje</th><th>Penalizacion</th><th>Auditoría IA</th></tr></thead>
+                    <tbody>{% for paso in intento.pasos.all %}<tr>
+                        <td>{{ paso.numero }}<div class="small {% if paso.es_valido %}text-success{% else %}text-danger{% endif %}">{% if paso.es_valido %}Válido{% else %}Inválido{% endif %}</div></td>
+                        <td>{{ paso.decision_estudiante }}</td>
+                        <td>{{ paso.justificacion_estudiante }}</td>
+                        <td>{{ paso.puntaje_paso }}</td>
+                        <td>{{ paso.penalizacion_aplicada|default:"-" }}</td>
+                        <td>
+                            <details>
+                                <summary class="small" style="cursor:pointer">Ver evaluación</summary>
+                                <div class="small mt-2"><strong>Proveedor/modelo:</strong> {{ paso.api_ia|default:"rúbrica local" }}{% if paso.modelo_ia %} / {{ paso.modelo_ia }}{% endif %}</div>
+                                <div class="small"><strong>Versiones:</strong> {{ paso.prompt_version|default:"-" }} / {{ paso.esquema_ia_version|default:"-" }}</div>
+                                <div class="small"><strong>Tokens:</strong> {{ paso.tokens_entrada }} entrada · {{ paso.tokens_salida }} salida</div>
+                                <div class="small mt-2"><strong>Detalle y evidencias</strong></div>
+                                <pre class="small border rounded p-2 bg-white" style="max-width:520px;max-height:220px;overflow:auto;white-space:pre-wrap">{{ paso.evaluacion_detalle }}</pre>
+                                {% if paso.respuesta_ia_estructurada %}<div class="small"><strong>Respuesta JSON</strong></div><pre class="small border rounded p-2 bg-white" style="max-width:520px;max-height:220px;overflow:auto;white-space:pre-wrap">{{ paso.respuesta_ia_estructurada }}</pre>{% endif %}
+                                {% if paso.prompt_ia_enviado %}<div class="small"><strong>Prompt efectivo enviado</strong></div><pre class="small border rounded p-2 bg-white" style="max-width:520px;max-height:220px;overflow:auto;white-space:pre-wrap">{{ paso.prompt_ia_enviado }}</pre>{% endif %}
+                            </details>
+                        </td>
+                    </tr>{% empty %}<tr><td colspan="6" class="text-muted">Sin pasos registrados.</td></tr>{% endfor %}</tbody>
                 </table>
                 {% if intento.retroalimentacion_final %}<div class="mt-2"><strong>Retroalimentacion:</strong><p class="mb-0">{{ intento.retroalimentacion_final }}</p></div>{% endif %}
                 {% if intento.debriefing_final %}<div class="mt-2"><strong>Debriefing:</strong><pre class="border rounded bg-white p-2 mt-1 mb-0">{{ intento.debriefing_final }}</pre></div>{% endif %}

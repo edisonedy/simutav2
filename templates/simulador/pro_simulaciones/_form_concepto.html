@@ -10,7 +10,7 @@
 <div class="mb-2">
     <label class="form-label">Ronda</label>
     {{ form.numero_ronda }}
-    <div class="form-text">1 = Diagnóstico · 2 = Decisión · 3 = Plan.</div>
+    <div class="form-text">Selecciona la ronda concreta en la que el estudiante debe demostrar este aprendizaje.</div>
 </div>
 
 <div class="mb-2">
@@ -22,6 +22,12 @@
 <div class="mb-3">
     <label class="form-label">Descripción (opcional)</label>
     {{ form.descripcion }}
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Resultado de aprendizaje de la materia</label>
+    {{ form.resultado_aprendizaje }}
+    <div class="form-text">Vincula el concepto con lo que el docente realmente enseñó. Si la lista está vacía, primero registra los resultados de aprendizaje de la materia.</div>
 </div>
 
 <div class="mb-2">

@@ -17,7 +17,7 @@ from simulador.models import (
     OpcionCasoSimulacion, Simulacion,
 )
 
-OPERADORES = {'>=', '<=', '>', '<', '=='}
+OPERADORES = {'>=', '<=', '>', '<', '==', '=', 'ABS<='}
 
 
 class Command(BaseCommand):
@@ -70,7 +70,25 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def _generar(self, simulacion, rehacer):
-        indicadores = list(simulacion.indicadores.filter(activo=True).values('codigo', 'nombre', 'direccion_optima'))
+        # Una alternativa vinculada ya es la misma entidad que una decisión y
+        # su consecuencia. Regenerar solo la tabla rompería esa relación; en
+        # ese caso se conserva el conjunto completo y se exige crear una nueva
+        # versión del caso para rediseñarlo.
+        if rehacer and simulacion.acciones_sugeridas.filter(
+            activo=True, opcion_caso__isnull=False,
+        ).exists():
+            return (
+                simulacion.opciones_caso.filter(activo=True).count(),
+                simulacion.matriz_caso.filter(activo=True).count(),
+                simulacion.condiciones_exito.filter(activo=True).count(),
+                simulacion.eventos.filter(activo=True).count(),
+                'No se regeneró: las alternativas ya están vinculadas a consecuencias. '
+                'Crea una nueva versión para reemplazar todo el conjunto.',
+            )
+        indicadores = list(simulacion.indicadores.filter(activo=True).values(
+            'codigo', 'nombre', 'direccion_optima', 'valor_inicial',
+            'valor_minimo', 'valor_maximo', 'unidad',
+        ))
         if not indicadores:
             return None
         codigos = {i['codigo'] for i in indicadores}

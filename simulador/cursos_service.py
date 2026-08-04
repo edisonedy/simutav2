@@ -289,6 +289,15 @@ def auditar_calidad_simulacion(simulacion):
     restricciones = simulacion.restricciones.filter(activo=True).count()
     recursos = simulacion.recursos.filter(activo=True).count()
     eventos = simulacion.eventos.filter(activo=True).count()
+    metas = simulacion.condiciones_exito.filter(activo=True).count()
+    alternativas = simulacion.opciones_caso.filter(activo=True).count()
+    conceptos_ra = simulacion.conceptos_esperados.filter(
+        activo=True, resultado_aprendizaje__isnull=False,
+    ).count()
+    rondas = (simulacion.parametros or {}).get('rondas') or []
+    rondas_sin_proposito = sum(
+        1 for ronda in rondas if isinstance(ronda, dict) and not (ronda.get('proposito') or '').strip()
+    )
     acciones_tradeoff = 0
     for accion in simulacion.acciones_sugeridas.filter(activo=True):
         impacto = accion.impacto_base or {}
@@ -314,6 +323,12 @@ def auditar_calidad_simulacion(simulacion):
         hallazgos.append('Agregar recursos limitados si el caso involucra presupuesto, tiempo o capacidad.')
     if eventos == 0:
         hallazgos.append('Agregar eventos dinamicos para que el caso reaccione al estado.')
+    if metas == 0:
+        hallazgos.append('Agregar al menos una meta final medible.')
+    if rondas_sin_proposito:
+        hallazgos.append('Indicar el aprendizaje que practica cada ronda.')
+    if conceptos and conceptos_ra == 0 and not (simulacion.resultado_aprendizaje or '').strip():
+        hallazgos.append('Vincular la rubrica con un resultado de aprendizaje.')
 
     puntaje = 100
     puntaje -= max(0, 3 - indicadores) * 12
@@ -322,6 +337,8 @@ def auditar_calidad_simulacion(simulacion):
     puntaje -= 10 if restricciones == 0 else 0
     puntaje -= 10 if recursos == 0 else 0
     puntaje -= 8 if eventos == 0 else 0
+    puntaje -= 10 if metas == 0 else 0
+    puntaje -= min(12, rondas_sin_proposito * 4)
     puntaje = max(0, min(100, puntaje))
     if puntaje >= 80:
         nivel = 'Completo'

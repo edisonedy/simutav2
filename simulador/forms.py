@@ -143,8 +143,12 @@ class SimulacionForm(forms.ModelForm):
             ('bonus_adaptacion', 'Bonificacion por mejorar entre rondas'),
         ):
             self.fields[nombre].label = etiqueta
-        self.fields['maximo_decisiones'].label = 'Rondas que tendra el caso'
-        self.fields['maximo_decisiones'].help_text = 'Cuantas decisiones o etapas tendra la simulacion.'
+        self.fields['maximo_decisiones'].label = 'Cantidad exacta de rondas'
+        self.fields['maximo_decisiones'].help_text = (
+            'Pon únicamente las rondas necesarias para lograr el aprendizaje. '
+            'No existe una cantidad fija.'
+        )
+        self.fields['maximo_decisiones'].widget.attrs.update({'min': 1, 'step': 1})
         self.fields['contexto'].label = 'Contexto del caso'
         self.fields['contexto'].help_text = 'Cuenta el problema general que vivira el estudiante.'
         self.fields['objetivo'].label = 'Objetivo del estudiante'
@@ -162,6 +166,12 @@ class SimulacionForm(forms.ModelForm):
         self.fields['esquema_ia_version'].label = 'Version del esquema de IA'
         self.fields['ia_habilitada'].label = 'IA habilitada'
         self.fields['activo'].label = 'Activo'
+
+    def clean_maximo_decisiones(self):
+        cantidad = self.cleaned_data.get('maximo_decisiones')
+        if cantidad is None or cantidad < 1:
+            raise forms.ValidationError('El caso debe tener al menos una ronda.')
+        return cantidad
     class Meta:
         model = Simulacion
         fields = [
@@ -207,7 +217,7 @@ class PlantillaSimulacionForm(forms.ModelForm):
         model = PlantillaSimulacion
         fields = [
             'nombre', 'codigo', 'tipo', 'descripcion', 'materia_malla',
-            'maximo_decisiones', 'tiempo_estimado', 'nivel_dificultad',
+            'tiempo_estimado', 'nivel_dificultad',
             'rol_base', 'contexto_base', 'objetivo_base', 'resultado_base',
             'instrucciones_ia', 'version', 'es_predeterminada', 'activo',
         ]
@@ -271,7 +281,41 @@ class PlantillaConceptoForm(forms.ModelForm):
 class IndicadorSimulacionForm(forms.ModelForm):
     class Meta:
         model = IndicadorSimulacion
-        fields = ['simulacion', 'nombre', 'codigo', 'valor_inicial', 'valor_minimo', 'valor_maximo', 'direccion_optima', 'es_critico', 'unidad', 'activo']
+        fields = [
+            'simulacion', 'nombre', 'codigo', 'valor_inicial', 'valor_minimo',
+            'valor_maximo', 'direccion_optima', 'valor_objetivo',
+            'valor_objetivo_min', 'valor_objetivo_max',
+            'peso_salud', 'es_critico', 'unidad', 'activo',
+        ]
+
+    def clean(self):
+        cleaned = super().clean()
+        minimo = cleaned.get('valor_minimo')
+        maximo = cleaned.get('valor_maximo')
+        objetivo = cleaned.get('valor_objetivo')
+        objetivo_min = cleaned.get('valor_objetivo_min')
+        objetivo_max = cleaned.get('valor_objetivo_max')
+        direccion = cleaned.get('direccion_optima')
+        peso_salud = cleaned.get('peso_salud')
+        if minimo is not None and maximo is not None and minimo >= maximo:
+            raise forms.ValidationError('El valor minimo debe ser menor que el maximo.')
+        if direccion == IndicadorSimulacion.DIRECCION_OBJETIVO:
+            if objetivo is None:
+                raise forms.ValidationError('Ingresa el valor objetivo de este indicador.')
+            if minimo is not None and maximo is not None and not (minimo <= objetivo <= maximo):
+                raise forms.ValidationError('El valor objetivo debe estar entre el minimo y el maximo.')
+        if direccion == IndicadorSimulacion.DIRECCION_RANGO:
+            if objetivo_min is None or objetivo_max is None:
+                raise forms.ValidationError('Ingresa los dos límites del rango objetivo.')
+            if objetivo_min >= objetivo_max:
+                raise forms.ValidationError('El límite inferior del rango debe ser menor que el superior.')
+            if minimo is not None and maximo is not None and not (
+                minimo <= objetivo_min < objetivo_max <= maximo
+            ):
+                raise forms.ValidationError('El rango objetivo debe quedar dentro del mínimo y máximo del indicador.')
+        if peso_salud is not None and peso_salud < 0:
+            raise forms.ValidationError('El peso de salud no puede ser negativo.')
+        return cleaned
 
 
 class RecursoSimulacionForm(forms.ModelForm):
@@ -305,6 +349,20 @@ class RestriccionSimulacionForm(forms.ModelForm):
         model = RestriccionSimulacion
         fields = ['simulacion', 'descripcion', 'codigo_indicador', 'operador', 'valor_limite', 'penalizacion', 'activo']
         widgets = {'descripcion': forms.Textarea(attrs={'rows': 2})}
+
+    def clean(self):
+        cleaned = super().clean()
+        simulacion = cleaned.get('simulacion')
+        codigo = cleaned.get('codigo_indicador')
+        limite = cleaned.get('valor_limite')
+        if simulacion and codigo:
+            indicador = simulacion.indicadores.filter(codigo=codigo, activo=True).first()
+            if not indicador:
+                raise forms.ValidationError('El indicador seleccionado no pertenece a esta simulacion.')
+            if limite is not None and cleaned.get('operador') != 'ABS<=':
+                if limite < indicador.valor_minimo or limite > indicador.valor_maximo:
+                    raise forms.ValidationError('El limite debe estar dentro del rango del indicador.')
+        return cleaned
 
 
 class CriterioEvaluacionForm(forms.ModelForm):
@@ -378,16 +436,100 @@ class AccionSugeridaForm(forms.ModelForm):
     # no se pide JSON al profesor. Ver _impacto_desde_post en pro_simulaciones.
     class Meta:
         model = AccionSugeridaSimulacion
-        fields = ['simulacion', 'numero_ronda', 'texto', 'descripcion', 'activo']
+        fields = [
+            'simulacion', 'numero_ronda', 'opcion_caso', 'requiere_accion_previa',
+            'bloqueada_por_accion_previa', 'maximo_ejecuciones',
+            'texto', 'descripcion', 'activo',
+        ]
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 2}),
         }
+
+    def __init__(self, *args, simulacion_obj=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        simulacion_obj = simulacion_obj or getattr(self.instance, 'simulacion', None)
+        maximo = int(getattr(simulacion_obj, 'maximo_decisiones', 0) or 0)
+        rondas = (getattr(simulacion_obj, 'parametros', None) or {}).get('rondas') or []
+        titulos = {
+            int(item.get('numero')): str(item.get('titulo') or '').strip()
+            for item in rondas if isinstance(item, dict) and item.get('numero')
+        }
+        choices = [('', 'Todas las rondas (solo si realmente aplica a todas)')]
+        choices.extend(
+            (numero, f'Ronda {numero}' + (f' · {titulos[numero]}' if titulos.get(numero) else ''))
+            for numero in range(1, maximo + 1)
+        )
+        self.fields['numero_ronda'] = forms.TypedChoiceField(
+            choices=choices, coerce=int, empty_value=None, required=False,
+            label='Ronda en la que aparece',
+            widget=forms.Select(attrs={'class': 'form-select'}),
+        )
+        self.fields['opcion_caso'].queryset = OpcionCasoSimulacion.objects.filter(
+            simulacion=simulacion_obj, activo=True,
+        ) if simulacion_obj else OpcionCasoSimulacion.objects.none()
+        self.fields['opcion_caso'].required = False
+        self.fields['opcion_caso'].label = 'Alternativa visible vinculada'
+        previas = AccionSugeridaSimulacion.objects.none()
+        if simulacion_obj:
+            previas = AccionSugeridaSimulacion.objects.filter(
+                simulacion=simulacion_obj, activo=True,
+                numero_ronda__isnull=False,
+            )
+            if self.instance and self.instance.pk:
+                previas = previas.exclude(pk=self.instance.pk)
+        self.fields['requiere_accion_previa'].queryset = previas.order_by('numero_ronda', 'texto')
+        self.fields['requiere_accion_previa'].required = False
+        self.fields['requiere_accion_previa'].label = 'Decisión previa requerida'
+        self.fields['bloqueada_por_accion_previa'].queryset = previas.order_by('numero_ronda', 'texto')
+        self.fields['bloqueada_por_accion_previa'].required = False
+        self.fields['bloqueada_por_accion_previa'].label = 'Decisión previa que la bloquea'
+        self.fields['texto'].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        opcion = cleaned.get('opcion_caso')
+        previa = cleaned.get('requiere_accion_previa')
+        bloqueante = cleaned.get('bloqueada_por_accion_previa')
+        texto = (cleaned.get('texto') or '').strip()
+        simulacion = cleaned.get('simulacion') or getattr(self.instance, 'simulacion', None)
+        if opcion and simulacion and opcion.simulacion_id != simulacion.id:
+            raise forms.ValidationError('La alternativa vinculada debe pertenecer a esta simulación.')
+        if previa and simulacion and previa.simulacion_id != simulacion.id:
+            raise forms.ValidationError('La decisión previa debe pertenecer a esta simulación.')
+        numero = cleaned.get('numero_ronda')
+        if previa and (not numero or not previa.numero_ronda or previa.numero_ronda >= numero):
+            raise forms.ValidationError('La decisión requerida debe pertenecer a una ronda anterior.')
+        if bloqueante and simulacion and bloqueante.simulacion_id != simulacion.id:
+            raise forms.ValidationError('La decisión que bloquea debe pertenecer a esta simulación.')
+        if bloqueante and (not numero or not bloqueante.numero_ronda or bloqueante.numero_ronda >= numero):
+            raise forms.ValidationError('La decisión que bloquea debe pertenecer a una ronda anterior.')
+        if previa and bloqueante and previa.pk == bloqueante.pk:
+            raise forms.ValidationError('Una misma decisión no puede habilitar y bloquear la alternativa.')
+        if not opcion and not texto:
+            raise forms.ValidationError('Selecciona una alternativa visible o escribe la decisión.')
+        if opcion and not texto:
+            cleaned['texto'] = f'Seleccionar {opcion.nombre}'
+        return cleaned
 
 
 class CondicionExitoForm(forms.ModelForm):
     class Meta:
         model = CondicionExitoSimulacion
         fields = ['simulacion', 'descripcion', 'codigo_indicador', 'operador', 'valor_objetivo', 'bonificacion', 'activo']
+
+    def clean(self):
+        cleaned = super().clean()
+        simulacion = cleaned.get('simulacion')
+        codigo = cleaned.get('codigo_indicador')
+        objetivo = cleaned.get('valor_objetivo')
+        if simulacion and codigo:
+            indicador = simulacion.indicadores.filter(codigo=codigo, activo=True).first()
+            if not indicador:
+                raise forms.ValidationError('El indicador seleccionado no pertenece a esta simulacion.')
+            if objetivo is not None and cleaned.get('operador') != 'ABS<=':
+                if objetivo < indicador.valor_minimo or objetivo > indicador.valor_maximo:
+                    raise forms.ValidationError('La meta debe estar dentro del rango del indicador.')
+        return cleaned
 
 
 class EventoSimulacionForm(forms.ModelForm):
@@ -460,7 +602,7 @@ class ConceptoEsperadoRondaForm(forms.ModelForm):
         # amigable (texto + modo, casillas por indicador) en pro_simulaciones.
         fields = [
             'simulacion', 'escenario', 'numero_ronda', 'nombre', 'descripcion',
-            'peso',
+            'resultado_aprendizaje', 'peso',
             'retroalimentacion_si_cumple', 'retroalimentacion_si_falta',
             'es_critico', 'activo',
         ]
@@ -505,28 +647,23 @@ class ConceptoEsperadoRondaForm(forms.ModelForm):
 
 
 class PasoSimulacionForm(forms.Form):
-    LABELS_POR_RONDA = {
-        1: ('Diagnóstico', 'Justificación del diagnóstico'),
-        2: ('Decisión', 'Justificación de la decisión'),
-        3: ('Plan de implementación', 'Justificación, control y seguimiento'),
-    }
-
     # required=False para que el campo (oculto en modo hibrido cuando se elige una
     # opcion) no bloquee el envio por validacion HTML. El servidor valida igual.
     decision = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={'rows': 4}),
+        max_length=600,
+        widget=forms.Textarea(attrs={'rows': 2, 'maxlength': 600}),
     )
     justificacion = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={'rows': 4}),
+        max_length=600,
+        widget=forms.Textarea(attrs={'rows': 2, 'maxlength': 600}),
     )
 
     def __init__(self, *args, **kwargs):
-        ronda = kwargs.pop('ronda', 1)
+        kwargs.pop('ronda', 1)  # Compatibilidad con llamadas existentes.
         super().__init__(*args, **kwargs)
-        labels = self.LABELS_POR_RONDA.get(ronda, ('Decisión', 'Justificación'))
-        self.fields['decision'].label = labels[0]
-        self.fields['decision'].widget.attrs['placeholder'] = f'Describe {labels[0].lower()} para esta situacion'
-        self.fields['justificacion'].label = labels[1]
-        self.fields['justificacion'].widget.attrs['placeholder'] = f'Explica {labels[1].lower()}'
+        self.fields['decision'].label = 'Tu respuesta'
+        self.fields['decision'].widget.attrs['placeholder'] = 'Escribe una decisión concreta en una frase'
+        self.fields['justificacion'].label = 'Explica tu razonamiento'
+        self.fields['justificacion'].widget.attrs['placeholder'] = 'Una frase breve: dato del caso + por qué conviene'

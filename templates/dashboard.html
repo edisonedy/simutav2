@@ -13,6 +13,22 @@
     </div>
 </div>
 
+{% if puede_administrar %}
+<div class="module-card p-3 mb-3" id="estado-ia-panel" data-url="{% url 'core:estado_ia' %}">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <div class="section-title">Servicios externos</div>
+            <h2 class="h5 mb-1">Estado de la IA</h2>
+            <div class="text-muted small" id="estado-ia-hora">Comprobando disponibilidad actual...</div>
+        </div>
+        <button class="btn btn-sm btn-outline-primary" type="button" id="estado-ia-refrescar">Volver a comprobar</button>
+    </div>
+    <div class="row g-2" id="estado-ia-lista">
+        <div class="col-12 text-muted small">Consultando DeepSeek y OpenAI...</div>
+    </div>
+</div>
+{% endif %}
+
 {% if rol == "ESTUDIANTE" %}
     <div class="row g-3">
         <div class="col-lg-6">
@@ -120,5 +136,67 @@
             </div>
         </div>
     </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if puede_administrar %}
+<script>
+(function () {
+    const panel = document.getElementById('estado-ia-panel');
+    if (!panel) return;
+    const lista = document.getElementById('estado-ia-lista');
+    const hora = document.getElementById('estado-ia-hora');
+    const boton = document.getElementById('estado-ia-refrescar');
+    const estilos = {
+        disponible: ['success', 'Disponible'],
+        saturado: ['warning', 'Saturado'],
+        sin_creditos: ['danger', 'Sin creditos'],
+        limitado: ['warning', 'Limite alcanzado'],
+        sin_configurar: ['secondary', 'Sin configurar'],
+        credenciales: ['danger', 'Credenciales invalidas'],
+        timeout: ['warning', 'Sin respuesta'],
+        conexion: ['danger', 'Error de conexion'],
+        no_disponible: ['danger', 'No disponible'],
+        error: ['danger', 'Error']
+    };
+    const escapar = valor => String(valor || '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+    async function comprobar(forzar) {
+        boton.disabled = true;
+        boton.textContent = 'Comprobando...';
+        try {
+            const respuesta = await fetch(panel.dataset.url + (forzar ? '?refresh=1' : ''), {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
+            const datos = await respuesta.json();
+            lista.innerHTML = datos.proveedores.map(prov => {
+                const estilo = estilos[prov.estado] || estilos.error;
+                const modeloReal = prov.modelo_respuesta && prov.modelo_respuesta !== prov.modelo
+                    ? `<div class="text-muted small">Atendido por: ${escapar(prov.modelo_respuesta)}</div>` : '';
+                const latencia = prov.latencia_ms != null ? ` · ${prov.latencia_ms} ms` : '';
+                const rol = prov.rol ? `<span class="badge text-bg-light border ms-1">${escapar(prov.rol)}</span>` : '';
+                return `<div class="col-md-6"><div class="border rounded p-3 h-100 d-flex justify-content-between gap-3">
+                    <div><div class="fw-semibold">${escapar(prov.nombre)}${rol}</div>
+                    <div class="text-muted small">${escapar(prov.modelo || 'Sin modelo')}${latencia}</div>${modeloReal}
+                    <div class="small mt-1">${escapar(prov.detalle)}</div></div>
+                    <div><span class="badge text-bg-${estilo[0]}">${estilo[1]}</span></div>
+                </div></div>`;
+            }).join('');
+            hora.textContent = `Comprobado: ${datos.comprobado_texto}${datos.desde_cache ? ' (resultado reciente)' : ''}`;
+        } catch (error) {
+            lista.innerHTML = '<div class="col-12"><div class="alert alert-danger mb-0">No se pudo consultar el estado de la IA.</div></div>';
+            hora.textContent = 'La comprobacion fallo';
+        } finally {
+            boton.disabled = false;
+            boton.textContent = 'Volver a comprobar';
+        }
+    }
+    boton.addEventListener('click', () => comprobar(true));
+    comprobar(false);
+})();
+</script>
 {% endif %}
 {% endblock %}

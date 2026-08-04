@@ -132,7 +132,7 @@ class Command(BaseCommand):
 
         self.stdout.write('')
         self.stdout.write('Acciones configuradas por ronda:')
-        for ronda in range(1, (simulacion.maximo_decisiones or 3) + 1):
+        for ronda in range(1, (simulacion.maximo_decisiones or 1) + 1):
             acciones = simulacion.acciones_sugeridas.filter(activo=True, numero_ronda=ronda).order_by('id')
             self.stdout.write(f'  Ronda {ronda}:')
             for accion in acciones:
@@ -176,7 +176,7 @@ class Command(BaseCommand):
 
     def _camino_generico(self, simulacion):
         pasos = []
-        for ronda in range(1, (simulacion.maximo_decisiones or 3) + 1):
+        for ronda in range(1, (simulacion.maximo_decisiones or 1) + 1):
             accion = simulacion.acciones_sugeridas.filter(activo=True, numero_ronda=ronda).order_by('id').first()
             if accion:
                 pasos.append((accion.texto, 'Justifico la decision con datos, indicadores y restricciones del caso.'))

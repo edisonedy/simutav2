@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% load simulador_extras %}
-{% block title %}Misión {{ numero }} - {{ simulacion.titulo }}{% endblock %}
+{% block title %}Misión {{ numero }} - {{ caso.titulo }}{% endblock %}
 {% block content %}
 <div class="game-screen">
 
     <!-- HUD superior -->
     <div class="hud">
         <div class="hud-mission">
-            <div class="hud-label">Misión {{ numero }}/{{ simulacion.maximo_decisiones }}</div>
-            <div class="hud-title">{{ simulacion.titulo }}</div>
-            <div class="hud-role">▶ {{ simulacion.rol_estudiante|default:"Responsable de decisión" }}</div>
+            <div class="hud-label">Misión {{ numero }}/{{ caso.maximo_decisiones }}</div>
+            <div class="hud-title">{{ caso.titulo }}</div>
+            <div class="hud-role">▶ {{ caso.rol_estudiante|default:"Responsable de decisión" }}</div>
         </div>
         {% if hud %}
         <div class="hud-stats">
@@ -25,7 +25,12 @@
             </div>
             <div class="hud-stat hud-health">
                 <div class="hud-stat-label">Salud empresa</div>
-                <div class="hud-health-bar"><div class="hud-health-fill bg-{{ hud.salud_color }}" style="--w: {{ hud.salud }}%;"></div></div>
+                {% if hud.salud_disponible %}
+                <div class="d-flex align-items-center gap-2">
+                    <div class="hud-health-bar"><div class="hud-health-fill bg-{{ hud.salud_color }}" style="--w: {{ hud.salud }}%;"></div></div>
+                    <strong>{{ hud.salud }}%</strong>
+                </div>
+                {% else %}<div class="small">Sin indicadores empresariales</div>{% endif %}
             </div>
         </div>
         {% endif %}
@@ -57,7 +62,7 @@
                 <div class="mb-2">
                     <div class="d-flex justify-content-between small">
                         <span>{% if o.cumplido %}✅{% else %}🎯{% endif %} {{ o.descripcion }}</span>
-                        <span class="cell-num text-muted">{{ o.valor_actual }} / {{ o.meta }}</span>
+                        <span class="cell-num text-muted">{{ o.valor_actual_legible }} / {{ o.meta }}</span>
                     </div>
                     <div class="progress" style="height:7px"><div class="progress-bar" style="width:{{ o.progreso_pct }}%;background:{% if o.cumplido %}var(--forest){% else %}var(--gold){% endif %}"></div></div>
                 </div>
@@ -105,6 +110,8 @@
                         </span>
                     {% endfor %}
                 </div>
+                {% elif ultimo_paso.evaluacion_detalle.origen_impacto == 'sin_consecuencia_configurada' %}
+                <div class="alert alert-secondary py-2 small mb-0">Esta jugada no tenía una consecuencia numérica configurada; los indicadores no fueron modificados.</div>
                 {% endif %}
                 {% if ultimo_paso.pronostico_indicador %}
                 <div class="alert {% if ultimo_paso.pronostico_resultado.estado == 'acierto' %}alert-success{% else %}alert-secondary{% endif %} py-2 small mt-2 mb-0">
@@ -125,7 +132,7 @@
                     {% if ultimo_paso.tradeoff_resultado.ganancias %}
                         <div class="mt-2"><strong>Ganancias:</strong>
                             {% for item in ultimo_paso.tradeoff_resultado.ganancias %}
-                                <span class="game-delta up">{{ item.nombre }} +{{ item.delta }}</span>
+                                <span class="game-delta up">{{ item.nombre }} {% if item.delta > 0 %}+{% endif %}{{ item.delta }}</span>
                             {% endfor %}
                         </div>
                     {% endif %}
@@ -152,7 +159,7 @@
             {% endif %}
 
             <!-- Reflexión (ciclo de Kolb): convierte la experiencia en aprendizaje -->
-            {% if ultimo_paso and ultimo_paso.es_valido %}
+            {% if ultimo_paso and ultimo_paso.es_valido and pedir_reflexion_ultimo %}
             <div class="game-card briefing mb-3" style="border-left-color: var(--gold)">
                 <div class="game-card-head">
                     <span class="game-tag">🤔 Reflexiona</span>
@@ -170,7 +177,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="intento_id" value="{{ intento.pk }}">
                         <input type="hidden" name="numero" value="{{ ultimo_paso.numero }}">
-                        <textarea name="reflexion" rows="2" class="mb-2" placeholder="Escribe tu reflexión... el tutor te repreguntará para que pienses más a fondo."></textarea>
+                        <textarea name="reflexion" rows="2" maxlength="400" class="mb-2" placeholder="Una frase: ¿qué ocurrió y qué cambiarías?"></textarea>
                         <button class="btn btn-outline-warning btn-sm" type="submit">Enviar reflexión</button>
                     </form>
                 {% endif %}
@@ -181,9 +188,7 @@
             <div class="game-card briefing mb-3">
                 <div class="game-card-head">
                     <span class="game-tag">🎯 Briefing</span>
-                    {% if numero == 1 %}<span class="game-phase">Fase: Diagnóstico</span>
-                    {% elif numero == 2 %}<span class="game-phase">Fase: Decisión</span>
-                    {% else %}<span class="game-phase">Fase: Plan</span>{% endif %}
+                    <span class="game-phase">{{ ronda_config.titulo|default:"Ronda" }} {{ numero }}</span>
                 </div>
                 <p class="briefing-text mb-0">{{ situacion }}</p>
             </div>
@@ -191,7 +196,7 @@
             {% if rubrica_visible %}
             <div class="game-card mb-3">
                 <div class="game-card-head">
-                    <span class="game-tag">📌 Criterios de evaluación</span>
+                    <span class="game-tag">📌 Evaluación académica</span>
                     <span class="game-phase">Sin revelar la respuesta</span>
                 </div>
                 {% if rubrica_visible.conceptos %}
@@ -239,13 +244,11 @@
             </div>
             {% endif %}
 
-            {% if candidatos or prueba_tecnica %}
+            {% if mostrar_datos_caso and alternativas_caso or mostrar_datos_caso and prueba_tecnica %}
             <div class="game-card mb-3">
                 <div class="game-card-head">
-                    <span class="game-tag">🧾 Datos del caso</span>
-                    {% if numero == 1 %}<span class="game-phase">{{ caso_labels.fase_criterios|default:"Criterios de evaluación" }}</span>
-                    {% elif numero == 2 %}<span class="game-phase">{{ caso_labels.fase_resultados|default:"Resultados de candidatos" }}</span>
-                    {% else %}<span class="game-phase">{{ caso_labels.fase_plan|default:"Base para onboarding" }}</span>{% endif %}
+                    <span class="game-tag">🧾 {{ caso_labels.datos_titulo }}</span>
+                    {% if ronda_config.titulo %}<span class="game-phase">{{ ronda_config.titulo }}</span>{% endif %}
                 </div>
 
                 {% if prueba_tecnica %}
@@ -262,49 +265,33 @@
                 </div>
                 {% endif %}
 
-                {% if candidatos %}
+                {% if alternativas_caso %}
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0 case-table">
                         <thead>
                             <tr>
-                                <th>{{ caso_labels.participante_col|default:"Candidato" }}</th>
-                                <th>{{ caso_labels.valor_col|default:"Salario" }}</th>
-                                <th>{{ caso_labels.fortalezas_col|default:"Fortaleza" }}</th>
-                                <th>{{ caso_labels.riesgo_col|default:"Riesgo" }}</th>
-                                {% if numero >= 2 and columnas_resultados %}
+                                <th>{{ caso_labels.alternativa_col }}</th>
+                                <th>{{ caso_labels.valor_col }}</th>
+                                <th>{{ caso_labels.fortaleza_col }}</th>
+                                <th>{{ caso_labels.riesgo_col }}</th>
+                                {% if mostrar_resultados_alternativas and columnas_resultados %}
                                 {% for col in columnas_resultados %}
                                 <th>{{ col }}</th>
                                 {% endfor %}
-                                {% elif numero >= 2 %}
-                                <th>Mini</th>
-                                <th>Review</th>
-                                <th>Testing</th>
-                                <th>ORM</th>
-                                <th>DRF</th>
-                                <th>Com.</th>
-                                <th>Rot.</th>
                                 {% endif %}
                             </tr>
                         </thead>
                         <tbody>
-                            {% for c in candidatos %}
+                            {% for alternativa in alternativas_caso %}
                             <tr>
-                                <td class="fw-semibold">{{ c.nombre }}</td>
-                                <td>{{ c.valor_display|default:c.salario_pretendido }}</td>
-                                <td>{{ c.fortalezas }}</td>
-                                <td>{{ c.debilidades }}</td>
-                                {% if numero >= 2 and c.resultados %}
-                                {% for item in c.resultados %}
+                                <td class="fw-semibold">{{ alternativa.nombre }}</td>
+                                <td>{{ alternativa.valor }}</td>
+                                <td>{{ alternativa.fortaleza }}</td>
+                                <td>{{ alternativa.riesgo }}</td>
+                                {% if mostrar_resultados_alternativas and alternativa.resultados %}
+                                {% for item in alternativa.resultados %}
                                 <td>{{ item.valor }}</td>
                                 {% endfor %}
-                                {% elif numero >= 2 %}
-                                <td>{{ c.prueba.mini_feature }}</td>
-                                <td>{{ c.prueba.code_review }}</td>
-                                <td>{{ c.prueba.testing }}</td>
-                                <td>{{ c.prueba.orm }}</td>
-                                <td>{{ c.prueba.drf }}</td>
-                                <td>{{ c.prueba.comunicacion }}</td>
-                                <td>{{ c.prueba.riesgo_rotacion }}</td>
                                 {% endif %}
                             </tr>
                             {% endfor %}
@@ -335,10 +322,10 @@
                         <input type="hidden" name="intento_id" value="{{ intento.pk }}">
                         {% if pronostico_indicadores %}
                         <div class="mb-2 p-2 rounded" style="background:var(--field)">
-                            <div class="small text-muted mb-1">🔮 Pronóstico rápido <span class="text-muted">(opcional)</span> — ¿qué indicador crees que más cambiará?</div>
+                            <div class="small text-muted mb-1">🔮 Pronóstico rápido <span class="text-muted">({% if pronostico_obligatorio %}obligatorio{% else %}opcional{% endif %})</span> — ¿qué indicador crees que más cambiará?</div>
                             <div class="row g-2">
                                 <div class="col-7">
-                                    <select name="pronostico_indicador" class="form-select form-select-sm">
+                                    <select name="pronostico_indicador" class="form-select form-select-sm" {% if pronostico_obligatorio %}required{% endif %}>
                                         <option value="">Elegir indicador…</option>
                                         {% for ind in pronostico_indicadores %}
                                             <option value="{{ ind.codigo }}">{{ ind.nombre }}</option>
@@ -346,7 +333,7 @@
                                     </select>
                                 </div>
                                 <div class="col-5">
-                                    <select name="pronostico_direccion" class="form-select form-select-sm">
+                                    <select name="pronostico_direccion" class="form-select form-select-sm" {% if pronostico_obligatorio %}required{% endif %}>
                                         <option value="">¿Sube o baja?</option>
                                         <option value="sube">Sube ▲</option>
                                         <option value="baja">Baja ▼</option>
@@ -354,9 +341,12 @@
                                     </select>
                                 </div>
                             </div>
-                            {% if pedir_tradeoff %}
-                            <input type="text" name="tradeoff_aceptado" class="form-control form-control-sm mt-2" placeholder="⚖️ ¿Qué aceptas sacrificar? (opcional)">
-                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% if pedir_tradeoff %}
+                        <div class="mb-2">
+                            <label class="small text-muted" for="tradeoff_arbol">⚖️ Costo o riesgo que aceptas</label>
+                            <input id="tradeoff_arbol" type="text" name="tradeoff_aceptado" maxlength="180" class="form-control form-control-sm" placeholder="Una frase breve{% if not tradeoff_obligatorio %} (opcional){% endif %}" {% if tradeoff_obligatorio %}required minlength="8"{% endif %}>
                         </div>
                         {% endif %}
                         {% if decisiones %}
@@ -380,10 +370,10 @@
                         <input type="hidden" name="intento_id" value="{{ intento.pk }}">
                         {% if pronostico_indicadores %}
                         <div class="mb-2 p-2 rounded" style="background:var(--field)">
-                            <div class="small text-muted mb-1">🔮 Pronóstico rápido <span class="text-muted">(opcional)</span> — ¿qué indicador crees que más cambiará?</div>
+                            <div class="small text-muted mb-1">🔮 Pronóstico rápido <span class="text-muted">({% if pronostico_obligatorio %}obligatorio{% else %}opcional{% endif %})</span> — ¿qué indicador crees que más cambiará?</div>
                             <div class="row g-2">
                                 <div class="col-7">
-                                    <select name="pronostico_indicador" class="form-select form-select-sm">
+                                    <select name="pronostico_indicador" class="form-select form-select-sm" {% if pronostico_obligatorio %}required{% endif %}>
                                         <option value="">Elegir indicador…</option>
                                         {% for ind in pronostico_indicadores %}
                                             <option value="{{ ind.codigo }}">{{ ind.nombre }}</option>
@@ -391,7 +381,7 @@
                                     </select>
                                 </div>
                                 <div class="col-5">
-                                    <select name="pronostico_direccion" class="form-select form-select-sm">
+                                    <select name="pronostico_direccion" class="form-select form-select-sm" {% if pronostico_obligatorio %}required{% endif %}>
                                         <option value="">¿Sube o baja?</option>
                                         <option value="sube">Sube ▲</option>
                                         <option value="baja">Baja ▼</option>
@@ -399,9 +389,12 @@
                                     </select>
                                 </div>
                             </div>
-                            {% if pedir_tradeoff %}
-                            <input type="text" name="tradeoff_aceptado" class="form-control form-control-sm mt-2" placeholder="⚖️ ¿Qué aceptas sacrificar? (opcional)">
-                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% if pedir_tradeoff %}
+                        <div class="mb-3 p-2 rounded" style="background:var(--field)">
+                            <label class="small text-muted mb-1" for="tradeoff_dinamico">⚖️ ¿Qué costo o riesgo aceptas?</label>
+                            <input id="tradeoff_dinamico" type="text" name="tradeoff_aceptado" maxlength="180" class="form-control form-control-sm" placeholder="Ej.: acepto una semana de retraso" {% if tradeoff_obligatorio %}required minlength="8"{% endif %}>
                         </div>
                         {% endif %}
                         {% if modo_ronda == 'escribir' %}
@@ -413,6 +406,7 @@
                             <div class="mb-3">
                                 <label class="play-label" for="id_justificacion">{{ etiqueta_justificacion }}</label>
                                 {{ form.justificacion }}
+                                {% if justificacion_obligatoria %}<div class="small text-muted mt-1">Obligatoria, pero breve: una frase con un dato, indicador o razón del caso (mínimo {{ minimo_justificacion }} caracteres).</div>{% endif %}
                             </div>
                         {% elif modo_ronda == 'elegir' %}
                             {# Solo elegir: opciones de la lista, sin escribir #}
@@ -422,12 +416,20 @@
                                     {% for accion in acciones_sugeridas %}
                                     <label class="play-option">
                                         <input type="radio" name="accion_id" value="{{ accion.pk }}" class="opt-accion play-option-control" required>
-                                        <span class="fw-semibold">{{ accion.texto }}</span>
+                                        <span class="fw-semibold">{{ accion.texto_visible }}</span>
+                                        {% if accion.descripcion_visible %}<span class="d-block small text-muted">{{ accion.descripcion_visible }}</span>{% endif %}
                                     </label>
                                     {% endfor %}
                                 </div>
                                 <div class="form-text">Decide sin ver los efectos; luego observa cómo reacciona la empresa.</div>
                             </div>
+                            {% if justificacion_obligatoria %}
+                            <div class="mb-3">
+                                <label class="play-label" for="id_justificacion">{{ etiqueta_justificacion }}</label>
+                                {{ form.justificacion }}
+                                <div class="small text-muted mt-1">Una frase es suficiente: menciona el dato o razón principal (mínimo {{ minimo_justificacion }} caracteres).</div>
+                            </div>
+                            {% endif %}
                         {% else %}
                             {# Hibrido: elegir de la lista O escribir la propia + justificar #}
                             <div class="mb-3">
@@ -436,7 +438,8 @@
                                     {% for accion in acciones_sugeridas %}
                                     <label class="play-option">
                                         <input type="radio" name="accion_id" value="{{ accion.pk }}" class="opt-accion play-option-control" required>
-                                        <span class="fw-semibold">{{ accion.texto }}</span>
+                                        <span class="fw-semibold">{{ accion.texto_visible }}</span>
+                                        {% if accion.descripcion_visible %}<span class="d-block small text-muted">{{ accion.descripcion_visible }}</span>{% endif %}
                                     </label>
                                     {% endfor %}
                                     <label class="play-option play-option-propia">
@@ -453,6 +456,7 @@
                             <div class="mb-3">
                                 <label class="play-label" for="id_justificacion">{{ etiqueta_justificacion }}</label>
                                 {{ form.justificacion }}
+                                {% if justificacion_obligatoria %}<div class="small text-muted mt-1">Obligatoria, pero breve: una frase con un dato, indicador o razón del caso (mínimo {{ minimo_justificacion }} caracteres).</div>{% endif %}
                             </div>
                         {% endif %}
                         <button class="btn btn-primary btn-play">Ejecutar jugada ▶</button>
@@ -513,7 +517,7 @@
 
         <!-- Panel lateral: HUD de indicadores -->
         <div class="col-lg-4">
-            {% if recursos_estado %}
+            {% if mostrar_recursos and recursos_estado %}
             <div class="game-card mb-3">
                 <div class="game-card-head"><span class="game-tag">💼 Recursos del caso</span></div>
                 <div class="resource-grid">
@@ -527,10 +531,10 @@
             </div>
             {% endif %}
 
+            {% if mostrar_indicadores and indicadores_empresa %}
             <div class="game-card mb-3">
-                <div class="game-card-head"><span class="game-tag">📊 Estado de la empresa</span></div>
-                {% if indicadores_estado %}
-                    {% for ind in indicadores_estado %}
+                <div class="game-card-head"><span class="game-tag">📊 Indicadores de la empresa</span></div>
+                    {% for ind in indicadores_empresa %}
                     <div class="hud-ind hud-ind-compact mb-3">
                         <div class="d-flex justify-content-between small">
                             <span class="fw-semibold">{{ ind.nombre }}{% if ind.critico %} <span class="game-crit">crítico</span>{% endif %}</span>
@@ -549,14 +553,30 @@
                         </div>
                     </div>
                     {% endfor %}
-                {% else %}
-                    <p class="text-muted mb-0">Sin indicadores.</p>
-                {% endif %}
             </div>
+            {% endif %}
+
+            {% if mostrar_indicadores and indicadores_academicos %}
+            <div class="game-card mb-3">
+                <div class="game-card-head"><span class="game-tag">🧠 Desempeño académico</span></div>
+                <div class="small text-muted mb-2">Separado de las variables de la empresa.</div>
+                {% for ind in indicadores_academicos %}
+                <div class="hud-ind hud-ind-compact mb-3">
+                    <div class="d-flex justify-content-between small">
+                        <span class="fw-semibold">{{ ind.nombre }}{% if ind.critico %} <span class="game-crit">crítico</span>{% endif %}</span>
+                        <span><strong>{{ ind.valor }}</strong>{% if ind.flecha %}<span class="delta {% if ind.delta_bueno %}delta-good{% else %}delta-bad{% endif %}">{{ ind.flecha }}{{ ind.delta_abs }}</span>{% endif %}</span>
+                    </div>
+                    <div class="progress" style="height: 9px;"><div class="progress-bar bar-anim bg-{{ ind.color }}" role="progressbar" style="--w: {{ ind.pct }}%;"></div></div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if not indicadores_estado %}<div class="game-card mb-3"><p class="text-muted mb-0">Sin indicadores.</p></div>{% endif %}
 
             <div class="game-card">
                 <div class="game-card-head"><span class="game-tag">🏁 Objetivo</span></div>
-                <p class="mb-0 small">{{ simulacion.objetivo }}</p>
+                <p class="mb-0 small">{{ caso.objetivo }}</p>
             </div>
         </div>
     </div>

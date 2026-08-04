@@ -28,7 +28,7 @@
                         <td>
                             <div class="d-flex flex-wrap gap-1">
                                 <span class="badge text-bg-{% if s.estado == 'PUBLICADA' %}success{% elif s.estado == 'BORRADOR' %}warning{% else %}secondary{% endif %}">{{ s.get_estado_display }}</span>
-                                <span class="chip chip-soft">{{ s.maximo_decisiones }} ronda(s)</span>
+                                <span class="chip chip-soft">{{ s.maximo_decisiones }} {% if s.maximo_decisiones == 1 %}ronda{% else %}rondas{% endif %}</span>
                                 <span class="chip chip-soft">{{ s.get_tipo_simulacion_display }}</span>
                             </div>
                         </td>
@@ -43,8 +43,17 @@
                         </td>
                         <td class="text-end">
                             <div class="action-row justify-content-end">
+                                {% if s.estado == 'PUBLICADA' %}
+                                <form method="post" action="{% url 'pro_simulaciones' %}" class="d-inline" onsubmit="return enviar_formulario(this)">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="nueva_version">
+                                    <input type="hidden" name="pk" value="{{ s.pk }}">
+                                    <button class="btn btn-sm btn-outline-primary">Nueva versión</button>
+                                </form>
+                                {% else %}
                                 <button class="btn btn-sm btn-outline-primary" onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=edit&id={{ s.pk }}')">Editar</button>
                                 <a class="btn btn-sm btn-outline-dark" href="{% url 'pro_simulaciones' %}?action=configuracion&id={{ s.pk }}">Configurar</a>
+                                {% endif %}
                                 <a class="btn btn-sm btn-outline-secondary" href="{% url 'pro_simulaciones' %}?action=revisar&id={{ s.pk }}">Revisar</a>
                                 {% if s.estado == 'BORRADOR' %}
                                     <form method="post" action="{% url 'pro_simulaciones' %}" class="d-inline" onsubmit="return enviar_formulario(this)">

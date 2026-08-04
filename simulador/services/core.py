@@ -1,7 +1,9 @@
 import re
 import unicodedata
 import json
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from statistics import mean
+from types import SimpleNamespace
 
 from django.utils import timezone
 
@@ -13,6 +15,10 @@ TIPO_ERROR_GENERICA = 'GENERICA'
 TIPO_ERROR_SIN_JUSTIFICACION = 'SIN_JUSTIFICACION'
 TIPO_ERROR_JUST_BREVE = 'JUST_BREVE'
 TIPO_ERROR_OFFTOPIC = 'OFFTOPIC'
+TIPO_ERROR_CONTRADICCION = 'CONTRADICCION'
+TIPO_ERROR_ACCION_NO_DISPONIBLE = 'ACCION_NO_DISPONIBLE'
+TIPO_ERROR_PRONOSTICO_REQUERIDO = 'PRONOSTICO_REQUERIDO'
+TIPO_ERROR_TRADEOFF_REQUERIDO = 'TRADEOFF_REQUERIDO'
 TIPO_ERROR_OK = 'OK'
 
 # Solo estos tipos de error invalidan la ronda (no cuenta como intento valido).
@@ -191,7 +197,7 @@ def calcular_puntaje_justificacion(justificacion):
     if validacion['tipo_error'] == TIPO_ERROR_GENERICA:
         return 2
     texto = _normalizar_texto(justificacion)
-    if len(justificacion.strip()) >= 80 and any(
+    if len(justificacion.strip()) >= 25 and any(
         palabra in texto
         for palabra in ['porque', 'para', 'permite', 'evita', 'garantiza', 'asegura', 'debido', 'ya que']
     ):
@@ -199,7 +205,10 @@ def calcular_puntaje_justificacion(justificacion):
     return 5
 
 
-def validar_respuesta_estudiante(decision, justificacion, simulacion=None, situacion_actual=None):
+def validar_respuesta_estudiante(
+    decision, justificacion, simulacion=None, situacion_actual=None,
+    requerir_justificacion=False, minimo_justificacion=12,
+):
     """Distingue VALIDEZ (cuenta como ronda) de CALIDAD (tope de nota).
 
     Solo se invalida la ronda cuando la respuesta es inutilizable:
@@ -240,10 +249,18 @@ def validar_respuesta_estudiante(decision, justificacion, simulacion=None, situa
             TIPO_ERROR_OFFTOPIC,
         )
 
-    # === VALIDA pero con tope de nota (baja calidad, igual avanza) ===
-    if len(combinado) < 40 or len(decision_limpia) < 8:
+    if requerir_justificacion and len(justificacion_limpia) < minimo_justificacion:
         return _resultado_validacion(
-            True, 'Respuesta válida pero muy breve: amplía tu decisión y justificación.',
+            False,
+            'Justifica en una frase breve con un dato, indicador o razón del caso.',
+            0,
+            TIPO_ERROR_SIN_JUSTIFICACION if not justificacion_limpia else TIPO_ERROR_JUST_BREVE,
+        )
+
+    # === VALIDA pero con tope de nota (baja calidad, igual avanza) ===
+    if len(combinado) < 24 or len(decision_limpia) < 5:
+        return _resultado_validacion(
+            True, 'Respuesta válida pero muy breve: agrega un dato o una consecuencia.',
             40, TIPO_ERROR_CORTA,
         )
 
@@ -259,7 +276,13 @@ def validar_respuesta_estudiante(decision, justificacion, simulacion=None, situa
             60, TIPO_ERROR_GENERICA,
         )
 
-    if len(justificacion_limpia) < 20:
+    if len(justificacion_limpia) < 30 and not re.search(r'\d', justificacion_limpia):
+        return _resultado_validacion(
+            True, 'La frase es válida; agrega un dato o indicador concreto para sustentarla.',
+            70, TIPO_ERROR_JUST_BREVE,
+        )
+
+    if len(justificacion_limpia) < 12:
         return _resultado_validacion(
             True, 'La justificación es breve; añade más detalle técnico.',
             70, TIPO_ERROR_JUST_BREVE,
@@ -341,6 +364,123 @@ def construir_estado_inicial(simulacion):
     return estado
 
 
+def justificacion_obligatoria(simulacion, numero_ronda, configuracion_snapshot=None):
+    """La justificacion es obligatoria salvo en una ronda configurada solo para elegir."""
+    caso = (configuracion_snapshot or {}).get('caso') or {}
+    parametros = caso.get('parametros') if caso else None
+    parametros = parametros if isinstance(parametros, dict) else (simulacion.parametros or {})
+    rondas = parametros.get('rondas') or []
+    ronda = next(
+        (item for item in rondas if isinstance(item, dict) and item.get('numero') == numero_ronda),
+        {},
+    )
+    if not ronda:
+        indice = numero_ronda - 1
+        ronda = rondas[indice] if 0 <= indice < len(rondas) and isinstance(rondas[indice], dict) else {}
+    if 'justificacion_obligatoria' in ronda:
+        return bool(ronda['justificacion_obligatoria'])
+    return str(ronda.get('modo') or 'hibrido').lower() != 'elegir'
+
+
+def configuracion_respuesta_ronda(simulacion, numero_ronda, configuracion_snapshot=None):
+    """Reglas de entrada congeladas para una ronda.
+
+    Los valores por defecto mantienen compatibles los casos antiguos y permiten
+    que una respuesta breve, pero útil, siga siendo válida.
+    """
+    caso = (configuracion_snapshot or {}).get('caso') or {}
+    parametros = caso.get('parametros') if isinstance(caso, dict) else None
+    parametros = parametros if isinstance(parametros, dict) else (simulacion.parametros or {})
+    rondas = parametros.get('rondas') or []
+    ronda = next(
+        (item for item in rondas if isinstance(item, dict) and item.get('numero') == numero_ronda),
+        None,
+    )
+    if ronda is None:
+        indice = numero_ronda - 1
+        ronda = rondas[indice] if 0 <= indice < len(rondas) and isinstance(rondas[indice], dict) else {}
+    try:
+        minimo = int(ronda.get('minimo_justificacion', 12))
+    except (TypeError, ValueError):
+        minimo = 12
+    modo = str(ronda.get('modo') or 'hibrido').lower()
+    fuentes = ronda.get('fuentes_evaluacion')
+    if not isinstance(fuentes, list):
+        fuentes = ['decision', 'justificacion', 'pronostico', 'tradeoff']
+    fuentes_validas = {'decision', 'justificacion', 'pronostico', 'tradeoff'}
+    return {
+        'minimo_justificacion': max(0, min(500, minimo)),
+        'bloquear_contradiccion': bool(
+            ronda.get('bloquear_contradiccion', modo == 'hibrido')
+        ),
+        'pronostico_obligatorio': bool(ronda.get('pronostico_obligatorio', False)),
+        'tradeoff_obligatorio': bool(ronda.get('tradeoff_obligatorio', False)),
+        'fuentes_evaluacion': [f for f in fuentes if f in fuentes_validas],
+    }
+
+
+def detectar_contradiccion_explicita(texto_opcion, justificacion):
+    """Detecta negaciones directas de la opción sin intentar sustituir a la IA.
+
+    Es deliberadamente conservadora: solo bloquea frases como "no aceptar" o
+    "descarto contratar" cuando el verbo negado pertenece a la opción elegida.
+    Las contradicciones semánticas menos literales las revisa el evaluador IA.
+    """
+    opcion = _normalizar_texto(texto_opcion)
+    explicacion = _normalizar_texto(justificacion)
+    if not opcion or not explicacion:
+        return ''
+    verbos = {
+        'aceptar', 'aplicar', 'aumentar', 'calcular', 'contratar', 'ejecutar',
+        'elegir', 'financiar', 'ignorar', 'implementar', 'ofertar', 'pagar',
+        'pausar', 'presentar', 'proponer', 'reducir', 'revisar', 'usar',
+    }
+    raices = {
+        token[:-2] for token in opcion.split()
+        if token in verbos and len(token) > 5
+    }
+    if not raices:
+        return ''
+    tokens = explicacion.split()
+    negaciones = {'no', 'nunca', 'evito', 'evitaria', 'descarto', 'descartaria', 'rechazo', 'rechazaria'}
+    for indice, token in enumerate(tokens):
+        if token not in negaciones:
+            continue
+        ventana = tokens[indice + 1:indice + 7]
+        if any(any(palabra.startswith(raiz) for raiz in raices) for palabra in ventana):
+            return 'La explicación niega explícitamente la opción seleccionada.'
+    return ''
+
+
+def indicadores_modificables_ronda(simulacion, numero_ronda, configuracion_snapshot=None):
+    """Códigos que una fase puede modificar.
+
+    La clave ausente conserva compatibilidad con casos antiguos (todos). Una
+    lista vacía es válida y representa una fase informativa sin efecto directo.
+    """
+    caso = (configuracion_snapshot or {}).get('caso') or {}
+    parametros = caso.get('parametros') if isinstance(caso, dict) else None
+    parametros = parametros if isinstance(parametros, dict) else (simulacion.parametros or {})
+    rondas = parametros.get('rondas') or []
+    ronda = next(
+        (item for item in rondas if isinstance(item, dict) and item.get('numero') == numero_ronda),
+        None,
+    )
+    if ronda is None:
+        indice = numero_ronda - 1
+        ronda = rondas[indice] if 0 <= indice < len(rondas) and isinstance(rondas[indice], dict) else {}
+    if 'indicadores_modificables' not in ronda:
+        congelados = (configuracion_snapshot or {}).get('indicadores') or []
+        if congelados:
+            return {item.get('codigo') for item in congelados if item.get('codigo')}
+        return set(simulacion.indicadores.filter(activo=True).values_list('codigo', flat=True))
+    validos = {
+        item.get('codigo') for item in ((configuracion_snapshot or {}).get('indicadores') or [])
+        if item.get('codigo')
+    } or set(simulacion.indicadores.filter(activo=True).values_list('codigo', flat=True))
+    return {codigo for codigo in (ronda.get('indicadores_modificables') or []) if codigo in validos}
+
+
 def construir_recursos_iniciales(simulacion):
     recursos = {}
     for recurso in simulacion.recursos.filter(activo=True):
@@ -353,17 +493,95 @@ def aplicar_impacto(estado_actual, impacto):
     for clave, valor in (impacto or {}).items():
         actual = estado.get(clave, 0)
         if isinstance(actual, (int, float)) and isinstance(valor, (int, float)):
-            estado[clave] = actual + valor
+            # JSON no serializa Decimal, pero la operacion se hace con Decimal
+            # para evitar residuos como 4.999999999999998.
+            total = (Decimal(str(actual)) + Decimal(str(valor))).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP,
+            )
+            estado[clave] = float(total)
         else:
             estado[clave] = valor
     return estado
 
 
-def limitar_recursos_por_min_max(simulacion, recursos):
+def desempeno_indicador(indicador, valor):
+    """Normaliza un indicador a 0-100 respetando su semantica.
+
+    Ademas de maximizar o minimizar, admite indicadores cuyo mejor resultado
+    es acercarse a un valor objetivo (por ejemplo, tasa CIF o desviacion neta).
+    """
+    minimo = float(indicador.valor_minimo)
+    maximo = float(indicador.valor_maximo)
+    valor = max(minimo, min(maximo, float(valor)))
+    if maximo <= minimo:
+        return 50.0
+    direccion = getattr(indicador, 'direccion_optima', 'ALTO')
+    if direccion == 'OBJETIVO':
+        objetivo_raw = getattr(indicador, 'valor_objetivo', None)
+        objetivo = float(objetivo_raw) if objetivo_raw is not None else (minimo + maximo) / 2
+        objetivo = max(minimo, min(maximo, objetivo))
+        if valor <= objetivo:
+            tramo = objetivo - minimo
+            return 100.0 if tramo <= 0 else (valor - minimo) / tramo * 100
+        tramo = maximo - objetivo
+        return 100.0 if tramo <= 0 else (maximo - valor) / tramo * 100
+    if direccion == 'RANGO':
+        inferior_raw = getattr(indicador, 'valor_objetivo_min', None)
+        superior_raw = getattr(indicador, 'valor_objetivo_max', None)
+        if inferior_raw is None or superior_raw is None:
+            return 50.0
+        inferior = max(minimo, min(maximo, float(inferior_raw)))
+        superior = max(minimo, min(maximo, float(superior_raw)))
+        if inferior >= superior:
+            return 50.0
+        if inferior <= valor <= superior:
+            return 100.0
+        if valor < inferior:
+            return (valor - minimo) / (inferior - minimo or 1) * 100
+        return (maximo - valor) / (maximo - superior or 1) * 100
+    posicion = (valor - minimo) / (maximo - minimo)
+    return (1 - posicion) * 100 if direccion == 'BAJO' else posicion * 100
+
+
+def indicador_mejora(indicador, antes, despues):
+    if not isinstance(antes, (int, float)) or not isinstance(despues, (int, float)):
+        return None
+    diferencia = desempeno_indicador(indicador, despues) - desempeno_indicador(indicador, antes)
+    if abs(diferencia) < 0.01:
+        return None
+    return diferencia > 0
+
+
+def cumple_operador(operador, valor, limite):
+    valor = float(valor)
+    limite = float(limite)
+    if operador == '<':
+        return valor < limite
+    if operador == '<=':
+        return valor <= limite
+    if operador == '>':
+        return valor > limite
+    if operador == '>=':
+        return valor >= limite
+    if operador in ('=', '=='):
+        return valor == limite
+    if operador == 'ABS<=':
+        return abs(valor) <= abs(limite)
+    return False
+
+
+def _recursos_configurados(simulacion, configuracion_snapshot=None):
+    congelados = (configuracion_snapshot or {}).get('recursos')
+    if congelados is not None:
+        return [SimpleNamespace(**item) for item in congelados]
+    return list(simulacion.recursos.filter(activo=True))
+
+
+def limitar_recursos_por_min_max(simulacion, recursos, configuracion_snapshot=None):
     recursos_limitados = dict(recursos or {})
     recursos_cfg = {
         recurso.codigo: recurso
-        for recurso in simulacion.recursos.filter(activo=True)
+        for recurso in _recursos_configurados(simulacion, configuracion_snapshot)
     }
     for codigo, recurso in recursos_cfg.items():
         valor = recursos_limitados.get(codigo)
@@ -389,14 +607,20 @@ def aplicar_costo_recursos(recursos_actuales, costo):
 def investigaciones_disponibles(intento):
     """Las averiguaciones que el estudiante puede pagar en la ronda actual, con
     su costo y, si ya las pago, el hallazgo revelado."""
-    from simulador.models import InvestigacionSimulacion
-
     compradas = set(intento.investigaciones_compradas or [])
     recursos = intento.recursos_actuales or {}
-    catalogo = InvestigacionSimulacion.objects.filter(
-        simulacion=intento.simulacion, activo=True,
-        disponible_desde_ronda__lte=intento.numero_ronda_actual,
-    )
+    congeladas = (intento.configuracion_snapshot or {}).get('investigaciones')
+    if congeladas is not None:
+        catalogo = [
+            SimpleNamespace(**item) for item in congeladas
+            if int(item.get('disponible_desde_ronda') or 1) <= intento.numero_ronda_actual
+        ]
+    else:
+        from simulador.models import InvestigacionSimulacion
+        catalogo = InvestigacionSimulacion.objects.filter(
+            simulacion=intento.simulacion, activo=True,
+            disponible_desde_ronda__lte=intento.numero_ronda_actual,
+        )
     items = []
     for inv in catalogo:
         pagada = inv.id in compradas
@@ -450,20 +674,29 @@ def comprar_investigacion(intento, investigacion):
 def hallazgos_conocidos(intento):
     """Lo que el estudiante ya averiguo. Se le pasa a la IA para que pueda
     juzgar si uso la evidencia que pago o decidio a ciegas."""
-    from simulador.models import InvestigacionSimulacion
-
     compradas = intento.investigaciones_compradas or []
     if not compradas:
         return []
+    congeladas = (intento.configuracion_snapshot or {}).get('investigaciones')
+    if congeladas is not None:
+        return [
+            {
+                'sujeto': item.get('sujeto', ''),
+                'averiguacion': item.get('nombre', ''),
+                'hallazgo': item.get('hallazgo', ''),
+            }
+            for item in congeladas if item.get('id') in compradas
+        ]
+    from simulador.models import InvestigacionSimulacion
     return [
         {'sujeto': i.sujeto, 'averiguacion': i.nombre, 'hallazgo': i.hallazgo}
         for i in InvestigacionSimulacion.objects.filter(id__in=compradas, activo=True)
     ]
 
 
-def validar_recursos(simulacion, recursos):
+def validar_recursos(simulacion, recursos, configuracion_snapshot=None):
     alertas = []
-    for recurso in simulacion.recursos.filter(activo=True):
+    for recurso in _recursos_configurados(simulacion, configuracion_snapshot):
         valor = recursos.get(recurso.codigo)
         if not isinstance(valor, (int, float)):
             continue
@@ -487,11 +720,16 @@ def _costos_numericos(costo):
     }
 
 
-def detectar_accion_sugerida(simulacion, decision):
+def detectar_accion_sugerida(simulacion, decision, configuracion_snapshot=None):
     texto = _normalizar_texto(decision)
     if not texto:
         return None
-    acciones = simulacion.acciones_sugeridas.filter(activo=True).order_by('numero_ronda', 'texto')
+    congeladas = (configuracion_snapshot or {}).get('acciones_sugeridas') or []
+    acciones = (
+        [SimpleNamespace(**item) for item in congeladas]
+        if congeladas else
+        simulacion.acciones_sugeridas.filter(activo=True).order_by('numero_ronda', 'texto')
+    )
     mejor = None
     mejor_score = 0
     tokens_texto = set(texto.split())
@@ -511,12 +749,41 @@ def detectar_accion_sugerida(simulacion, decision):
     return mejor if mejor_score >= 0.45 else None
 
 
-def limitar_estado_por_min_max(simulacion, estado):
+def accion_habilitada_por_historial(intento, accion):
+    requerida = getattr(accion, 'requiere_accion_previa_id', None)
+    bloqueante = getattr(accion, 'bloqueada_por_accion_previa_id', None)
+    maximo = int(getattr(accion, 'maximo_ejecuciones', 0) or 0)
+    conteos = {}
+    for detalle in intento.pasos.filter(es_valido=True).values_list('evaluacion_detalle', flat=True):
+        seleccion = (detalle or {}).get('seleccion_registrada') or {}
+        accion_id = seleccion.get('accion_id')
+        try:
+            accion_id = int(accion_id)
+            conteos[accion_id] = conteos.get(accion_id, 0) + 1
+        except (TypeError, ValueError):
+            continue
+    seleccionadas = set(conteos)
+    try:
+        if requerida is not None and int(requerida) not in seleccionadas:
+            return False
+        if bloqueante is not None and int(bloqueante) in seleccionadas:
+            return False
+        accion_id = int(getattr(accion, 'pk', 0) or 0)
+        if maximo and conteos.get(accion_id, 0) >= maximo:
+            return False
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def limitar_estado_por_min_max(simulacion, estado, configuracion_snapshot=None):
     estado_limitado = dict(estado or {})
-    indicadores = {
-        indicador.codigo: indicador
-        for indicador in simulacion.indicadores.filter(activo=True)
-    }
+    congelados = (configuracion_snapshot or {}).get('indicadores') or []
+    indicadores = (
+        {item.get('codigo'): SimpleNamespace(**item) for item in congelados}
+        if congelados else
+        {indicador.codigo: indicador for indicador in simulacion.indicadores.filter(activo=True)}
+    )
     for codigo, indicador in indicadores.items():
         valor = estado_limitado.get(codigo)
         if not isinstance(valor, (int, float)):
@@ -527,8 +794,13 @@ def limitar_estado_por_min_max(simulacion, estado):
     return estado_limitado
 
 
-def validar_impacto(simulacion, impacto):
-    codigos = {i.codigo for i in simulacion.indicadores.filter(activo=True)}
+def validar_impacto(simulacion, impacto, configuracion_snapshot=None):
+    indicadores_snapshot = (configuracion_snapshot or {}).get('indicadores') or []
+    codigos = (
+        {i.get('codigo') for i in indicadores_snapshot}
+        if indicadores_snapshot else
+        {i.codigo for i in simulacion.indicadores.filter(activo=True)}
+    )
     errores = []
     for clave, valor in (impacto or {}).items():
         if clave not in codigos:
@@ -538,8 +810,20 @@ def validar_impacto(simulacion, impacto):
     return errores
 
 
-def obtener_conceptos_esperados_ronda(simulacion, numero_ronda, escenario=None):
+def obtener_conceptos_esperados_ronda(
+    simulacion, numero_ronda, escenario=None, configuracion_snapshot=None,
+):
     from simulador.models import ConceptoEsperadoRonda
+
+    datos = (configuracion_snapshot or {}).get('conceptos') or []
+    if datos and not escenario and all(item.get('id') is not None for item in datos):
+        seleccion = [item for item in datos if item.get('numero_ronda') == numero_ronda]
+        if not seleccion:
+            seleccion = [item for item in datos if item.get('numero_ronda') is None]
+        return [
+            SimpleNamespace(pk=item.get('id'), **item)
+            for item in seleccion
+        ]
 
     qs = ConceptoEsperadoRonda.objects.filter(activo=True)
     if escenario:
@@ -634,28 +918,43 @@ def evaluar_rubrica_decision(evaluaciones_decision):
 
 def _normalizar_evaluaciones_ia(evaluaciones_ia):
     normalizadas = {}
+    factores_por_nivel = {'completa': 1.0, 'parcial': 0.5, 'ausente': 0.0}
     for item in evaluaciones_ia or []:
         try:
             concepto_id = int(item.get('concepto_id'))
         except (TypeError, ValueError):
             continue
-        factor = item.get('factor', 1 if item.get('cumple') else 0)
-        try:
-            factor = float(factor)
-        except (TypeError, ValueError):
-            factor = 0.0
+        nivel = str(item.get('nivel_evidencia') or '').strip().lower()
+        if nivel in factores_por_nivel:
+            factor = factores_por_nivel[nivel]
+        else:
+            # Compatibilidad con respuestas ya almacenadas y proveedores que
+            # aun contesten con el esquema anterior.
+            factor = item.get('factor', 1 if item.get('cumple') else 0)
+            try:
+                factor = float(factor)
+            except (TypeError, ValueError):
+                factor = 0.0
         normalizadas[concepto_id] = {
-            'cumple': bool(item.get('cumple')),
+            'cumple': nivel == 'completa' if nivel else bool(item.get('cumple')),
             'factor': max(0.0, min(1.0, factor)),
             'evidencia': str(item.get('evidencia') or '').strip(),
             'retroalimentacion': str(item.get('retroalimentacion') or '').strip(),
+            'fuente_evidencia': str(item.get('fuente_evidencia') or 'respuesta_completa').strip().lower(),
         }
     return normalizadas
 
 
-def evaluar_conceptos_esperados(simulacion, numero_ronda, decision, justificacion, situacion_actual, escenario=None, evaluaciones_ia=None, evaluaciones_decision=None):
+def evaluar_conceptos_esperados(
+    simulacion, numero_ronda, decision, justificacion, situacion_actual,
+    escenario=None, evaluaciones_ia=None, evaluaciones_decision=None,
+    configuracion_snapshot=None, opcion_predefinida=False,
+):
     texto = _normalizar_texto(f'{decision} {justificacion}')
-    conceptos = obtener_conceptos_esperados_ronda(simulacion, numero_ronda, escenario=escenario)
+    conceptos = obtener_conceptos_esperados_ronda(
+        simulacion, numero_ronda, escenario=escenario,
+        configuracion_snapshot=configuracion_snapshot,
+    )
     evaluaciones_ia = _normalizar_evaluaciones_ia(evaluaciones_ia)
     cumplidos = []
     parciales = []
@@ -675,9 +974,18 @@ def evaluar_conceptos_esperados(simulacion, numero_ronda, decision, justificacio
         if evaluacion_ia:
             cumple = evaluacion_ia['cumple']
             factor = evaluacion_ia['factor']
+            fuente_evidencia = evaluacion_ia.get('fuente_evidencia', 'respuesta_completa')
+            # Elegir una opción correcta demuestra postura, pero el texto que
+            # escribió el docente dentro de esa opción no sustituye el
+            # razonamiento técnico del estudiante.
+            if opcion_predefinida and fuente_evidencia == 'opcion':
+                cumple, factor = False, 0.0
+            elif opcion_predefinida and fuente_evidencia == 'ambas':
+                factor = min(factor, 0.5)
         else:
             cumple = regla['cumple']
             factor = regla['factor']
+            fuente_evidencia = 'rubrica_local'
         cumple_completo = bool(cumple and factor >= 0.75)
         tiene_evidencia = factor > 0
         puntos = round(float(concepto.peso) * factor, 2)
@@ -724,6 +1032,7 @@ def evaluar_conceptos_esperados(simulacion, numero_ronda, decision, justificacio
             'prohibidas_detectadas': regla['prohibidas_detectadas'],
             'sinonimos_detectados': regla['sinonimos_detectados'],
             'evidencia_ia': evaluacion_ia.get('evidencia', '') if evaluacion_ia else '',
+            'fuente_evidencia': fuente_evidencia,
             'retroalimentacion': _retroalimentacion_concepto(
                 concepto,
                 cumple,
@@ -732,9 +1041,14 @@ def evaluar_conceptos_esperados(simulacion, numero_ronda, decision, justificacio
             'impacto': impacto_concepto,
         })
 
-    errores_impacto = validar_impacto(simulacion, impacto_total)
+    errores_impacto = validar_impacto(simulacion, impacto_total, configuracion_snapshot)
     if errores_impacto:
-        codigos = set(simulacion.indicadores.filter(activo=True).values_list('codigo', flat=True))
+        indicadores_snapshot = (configuracion_snapshot or {}).get('indicadores') or []
+        codigos = (
+            {item.get('codigo') for item in indicadores_snapshot}
+            if indicadores_snapshot else
+            set(simulacion.indicadores.filter(activo=True).values_list('codigo', flat=True))
+        )
         impacto_total = {k: v for k, v in impacto_total.items() if k in codigos}
 
     puntaje_sin_tope = max(0, min(100, puntaje_conceptos))
@@ -759,7 +1073,11 @@ def evaluar_conceptos_esperados(simulacion, numero_ronda, decision, justificacio
     rubrica_decision = evaluar_rubrica_decision(evaluaciones_decision)
     peso_decision = 0
     if rubrica_decision and conceptos:
-        peso_decision = max(0, min(100, int(getattr(simulacion, 'peso_rubrica_decision', 0) or 0)))
+        caso_snapshot = (configuracion_snapshot or {}).get('caso') or {}
+        peso_configurado = caso_snapshot.get(
+            'peso_rubrica_decision', getattr(simulacion, 'peso_rubrica_decision', 0),
+        )
+        peso_decision = max(0, min(100, int(peso_configurado or 0)))
         if peso_decision:
             proporcion = peso_decision / 100.0
             puntaje = round(puntaje * (1 - proporcion) + rubrica_decision['puntaje'] * proporcion, 2)
@@ -826,7 +1144,7 @@ def _retroalimentacion_concepto(concepto, cumple, retro_ia=''):
     return f'{accion} sobre: {concepto.nombre}.'
 
 
-def _resumen_impacto_indicadores(simulacion, impacto):
+def _resumen_impacto_indicadores(simulacion, impacto, estado_antes=None):
     if not impacto:
         return ''
     indicadores = {
@@ -838,10 +1156,12 @@ def _resumen_impacto_indicadores(simulacion, impacto):
         ind = indicadores.get(codigo)
         if not ind or not isinstance(delta, (int, float)):
             continue
-        es_bajo = ind.direccion_optima == ind.DIRECCION_BAJO
-        mejora = (delta < 0) if es_bajo else (delta > 0)
         signo = '+' if delta > 0 else ''
-        estado = 'mejora' if mejora else 'empeora'
+        previo = (estado_antes or {}).get(codigo)
+        mejora = indicador_mejora(
+            ind, previo, float(previo) + float(delta),
+        ) if isinstance(previo, (int, float)) else None
+        estado = 'mejora' if mejora is True else 'empeora' if mejora is False else 'cambio'
         partes.append(f'{ind.nombre} {signo}{round(float(delta), 2)} ({estado})')
     if not partes:
         return ''
@@ -859,23 +1179,18 @@ def _recomendacion_por_indicadores(simulacion, conceptos_faltantes):
     return f'Recomendación: refuerza "{conceptos}" usando evidencia del caso configurado.'
 
 
-def validar_restricciones(simulacion, estado):
+def validar_restricciones(simulacion, estado, configuracion_snapshot=None):
     alertas = []
-    for r in simulacion.restricciones.filter(activo=True):
+    congeladas = (configuracion_snapshot or {}).get('restricciones') or []
+    restricciones = (
+        [SimpleNamespace(**item) for item in congeladas]
+        if congeladas else simulacion.restricciones.filter(activo=True)
+    )
+    for r in restricciones:
         valor = estado.get(r.codigo_indicador)
         if valor is None:
             continue
-        incumple = False
-        if r.operador == '<':
-            incumple = not (float(valor) < float(r.valor_limite))
-        elif r.operador == '<=':
-            incumple = not (float(valor) <= float(r.valor_limite))
-        elif r.operador == '>':
-            incumple = not (float(valor) > float(r.valor_limite))
-        elif r.operador == '>=':
-            incumple = not (float(valor) >= float(r.valor_limite))
-        elif r.operador == '=':
-            incumple = not (float(valor) == float(r.valor_limite))
+        incumple = not cumple_operador(r.operador, valor, r.valor_limite)
         if incumple:
             alertas.append({
                 'descripcion': r.descripcion,
@@ -904,6 +1219,8 @@ def _magnitud_violacion(operador, limite, valor):
         return max(0.0, valor - limite)
     if operador in ('==', '='):
         return abs(valor - limite)
+    if operador == 'ABS<=':
+        return max(0.0, abs(valor) - abs(limite))
     return 0.0
 
 
@@ -928,17 +1245,7 @@ def validar_condiciones_exito(simulacion, estado):
         valor = estado.get(c.codigo_indicador)
         if valor is None:
             continue
-        cumple = False
-        if c.operador == '<':
-            cumple = float(valor) < float(c.valor_objetivo)
-        elif c.operador == '<=':
-            cumple = float(valor) <= float(c.valor_objetivo)
-        elif c.operador == '>':
-            cumple = float(valor) > float(c.valor_objetivo)
-        elif c.operador == '>=':
-            cumple = float(valor) >= float(c.valor_objetivo)
-        elif c.operador == '=':
-            cumple = float(valor) == float(c.valor_objetivo)
+        cumple = cumple_operador(c.operador, valor, c.valor_objetivo)
         if cumple:
             cumplidas.append({
                 'descripcion': c.descripcion,
@@ -959,29 +1266,6 @@ def calcular_puntaje_paso(puntaje_ia_sugerido, penalizacion):
     return max(0, min(100, puntaje))
 
 
-def impacto_automatico(simulacion, puntaje, estado_antes=None):
-    """La empresa reacciona a la calidad de la decision cuando el docente no
-    configuro impactos: una buena decision (puntaje alto) mueve cada indicador
-    hacia su direccion optima; una mala lo aleja. Neutral en 50.
-    Mueve hasta ~12% del rango por ronda para que se sienta vivo pero gradual."""
-    factor = (float(puntaje) - 50.0) / 50.0  # -1 .. +1
-    if abs(factor) < 0.05:
-        return {}
-    estado_antes = estado_antes or {}
-    impacto = {}
-    for ind in simulacion.indicadores.filter(activo=True):
-        rango = float(ind.valor_maximo) - float(ind.valor_minimo)
-        if rango <= 0:
-            continue
-        magnitud = rango * 0.12 * factor
-        if ind.direccion_optima == ind.DIRECCION_BAJO:
-            magnitud = -magnitud
-        magnitud = round(magnitud, 2)
-        if magnitud:
-            impacto[ind.codigo] = magnitud
-    return impacto
-
-
 def _hubo_movimiento(antes, despues):
     """True si algun indicador cambio entre el estado anterior y el nuevo."""
     antes = antes or {}
@@ -991,6 +1275,19 @@ def _hubo_movimiento(antes, despues):
             if round(float(valor), 3) != round(float(prev), 3):
                 return True
     return False
+
+
+def _delta_estados(antes, despues):
+    cambios = {}
+    for codigo in set((antes or {}).keys()) | set((despues or {}).keys()):
+        previo = (antes or {}).get(codigo)
+        actual = (despues or {}).get(codigo)
+        if not isinstance(previo, (int, float)) or not isinstance(actual, (int, float)):
+            continue
+        delta = round(float(actual) - float(previo), 2)
+        if delta:
+            cambios[codigo] = delta
+    return cambios
 
 
 def normalizar_pronostico(pronostico=None):
@@ -1063,10 +1360,7 @@ def evaluar_tradeoff(simulacion, tradeoff_aceptado, estado_antes, estado_despues
         delta = round(float(despues) - float(antes), 2)
         if delta == 0:
             continue
-        mejora = (
-            delta > 0 if ind.direccion_optima == ind.DIRECCION_ALTO
-            else delta < 0
-        )
+        mejora = indicador_mejora(ind, antes, despues)
         item = {
             'tipo': 'indicador',
             'codigo': codigo,
@@ -1075,9 +1369,9 @@ def evaluar_tradeoff(simulacion, tradeoff_aceptado, estado_antes, estado_despues
             'despues': float(despues),
             'delta': delta,
         }
-        if mejora:
+        if mejora is True:
             ganancias.append(item)
-        else:
+        elif mejora is False:
             sacrificios.append(item)
 
     for codigo, rec in recursos.items():
@@ -1131,13 +1425,10 @@ def _cumple_condicion(estado, cond):
         return False
     v, limite = float(valor), float(cond.get('valor', 0))
     op = cond.get('operador', '<')
-    return {
-        '<': v < limite, '<=': v <= limite, '>': v > limite,
-        '>=': v >= limite, '=': v == limite,
-    }.get(op, False)
+    return cumple_operador(op, v, limite)
 
 
-def aplicar_eventos(simulacion, estado_despues, ronda_actual):
+def aplicar_eventos(simulacion, estado_despues, ronda_actual, configuracion_snapshot=None):
     """Fase B - eventos dinamicos.
 
     Lee eventos desde la tabla EventoSimulacion. Si la simulacion aun no tiene
@@ -1146,30 +1437,53 @@ def aplicar_eventos(simulacion, estado_despues, ronda_actual):
     Se dispara si coincide la ronda (o no se especifica) y se cumple la condicion sobre
     el estado (o no hay), UNA sola vez por intento (se rastrea en estado['__eventos__'])."""
     eventos = []
-    try:
-        for evento in simulacion.eventos.filter(activo=True).order_by('prioridad', 'ronda', 'nombre'):
+    congelados = (configuracion_snapshot or {}).get('eventos')
+    if congelados is not None:
+        for evento in congelados:
             condicion = None
-            if evento.codigo_indicador_condicion and evento.valor_condicion is not None:
+            if evento.get('codigo_indicador_condicion') and evento.get('valor_condicion') is not None:
                 condicion = {
-                    'indicador': evento.codigo_indicador_condicion,
-                    'operador': evento.operador_condicion or '>=',
-                    'valor': float(evento.valor_condicion),
+                    'indicador': evento.get('codigo_indicador_condicion'),
+                    'operador': evento.get('operador_condicion') or '>=',
+                    'valor': float(evento.get('valor_condicion')),
                 }
             eventos.append({
-                'id': f'db:{evento.pk}',
-                'ronda': evento.ronda,
+                'id': f"db:{evento.get('id')}",
+                'ronda': evento.get('ronda'),
                 'condicion': condicion,
-                'mensaje': evento.mensaje,
-                'efecto': evento.efecto or {},
+                'mensaje': evento.get('mensaje', ''),
+                'efecto': evento.get('efecto') or {},
             })
-    except Exception:
-        eventos = []
+    else:
+        try:
+            for evento in simulacion.eventos.filter(activo=True).order_by('prioridad', 'ronda', 'nombre'):
+                condicion = None
+                if evento.codigo_indicador_condicion and evento.valor_condicion is not None:
+                    condicion = {
+                        'indicador': evento.codigo_indicador_condicion,
+                        'operador': evento.operador_condicion or '>=',
+                        'valor': float(evento.valor_condicion),
+                    }
+                eventos.append({
+                    'id': f'db:{evento.pk}',
+                    'ronda': evento.ronda,
+                    'condicion': condicion,
+                    'mensaje': evento.mensaje,
+                    'efecto': evento.efecto or {},
+                })
+        except Exception:
+            eventos = []
     if not eventos:
-        for idx, evento_json in enumerate((simulacion.parametros or {}).get('eventos') or []):
+        caso = (configuracion_snapshot or {}).get('caso') or {}
+        parametros = caso.get('parametros') if caso else simulacion.parametros
+        for idx, evento_json in enumerate((parametros or {}).get('eventos') or []):
             item = dict(evento_json or {})
             item['id'] = f'json:{item.get("id", idx)}'
             eventos.append(item)
     estado = dict(estado_despues or {})
+    modificables = indicadores_modificables_ronda(
+        simulacion, ronda_actual, configuracion_snapshot,
+    )
     if not eventos:
         return estado, []
     disparados = list(estado.get('__eventos__', []))
@@ -1184,7 +1498,10 @@ def aplicar_eventos(simulacion, estado_despues, ronda_actual):
         cond = ev.get('condicion')
         if cond and not _cumple_condicion(estado, cond):
             continue
-        efecto = {k: v for k, v in (ev.get('efecto') or {}).items() if isinstance(v, (int, float))}
+        efecto = {
+            k: v for k, v in (ev.get('efecto') or {}).items()
+            if isinstance(v, (int, float)) and k in modificables
+        }
         if efecto:
             estado = limitar_estado_por_min_max(simulacion, aplicar_impacto(estado, efecto))
         mensaje = str(ev.get('mensaje', '')).strip()
@@ -1204,8 +1521,6 @@ def calcular_promedio_pasos(intento):
 
 
 def _calcular_score_indicadores(simulacion, estado):
-    from simulador.models import IndicadorSimulacion
-
     indicadores = list(simulacion.indicadores.filter(activo=True))
     if not indicadores or not estado:
         return 50.0
@@ -1216,16 +1531,7 @@ def _calcular_score_indicadores(simulacion, estado):
         valor = estado.get(ind.codigo)
         if valor is None:
             continue
-        minimo = float(ind.valor_minimo)
-        maximo = float(ind.valor_maximo)
-        rango = maximo - minimo
-        if rango <= 0:
-            continue
-        posicion = (float(valor) - minimo) / rango
-        if ind.direccion_optima == IndicadorSimulacion.DIRECCION_BAJO:
-            score = (1 - posicion) * 100
-        else:
-            score = posicion * 100
+        score = desempeno_indicador(ind, valor)
         total += score
         count += 1
 
@@ -1233,15 +1539,7 @@ def _calcular_score_indicadores(simulacion, estado):
 
 
 def _calcular_desempeno_indicador(indicador, valor):
-    minimo = float(indicador.valor_minimo)
-    maximo = float(indicador.valor_maximo)
-    rango = maximo - minimo
-    if rango <= 0:
-        return 50.0
-    posicion = (float(valor) - minimo) / rango
-    if indicador.direccion_optima == indicador.DIRECCION_BAJO:
-        return (1 - posicion) * 100
-    return posicion * 100
+    return desempeno_indicador(indicador, valor)
 
 
 def calcular_puntaje_final(intento):
@@ -1275,6 +1573,30 @@ def calcular_bonificaciones(intento, pasos_validos=None):
         pasos_validos = list(intento.pasos.filter(es_valido=True))
     pasos = sorted(pasos_validos, key=lambda p: p.numero)
     detalle = []
+    caso = (intento.configuracion_snapshot or {}).get('caso') or {}
+    parametros = caso.get('parametros') if isinstance(caso, dict) else None
+    parametros = parametros if isinstance(parametros, dict) else (simulacion.parametros or {})
+    rondas_cfg = parametros.get('rondas') or []
+    claves_explicitas = {
+        clave: any(isinstance(r, dict) and clave in r for r in rondas_cfg)
+        for clave in ('pedir_pronostico', 'pedir_reflexion')
+    }
+
+    def solicita(paso, clave):
+        ronda = next(
+            (r for r in rondas_cfg if isinstance(r, dict) and r.get('numero') == paso.numero),
+            None,
+        )
+        if ronda is None and 0 <= paso.numero - 1 < len(rondas_cfg):
+            candidata = rondas_cfg[paso.numero - 1]
+            ronda = candidata if isinstance(candidata, dict) else {}
+        if claves_explicitas.get(clave):
+            return bool((ronda or {}).get(clave, False))
+        if clave == 'pedir_pronostico':
+            return any((p.pronostico_resultado or {}).get('estado') for p in pasos)
+        if clave == 'pedir_reflexion':
+            return any((p.reflexion or '').strip() for p in pasos)
+        return False
 
     def _bono(clave, etiqueta, tope, logrados, total, explicacion):
         tope = int(tope or 0)
@@ -1287,21 +1609,22 @@ def calcular_bonificaciones(intento, pasos_validos=None):
         })
         return puntos
 
+    pasos_pronostico = [p for p in pasos if solicita(p, 'pedir_pronostico')]
     aciertos = sum(
         1 for p in pasos
-        if (p.pronostico_resultado or {}).get('estado') == 'acierto'
+        if p in pasos_pronostico and (p.pronostico_resultado or {}).get('estado') == 'acierto'
     )
-    con_pronostico = sum(1 for p in pasos if (p.pronostico_resultado or {}).get('estado'))
     total_pronostico = _bono(
         'pronostico', 'Pronostico acertado', getattr(simulacion, 'bonus_pronostico', 0),
-        aciertos, con_pronostico or len(pasos),
+        aciertos, len(pasos_pronostico),
         'Anticipaste hacia donde se moveria el indicador antes de decidir.',
     )
 
-    reflexiones = sum(1 for p in pasos if (p.reflexion or '').strip())
+    pasos_reflexion = [p for p in pasos if solicita(p, 'pedir_reflexion')]
+    reflexiones = sum(1 for p in pasos_reflexion if (p.reflexion or '').strip())
     total_reflexion = _bono(
         'reflexion', 'Reflexion despues de decidir', getattr(simulacion, 'bonus_reflexion', 0),
-        reflexiones, len(pasos),
+        reflexiones, len(pasos_reflexion),
         'Explicaste por que reacciono asi la empresa y que cambiarias.',
     )
 
@@ -1336,8 +1659,6 @@ def obtener_nivel_resultado(puntaje):
 
 
 def generar_retroalimentacion_final(simulacion, estado, promedio):
-    from simulador.models import IndicadorSimulacion
-
     indicadores = {
         indicador.codigo: indicador
         for indicador in simulacion.indicadores.filter(activo=True)
@@ -1351,16 +1672,7 @@ def generar_retroalimentacion_final(simulacion, estado, promedio):
         if indicador is None:
             continue
         nombre = indicador.nombre or clave
-        minimo = float(indicador.valor_minimo)
-        maximo = float(indicador.valor_maximo)
-        rango = maximo - minimo
-        if rango <= 0:
-            continue
-        posicion = (float(valor) - minimo) / rango
-        if indicador.direccion_optima == IndicadorSimulacion.DIRECCION_BAJO:
-            desempeno = 1 - posicion
-        else:
-            desempeno = posicion
+        desempeno = desempeno_indicador(indicador, valor) / 100
         if desempeno >= 0.7:
             fortalezas.append(f'{nombre} en buen nivel ({valor})')
         elif desempeno <= 0.3:
@@ -1375,20 +1687,71 @@ def generar_retroalimentacion_final(simulacion, estado, promedio):
 
 
 def generar_debriefing_final(intento):
-    estado_inicial = construir_estado_inicial(intento.simulacion)
+    snapshot = intento.configuracion_snapshot or {}
+    caso_snapshot = snapshot.get('caso') or {}
+    indicadores_cfg = snapshot.get('indicadores') or []
+    if indicadores_cfg:
+        estado_inicial = {
+            item['codigo']: float(item.get('valor_inicial', 0))
+            for item in indicadores_cfg
+        }
+        metadatos = {item['codigo']: item for item in indicadores_cfg}
+    else:
+        estado_inicial = construir_estado_inicial(intento.simulacion)
+        metadatos = {
+            item.codigo: {'nombre': item.nombre, 'unidad': item.unidad}
+            for item in intento.simulacion.indicadores.filter(activo=True)
+        }
     estado_final = intento.estado_actual or {}
     cambios = []
     for clave in estado_inicial:
         inicial = estado_inicial.get(clave, 0)
         final = estado_final.get(clave, 0)
-        diff = float(final) - float(inicial)
+        try:
+            inicial_d = Decimal(str(inicial)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            final_d = Decimal(str(final)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except (InvalidOperation, TypeError, ValueError):
+            continue
+        diff = (final_d - inicial_d).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        meta = metadatos.get(clave, {})
+        nombre = meta.get('nombre') or clave.replace('_', ' ').title()
+        unidad = meta.get('unidad') or ''
+        def legible(numero):
+            texto = f'{numero:.2f}'.replace('.', ',')
+            return f'{texto} {unidad}'.strip()
         if diff > 0:
-            cambios.append(f'{clave}: {inicial} -> {final} (+{diff})')
+            cambios.append(f'{nombre}: {legible(inicial_d)} → {legible(final_d)} (+{legible(diff)})')
         elif diff < 0:
-            cambios.append(f'{clave}: {inicial} -> {final} ({diff})')
+            cambios.append(f'{nombre}: {legible(inicial_d)} → {legible(final_d)} ({legible(diff)})')
         else:
-            cambios.append(f'{clave}: {inicial} (sin cambios)')
+            cambios.append(f'{nombre}: {legible(inicial_d)} (sin cambios)')
     restricciones = sum(1 for p in intento.pasos.all() if p.alertas_restricciones)
+    condiciones = snapshot.get('condiciones_exito') or []
+    restricciones_finales = snapshot.get('restricciones') or []
+    metas_evaluadas = [
+        c for c in condiciones
+        if isinstance(estado_final.get(c.get('codigo_indicador')), (int, float))
+    ]
+    metas_logradas = sum(
+        1 for c in metas_evaluadas
+        if cumple_operador(
+            c.get('operador', '='),
+            estado_final.get(c.get('codigo_indicador')),
+            c.get('valor_objetivo', 0),
+        )
+    )
+    limites_evaluados = [
+        r for r in restricciones_finales
+        if isinstance(estado_final.get(r.get('codigo_indicador')), (int, float))
+    ]
+    limites_cumplidos = sum(
+        1 for r in limites_evaluados
+        if cumple_operador(
+            r.get('operador', '='),
+            estado_final.get(r.get('codigo_indicador')),
+            r.get('valor_limite', 0),
+        )
+    )
     rondas_validas = intento.pasos.filter(es_valido=True).count()
     intentos_invalidos = intento.pasos.filter(es_valido=False).count()
     partes = []
@@ -1402,18 +1765,23 @@ def generar_debriefing_final(intento):
         partes += ['=== QUE APRENDISTE ===', reflexivo, '']
     partes += [
         f'=== RESUMEN ===',
-        f'Simulacion: {intento.simulacion.titulo}',
+        f'Simulacion: {caso_snapshot.get("titulo", intento.simulacion.titulo)}',
         f'Estudiante: {intento.estudiante.get_full_name() or intento.estudiante.username}',
         f'Puntaje final: {intento.puntuacion_final} - {obtener_nivel_resultado(float(intento.puntuacion_final))}',
         f'Rondas validas completadas: {rondas_validas}',
         f'Intentos invalidos: {intentos_invalidos}',
-        f'Restricciones incumplidas en {restricciones} paso(s).',
+        f'Restricciones operativas incumplidas en {restricciones} paso(s).',
+        (
+            f'Metas finales logradas: {metas_logradas} de {len(metas_evaluadas)}.'
+            if metas_evaluadas else 'Metas finales configuradas: ninguna.'
+        ),
+        (
+            f'Limites tecnicos finales cumplidos: {limites_cumplidos} de {len(limites_evaluados)}.'
+            if limites_evaluados else 'Limites tecnicos finales configurados: ninguno.'
+        ),
         f'',
         f'Evolucion de indicadores:',
-    ] + [f'  {c}' for c in cambios] + [
-        f'',
-        f'Retroalimentacion: {intento.retroalimentacion_final}',
-    ]
+    ] + [f'  {c}' for c in cambios]
     if intentos_invalidos > 0:
         partes.append(
             'Recomendacion: revisa las respuestas invalidas y vuelve a plantear decisiones concretas con justificacion tecnica.'
@@ -1427,7 +1795,9 @@ def finalizar_intento(intento):
     intento.retroalimentacion_final = generar_retroalimentacion_final(
         intento.simulacion, intento.estado_actual, float(intento.puntuacion_final),
     )
-    intento.debriefing_final = generar_debriefing_final(intento)
+    intento.debriefing_final = re.sub(
+        r'\*\*(.*?)\*\*', r'\1', generar_debriefing_final(intento), flags=re.DOTALL,
+    ).replace('### ', '').replace('## ', '')
     intento.finalizado = True
     intento.fecha_fin = timezone.now()
     intento.save(update_fields=[
@@ -1506,7 +1876,18 @@ def registrar_resultado_juego(intento):
     insignias.add('primera_mision')
     if nota >= 70:
         insignias.add('mision_aprobada')
-    if nota >= 90:
+    salud = _calcular_score_indicadores(intento.simulacion, intento.estado_actual or {})
+    condiciones = list(intento.simulacion.condiciones_exito.filter(activo=True))
+    metas_cumplidas = bool(condiciones) and all(
+        isinstance((intento.estado_actual or {}).get(c.codigo_indicador), (int, float))
+        and cumple_operador(
+            c.operador,
+            (intento.estado_actual or {}).get(c.codigo_indicador),
+            c.valor_objetivo,
+        )
+        for c in condiciones
+    )
+    if nota >= 90 and salud >= 80 and metas_cumplidas:
         insignias.add('maestria')
     if perfil.racha_actual >= 3:
         insignias.add('racha_imparable')
@@ -1525,11 +1906,19 @@ def registrar_resultado_juego(intento):
     return perfil
 
 
-def situacion_de_ronda(simulacion, numero_ronda):
-    rondas = (simulacion.parametros or {}).get('rondas') or []
-    indice = numero_ronda - 1
-    if 0 <= indice < len(rondas):
-        valor = rondas[indice]
+def situacion_de_ronda(simulacion, numero_ronda, configuracion_snapshot=None):
+    caso = (configuracion_snapshot or {}).get('caso') or {}
+    parametros = caso.get('parametros') if isinstance(caso, dict) else None
+    parametros = parametros if isinstance(parametros, dict) else (simulacion.parametros or {})
+    rondas = parametros.get('rondas') or []
+    valor = next(
+        (item for item in rondas if isinstance(item, dict) and item.get('numero') == numero_ronda),
+        None,
+    )
+    if valor is None:
+        indice = numero_ronda - 1
+        valor = rondas[indice] if 0 <= indice < len(rondas) else None
+    if valor is not None:
         if isinstance(valor, dict):
             situacion = valor.get('situacion') or valor.get('enunciado') or ''
             titulo = valor.get('titulo') or ''
@@ -1538,6 +1927,14 @@ def situacion_de_ronda(simulacion, numero_ronda):
             return '\n\n'.join(partes)
         return str(valor)
     return ''
+
+
+def maximo_decisiones_intento(intento):
+    caso = (intento.configuracion_snapshot or {}).get('caso') or {}
+    try:
+        return int(caso.get('maximo_decisiones') or intento.simulacion.maximo_decisiones)
+    except (TypeError, ValueError):
+        return intento.simulacion.maximo_decisiones
 
 
 def obtener_escenario_inicial(simulacion):
@@ -1552,9 +1949,15 @@ def ejecutar_decision_arbol(intento, decision, pronostico=None, tradeoff_aceptad
     recursos_antes = dict(intento.recursos_actuales or {})
     impacto = dict(decision.impacto or {})
     estado_despues = aplicar_impacto(estado_antes, impacto)
-    estado_despues = limitar_estado_por_min_max(intento.simulacion, estado_despues)
-    recursos_despues = limitar_recursos_por_min_max(intento.simulacion, recursos_antes)
-    alertas = validar_restricciones(intento.simulacion, estado_despues)
+    estado_despues = limitar_estado_por_min_max(
+        intento.simulacion, estado_despues, intento.configuracion_snapshot,
+    )
+    recursos_despues = limitar_recursos_por_min_max(
+        intento.simulacion, recursos_antes, intento.configuracion_snapshot,
+    )
+    alertas = validar_restricciones(
+        intento.simulacion, estado_despues, intento.configuracion_snapshot,
+    )
     penalizacion = calcular_penalizaciones(alertas)
     puntaje_paso = calcular_puntaje_paso(float(decision.puntaje_base), penalizacion)
     pronostico = normalizar_pronostico(pronostico)
@@ -1625,14 +2028,104 @@ def ejecutar_decision_arbol(intento, decision, pronostico=None, tradeoff_aceptad
     return paso
 
 
+def _registrar_paso_invalido_dinamico(
+    intento, decision, justificacion, situacion_actual, estado_antes, recursos_antes,
+    validacion, pronostico, tradeoff_aceptado, auditoria=None,
+):
+    """Registra un rechazo sin aplicar impactos ni avanzar como ronda válida."""
+    auditoria = auditoria or {}
+    puntaje_sugerido = max(0, min(100, float(validacion.get('puntaje_maximo', 0))))
+    detalle = dict(auditoria.get('evaluacion_detalle') or {})
+    detalle.update({
+        'tipo': 'validacion',
+        'valida': False,
+        'motivo': validacion['motivo'],
+        'tipo_error': validacion['tipo_error'],
+        'puntaje_maximo': validacion.get('puntaje_maximo', 0),
+    })
+    paso = intento.pasos.create(
+        numero=intento.pasos.count() + 1,
+        es_valido=False,
+        tipo_paso='INVALIDO',
+        situacion_presentada=situacion_actual,
+        decision_estudiante=decision,
+        justificacion_estudiante=justificacion,
+        evaluacion_ia=validacion['motivo'],
+        evaluacion_detalle=detalle,
+        respuesta_ia_estructurada=auditoria.get('respuesta_ia_estructurada') or {},
+        modelo_ia=auditoria.get('modelo_ia', ''),
+        api_ia=auditoria.get('api_ia', ''),
+        prompt_version=auditoria.get('prompt_version', ''),
+        esquema_ia_version=auditoria.get('esquema_ia_version', ''),
+        tokens_entrada=int(auditoria.get('tokens_entrada') or 0),
+        tokens_salida=int(auditoria.get('tokens_salida') or 0),
+        prompt_ia_enviado=auditoria.get('prompt_ia_enviado', ''),
+        impacto_calculado={},
+        estado_antes=estado_antes,
+        estado_despues=dict(estado_antes),
+        costo_recursos={},
+        recursos_antes=recursos_antes,
+        recursos_despues=dict(recursos_antes),
+        puntaje_ia_sugerido=puntaje_sugerido,
+        puntaje_paso=puntaje_sugerido,
+        alertas_restricciones=[],
+        penalizacion_aplicada=0,
+        siguiente_situacion=situacion_actual,
+        pronostico_indicador=pronostico['indicador'],
+        pronostico_direccion=pronostico['direccion'],
+        pronostico_justificacion=pronostico['justificacion'],
+        pronostico_resultado=(
+            {
+                'estado': 'sin_aplicar',
+                'mensaje': 'No se comparo el pronostico porque la jugada no fue valida.',
+            }
+            if pronostico.get('indicador') else {}
+        ),
+        tradeoff_aceptado=tradeoff_aceptado,
+        tradeoff_resultado=(
+            {
+                'estado': 'sin_aplicar',
+                'mensaje': 'No se analizo el trade-off porque la jugada no fue valida.',
+                'aceptado': tradeoff_aceptado,
+                'ganancias': [],
+                'sacrificios': [],
+            }
+            if tradeoff_aceptado else {}
+        ),
+    )
+    ronda_actual = intento.numero_ronda_actual
+    intento.intentos_invalidos_actuales += 1
+    update_fields = ['intentos_invalidos_actuales']
+    if intento.intentos_invalidos_actuales >= intento.max_intentos_invalidos_por_ronda:
+        intento.numero_ronda_actual = ronda_actual + 1
+        intento.intentos_invalidos_actuales = 0
+        siguiente_configurada = situacion_de_ronda(
+            intento.simulacion, intento.numero_ronda_actual, intento.configuracion_snapshot,
+        )
+        intento.situacion_actual = siguiente_configurada or (
+            f'Ronda {intento.numero_ronda_actual}: Se agotaron los intentos de la ronda anterior. '
+            f'Replantea la solucion con una decision concreta, conceptos tecnicos y justificacion.'
+        )
+        update_fields.extend(['numero_ronda_actual', 'situacion_actual'])
+        if ronda_actual >= maximo_decisiones_intento(intento):
+            intento.save(update_fields=update_fields)
+            finalizar_intento(intento)
+            return paso
+    intento.save(update_fields=update_fields)
+    return paso
+
+
 def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pronostico=None, tradeoff_aceptado=''):
     # Modo hibrido: si el estudiante ELIGIO una decision (accion), su texto se
     # suma a la decision (la IA evalua la justificacion) y su impacto_base es la
     # CONSECUENCIA real sobre los indicadores. Si no elige, es texto libre.
+    decision_escrita = (decision or '').strip()
     accion_impacto = {}
     accion_costo = {}
     if accion is not None:
-        decision = (f'{accion.texto}. {decision}').strip() if decision else accion.texto
+        texto_accion = getattr(accion, 'texto_visible', accion.texto)
+        descripcion_accion = getattr(accion, 'descripcion_visible', accion.descripcion)
+        decision = (f'{texto_accion}. {decision}').strip() if decision else texto_accion
         accion_impacto = {k: v for k, v in (accion.impacto_base or {}).items() if isinstance(v, (int, float))}
         accion_costo = dict(getattr(accion, 'costo_recursos', {}) or {})
     estado_antes = dict(intento.estado_actual or {})
@@ -1641,107 +2134,173 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
     tradeoff_aceptado = (tradeoff_aceptado or '').strip()[:1000]
     numero = intento.pasos.count() + 1
     ronda_actual = intento.numero_ronda_actual
-    situacion_actual = intento.situacion_actual or intento.simulacion.situacion_inicial or intento.simulacion.contexto
+    reglas_respuesta = configuracion_respuesta_ronda(
+        intento.simulacion, ronda_actual, intento.configuracion_snapshot,
+    )
+    caso_snapshot = (intento.configuracion_snapshot or {}).get('caso') or {}
+    situacion_actual = (
+        intento.situacion_actual
+        or caso_snapshot.get('situacion_inicial')
+        or caso_snapshot.get('contexto')
+        or intento.simulacion.situacion_inicial
+        or intento.simulacion.contexto
+    )
+    if reglas_respuesta['pronostico_obligatorio'] and not (
+        pronostico.get('indicador') and pronostico.get('direccion')
+    ):
+        return _registrar_paso_invalido_dinamico(
+            intento, decision, justificacion, situacion_actual, estado_antes,
+            recursos_antes,
+            _resultado_validacion(
+                False, 'Selecciona el indicador y la dirección de tu pronóstico.', 0,
+                TIPO_ERROR_PRONOSTICO_REQUERIDO,
+            ),
+            pronostico, tradeoff_aceptado,
+        )
+    if reglas_respuesta['tradeoff_obligatorio'] and len(tradeoff_aceptado) < 8:
+        return _registrar_paso_invalido_dinamico(
+            intento, decision, justificacion, situacion_actual, estado_antes,
+            recursos_antes,
+            _resultado_validacion(
+                False, 'Explica brevemente qué costo, riesgo o sacrificio aceptas.', 0,
+                TIPO_ERROR_TRADEOFF_REQUERIDO,
+            ),
+            pronostico, tradeoff_aceptado,
+        )
+    if accion is not None and not accion_habilitada_por_historial(intento, accion):
+        return _registrar_paso_invalido_dinamico(
+            intento, decision, justificacion, situacion_actual, estado_antes,
+            recursos_antes,
+            _resultado_validacion(
+                False,
+                'Esta opción no corresponde a la estrategia elegida anteriormente.',
+                0,
+                TIPO_ERROR_ACCION_NO_DISPONIBLE,
+            ),
+            pronostico,
+            tradeoff_aceptado,
+        )
     validacion = validar_respuesta_estudiante(
         decision,
         justificacion,
         simulacion=intento.simulacion,
         situacion_actual=situacion_actual,
+        requerir_justificacion=justificacion_obligatoria(
+            intento.simulacion, ronda_actual, intento.configuracion_snapshot,
+        ),
+        minimo_justificacion=reglas_respuesta['minimo_justificacion'],
     )
 
     if not validacion['valida']:
-        puntaje_sugerido = max(0, min(100, float(validacion['puntaje_maximo'])))
-        paso = intento.pasos.create(
-            numero=numero,
-            es_valido=False,
-            tipo_paso='INVALIDO',
-            situacion_presentada=situacion_actual,
-            decision_estudiante=decision,
-            justificacion_estudiante=justificacion,
-            evaluacion_ia=validacion['motivo'],
-            evaluacion_detalle={
-                'tipo': 'validacion',
-                'valida': False,
-                'motivo': validacion['motivo'],
-                'tipo_error': validacion['tipo_error'],
-                'puntaje_maximo': validacion['puntaje_maximo'],
-            },
-            impacto_calculado={},
-            estado_antes=estado_antes,
-            estado_despues=dict(estado_antes),
-            costo_recursos={},
-            recursos_antes=recursos_antes,
-            recursos_despues=dict(recursos_antes),
-            puntaje_ia_sugerido=puntaje_sugerido,
-            puntaje_paso=puntaje_sugerido,
-            alertas_restricciones=[],
-            penalizacion_aplicada=0,
-            siguiente_situacion=situacion_actual,
-            pronostico_indicador=pronostico['indicador'],
-            pronostico_direccion=pronostico['direccion'],
-            pronostico_justificacion=pronostico['justificacion'],
-            pronostico_resultado=(
-                {
-                    'estado': 'sin_aplicar',
-                    'mensaje': 'No se comparo el pronostico porque la jugada no fue valida.',
-                }
-                if pronostico.get('indicador') else {}
-            ),
-            tradeoff_aceptado=tradeoff_aceptado,
-            tradeoff_resultado=(
-                {
-                    'estado': 'sin_aplicar',
-                    'mensaje': 'No se analizo el trade-off porque la jugada no fue valida.',
-                    'aceptado': tradeoff_aceptado,
-                    'ganancias': [],
-                    'sacrificios': [],
-                }
-                if tradeoff_aceptado else {}
-            ),
+        return _registrar_paso_invalido_dinamico(
+            intento, decision, justificacion, situacion_actual, estado_antes,
+            recursos_antes, validacion, pronostico, tradeoff_aceptado,
         )
-        intento.intentos_invalidos_actuales += 1
-        update_fields = ['intentos_invalidos_actuales']
-
-        if intento.intentos_invalidos_actuales >= intento.max_intentos_invalidos_por_ronda:
-            intento.numero_ronda_actual = ronda_actual + 1
-            intento.intentos_invalidos_actuales = 0
-            siguiente_configurada = situacion_de_ronda(intento.simulacion, intento.numero_ronda_actual)
-            intento.situacion_actual = siguiente_configurada or (
-                f'Ronda {intento.numero_ronda_actual}: Se agotaron los intentos de la ronda anterior. '
-                f'Replantea la solucion con una decision concreta, conceptos tecnicos y justificacion.'
-            )
-            update_fields.extend(['numero_ronda_actual', 'situacion_actual'])
-            if ronda_actual >= intento.simulacion.maximo_decisiones:
-                intento.save(update_fields=update_fields)
-                finalizar_intento(intento)
-                return paso
-
-        intento.save(update_fields=update_fields)
-        return paso
     else:
+        if accion is not None and reglas_respuesta['bloquear_contradiccion']:
+            contradiccion_local = detectar_contradiccion_explicita(texto_accion, justificacion)
+            if contradiccion_local:
+                return _registrar_paso_invalido_dinamico(
+                    intento, decision, justificacion, situacion_actual, estado_antes,
+                    recursos_antes,
+                    _resultado_validacion(
+                        False,
+                        f'{contradiccion_local} Revisa tu respuesta antes de continuar.',
+                        0,
+                        TIPO_ERROR_CONTRADICCION,
+                    ),
+                    pronostico,
+                    tradeoff_aceptado,
+                    auditoria={'evaluacion_detalle': {
+                        'decision_justificacion_coherentes': False,
+                        'coherencia_motivo': contradiccion_local,
+                        'seleccion_registrada': {
+                            'accion_id': getattr(accion, 'pk', None),
+                            'nombre': texto_accion,
+                            'descripcion': descripcion_accion,
+                            'ronda': ronda_actual,
+                            'respuesta_adicional': decision_escrita,
+                        },
+                    }},
+                )
         from simulador.ia_service import orden_proveedores, evaluar_ronda_con_proveedores
 
         if orden_proveedores():
             # Intenta OpenAI y/o DeepSeek (segun configuracion); si todos fallan
             # (sin cuota/timeout) cae a la rubrica local.
             try:
-                respuesta = evaluar_ronda_con_proveedores(intento, decision, justificacion)
+                respuesta = evaluar_ronda_con_proveedores(
+                    intento, decision, justificacion,
+                    opcion_predefinida=getattr(accion, 'texto_visible', accion.texto) if accion is not None else '',
+                    pronostico=pronostico,
+                    tradeoff_aceptado=tradeoff_aceptado,
+                )
                 detalle = respuesta.get('evaluacion_detalle') or {}
                 detalle.setdefault('tipo', 'ia_rubrica_docente')
                 respuesta['evaluacion_detalle'] = detalle
             except Exception as e:
-                respuesta = _fallback_conceptos_o_mock(intento, ronda_actual, decision, justificacion, situacion_actual)
+                respuesta = _fallback_conceptos_o_mock(
+                    intento, ronda_actual, decision, justificacion, situacion_actual,
+                    opcion_predefinida=bool(accion),
+                    fuentes_evaluacion=reglas_respuesta['fuentes_evaluacion'],
+                    pronostico=pronostico, tradeoff_aceptado=tradeoff_aceptado,
+                )
                 detalle = respuesta.get('evaluacion_detalle') or {}
                 detalle['error_ia'] = str(e)
                 respuesta['evaluacion_detalle'] = detalle
         else:
-            respuesta = _fallback_conceptos_o_mock(intento, ronda_actual, decision, justificacion, situacion_actual)
+            respuesta = _fallback_conceptos_o_mock(
+                intento, ronda_actual, decision, justificacion, situacion_actual,
+                opcion_predefinida=bool(accion),
+                fuentes_evaluacion=reglas_respuesta['fuentes_evaluacion'],
+                pronostico=pronostico, tradeoff_aceptado=tradeoff_aceptado,
+            )
+
+        detalle_coherencia = respuesta.get('evaluacion_detalle') or {}
+        if (
+            accion is not None
+            and reglas_respuesta['bloquear_contradiccion']
+            and detalle_coherencia.get('decision_justificacion_coherentes') is False
+        ):
+            motivo = (
+                detalle_coherencia.get('coherencia_motivo')
+                or 'La explicación desarrolla una acción distinta de la opción seleccionada.'
+            )
+            detalle_coherencia['seleccion_registrada'] = {
+                'accion_id': getattr(accion, 'pk', None),
+                'nombre': texto_accion,
+                'descripcion': descripcion_accion,
+                'ronda': ronda_actual,
+                'respuesta_adicional': decision_escrita,
+            }
+            respuesta['evaluacion_detalle'] = detalle_coherencia
+            return _registrar_paso_invalido_dinamico(
+                intento, decision, justificacion, situacion_actual, estado_antes,
+                recursos_antes,
+                _resultado_validacion(
+                    False,
+                    f'La decisión seleccionada contradice la explicación: {motivo} '
+                    'Revisa tu respuesta antes de continuar.',
+                    0,
+                    TIPO_ERROR_CONTRADICCION,
+                ),
+                pronostico,
+                tradeoff_aceptado,
+                auditoria=respuesta,
+            )
 
         from simulador.services.motor_dinamico import aplicar_opcion_dinamica
+        caso_snapshot = (intento.configuracion_snapshot or {}).get('caso') or {}
+        parametros_snapshot = caso_snapshot.get('parametros') if isinstance(caso_snapshot, dict) else None
         estado_motor, impacto_motor, opcion_detectada, confianza_opcion = aplicar_opcion_dinamica(
             intento.simulacion, estado_antes, decision, justificacion, ronda_actual,
+            parametros_snapshot,
         )
-        accion_detectada = accion or detectar_accion_sugerida(intento.simulacion, decision)
+        accion_detectada = accion or detectar_accion_sugerida(
+            intento.simulacion, decision, intento.configuracion_snapshot,
+        )
+        if accion_detectada and not accion_habilitada_por_historial(intento, accion_detectada):
+            accion_detectada = None
         impacto_accion = {}
         costo_recursos = {}
         if accion_detectada:
@@ -1757,7 +2316,7 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
             costo_recursos = _costos_numericos(accion_costo)
 
         impacto = respuesta.get('impacto_sugerido', {})
-        errores_impacto = validar_impacto(intento.simulacion, impacto)
+        errores_impacto = validar_impacto(intento.simulacion, impacto, intento.configuracion_snapshot)
         if errores_impacto:
             impacto = {}
 
@@ -1765,24 +2324,31 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
             impacto = {**impacto, **impacto_motor}
         if impacto_accion:
             impacto = {**impacto, **impacto_accion}
+        modificables = indicadores_modificables_ronda(
+            intento.simulacion, ronda_actual, intento.configuracion_snapshot,
+        )
+        impacto = {codigo: delta for codigo, delta in impacto.items() if codigo in modificables}
         puntaje_sugerido = max(0, min(100, float(respuesta.get('puntaje_sugerido', 0))))
-        estado_despues = estado_motor if impacto_motor else aplicar_impacto(estado_antes, impacto)
-        estado_despues = limitar_estado_por_min_max(intento.simulacion, estado_despues)
+        # El estado se deriva siempre del impacto ya filtrado por fase. Así una
+        # opción dinámica tampoco puede saltarse los indicadores congelados.
+        estado_despues = aplicar_impacto(estado_antes, impacto)
+        estado_despues = limitar_estado_por_min_max(
+            intento.simulacion, estado_despues, intento.configuracion_snapshot,
+        )
         recursos_despues = limitar_recursos_por_min_max(
             intento.simulacion,
             aplicar_costo_recursos(recursos_antes, costo_recursos),
+            intento.configuracion_snapshot,
         )
-        # Si la decision no movio ningun indicador (sin impactos configurados y el
-        # motor no detecto una opcion), la empresa reacciona a la CALIDAD de la
-        # decision, para que la simulacion se sienta viva ronda a ronda.
-        if not _hubo_movimiento(estado_antes, estado_despues):
-            impacto = impacto_automatico(intento.simulacion, puntaje_sugerido, estado_antes)
-            if impacto:
-                estado_despues = limitar_estado_por_min_max(
-                    intento.simulacion, aplicar_impacto(estado_antes, impacto))
+        estado_tras_decision = dict(estado_despues)
+        impacto_decision_real = _delta_estados(estado_antes, estado_tras_decision)
         # Fase B: eventos dinamicos -- la empresa reacciona con sucesos segun el
         # estado/ronda (un cliente cancela, aparece una crisis, etc.).
-        estado_despues, eventos_msgs = aplicar_eventos(intento.simulacion, estado_despues, ronda_actual)
+        estado_despues, eventos_msgs = aplicar_eventos(
+            intento.simulacion, estado_despues, ronda_actual, intento.configuracion_snapshot,
+        )
+        impacto_evento_real = _delta_estados(estado_tras_decision, estado_despues)
+        impacto_neto = _delta_estados(estado_antes, estado_despues)
         pronostico_resultado = evaluar_pronostico(pronostico, estado_antes, estado_despues)
         tradeoff_resultado = evaluar_tradeoff(
             intento.simulacion, tradeoff_aceptado, estado_antes, estado_despues,
@@ -1791,9 +2357,13 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
         # Solo se penaliza por indicadores que la decision del estudiante movio
         # este turno: no se castiga un estado inicial malo que el no causo. Ademas
         # se aplica un tope para que las restricciones nunca aplasten la nota.
-        alertas = validar_restricciones(intento.simulacion, estado_despues)
-        alertas_recursos = validar_recursos(intento.simulacion, recursos_despues)
-        indicadores_movidos = set(impacto.keys())
+        alertas = validar_restricciones(
+            intento.simulacion, estado_despues, intento.configuracion_snapshot,
+        )
+        alertas_recursos = validar_recursos(
+            intento.simulacion, recursos_despues, intento.configuracion_snapshot,
+        )
+        indicadores_movidos = set(impacto_neto.keys())
         # Solo se penaliza un indicador que el estudiante movio este turno Y que
         # NO acerco a cumplir su restriccion. Si lo mejoro (aunque siga fuera de
         # rango) va por buen camino: premiar el avance, no castigar el progreso.
@@ -1811,7 +2381,9 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
         if tope_calidad < 100:
             puntaje_paso = min(puntaje_paso, tope_calidad)
         evaluacion = respuesta.get('evaluacion', '')
-        resumen_impacto_real = _resumen_impacto_indicadores(intento.simulacion, impacto)
+        resumen_impacto_real = _resumen_impacto_indicadores(
+            intento.simulacion, impacto_neto, estado_antes,
+        )
         if resumen_impacto_real and resumen_impacto_real not in evaluacion:
             evaluacion = f'{evaluacion} Impacto real de la jugada: {resumen_impacto_real}'.strip()
         evaluacion_detalle = respuesta.get('evaluacion_detalle') or {
@@ -1819,6 +2391,24 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
             'puntaje_sugerido': puntaje_sugerido,
             'evaluacion': evaluacion,
         }
+        evaluacion_detalle.update({
+            'origen_impacto': (
+                'reglas_configuradas_reproducibles'
+                if impacto_neto else 'sin_consecuencia_configurada'
+            ),
+            'impacto_decision': impacto_decision_real,
+            'impacto_evento': impacto_evento_real,
+            'impacto_neto': impacto_neto,
+            'indicadores_modificables': sorted(modificables),
+        })
+        if accion is not None:
+            evaluacion_detalle['seleccion_registrada'] = {
+                'accion_id': getattr(accion, 'pk', None),
+                'nombre': texto_accion,
+                'descripcion': descripcion_accion,
+                'ronda': ronda_actual,
+                'respuesta_adicional': decision_escrita,
+            }
         if accion_detectada or costo_recursos or alertas_recursos:
             evaluacion_detalle = {
                 **evaluacion_detalle,
@@ -1834,6 +2424,7 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
         esquema_ia_version = respuesta.get('esquema_ia_version', '')
         tokens_entrada = int(respuesta.get('tokens_entrada') or 0)
         tokens_salida = int(respuesta.get('tokens_salida') or 0)
+        prompt_ia_enviado = respuesta.get('prompt_ia_enviado', '')
         siguiente_situacion = respuesta.get('siguiente_situacion') or situacion_actual
         finalizar = bool(respuesta.get('finalizar', False))
         if eventos_msgs:
@@ -1857,7 +2448,8 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
         esquema_ia_version=esquema_ia_version,
         tokens_entrada=tokens_entrada,
         tokens_salida=tokens_salida,
-        impacto_calculado=impacto,
+        prompt_ia_enviado=prompt_ia_enviado,
+        impacto_calculado=impacto_neto,
         estado_antes=estado_antes,
         estado_despues=estado_despues,
         costo_recursos=costo_recursos,
@@ -1886,7 +2478,7 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
         'intentos_invalidos_actuales',
     ])
 
-    if ronda_actual >= intento.simulacion.maximo_decisiones or finalizar:
+    if ronda_actual >= maximo_decisiones_intento(intento) or finalizar:
         finalizar_intento(intento)
 
     return paso
@@ -1915,13 +2507,27 @@ def _puntaje_fallback_justo(intento, decision, justificacion, situacion_actual, 
     return round(min(100.0, max(base, piso)), 2)
 
 
-def _fallback_conceptos_o_mock(intento, ronda_actual, decision, justificacion, situacion_actual):
+def _fallback_conceptos_o_mock(
+    intento, ronda_actual, decision, justificacion, situacion_actual,
+    opcion_predefinida=False, fuentes_evaluacion=None,
+    pronostico=None, tradeoff_aceptado='',
+):
+    fuentes = set(fuentes_evaluacion or ['decision', 'justificacion'])
+    decision_conceptos = decision if 'decision' in fuentes and not opcion_predefinida else ''
+    partes_justificacion = [justificacion] if 'justificacion' in fuentes else []
+    if 'pronostico' in fuentes and pronostico:
+        partes_justificacion.append(json.dumps(pronostico, ensure_ascii=False))
+    if 'tradeoff' in fuentes and tradeoff_aceptado:
+        partes_justificacion.append(tradeoff_aceptado)
+    justificacion_conceptos = ' '.join(partes_justificacion)
     evaluacion_conceptos = evaluar_conceptos_esperados(
         intento.simulacion,
         ronda_actual,
-        decision,
-        justificacion,
+        decision_conceptos,
+        justificacion_conceptos,
         situacion_actual,
+        configuracion_snapshot=intento.configuracion_snapshot,
+        opcion_predefinida=opcion_predefinida,
     )
     if evaluacion_conceptos['tiene_conceptos']:
         puntaje_justo = _puntaje_fallback_justo(
@@ -1940,13 +2546,17 @@ def _fallback_conceptos_o_mock(intento, ronda_actual, decision, justificacion, s
                 'puntaje_conceptos': evaluacion_conceptos['puntaje_conceptos'],
                 'puntaje_sin_tope': evaluacion_conceptos['puntaje_sin_tope'],
                 'tope_critico': evaluacion_conceptos['tope_critico'],
+                'metodo_evaluacion': evaluacion_conceptos['metodo_evaluacion'],
+                'opcion_predefinida': opcion_predefinida,
             },
             'impacto_sugerido': evaluacion_conceptos['impacto_sugerido'],
             'puntaje_sugerido': puntaje_justo,
             'siguiente_situacion': (
-                situacion_de_ronda(intento.simulacion, ronda_actual + 1)
+                situacion_de_ronda(
+                    intento.simulacion, ronda_actual + 1, intento.configuracion_snapshot,
+                )
                 or f'Ronda {ronda_actual + 1}: Continua el caso considerando los indicadores actualizados y los conceptos faltantes.'
-                if ronda_actual < intento.simulacion.maximo_decisiones else ''
+                if ronda_actual < maximo_decisiones_intento(intento) else ''
             ),
             'finalizar': False,
         }

@@ -59,7 +59,7 @@
                                     <span class="chip chip-media">Media</span>
                                 {% endif %}
                                 <span class="chip chip-soft">{{ sim.tiempo_estimado }} min</span>
-                                <span class="chip chip-soft">{{ sim.maximo_decisiones }} rondas</span>
+                                <span class="chip chip-soft">{{ sim.maximo_decisiones }} {% if sim.maximo_decisiones == 1 %}ronda{% else %}rondas{% endif %}</span>
                             </div>
                         </div>
                         <a class="btn btn-sm btn-primary sim-go" href="?action=iniciar&simulacion_id={{ sim.pk }}">Iniciar &rarr;</a>

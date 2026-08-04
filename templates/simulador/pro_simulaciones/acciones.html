@@ -27,8 +27,33 @@
                 {% csrf_token %}
                 {{ form.simulacion }}
                 <div class="mb-3">
+                    <label class="form-label" for="id_numero_ronda">Ronda en la que aparece</label>
+                    {{ form.numero_ronda }}
+                    <div class="form-text">Asigna opciones distintas a cada ronda. Usa “todas” solamente cuando la misma decisión tenga sentido durante todo el caso.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="id_opcion_caso">Alternativa visible vinculada (opcional)</label>
+                    {{ form.opcion_caso }}
+                    <div class="form-text">Si esta ronda elige un candidato, proveedor o producto de la tabla, selecciónalo aquí. El nombre se tomará de esa misma alternativa.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="id_requiere_accion_previa">Mostrar solo después de esta decisión (opcional)</label>
+                    {{ form.requiere_accion_previa }}
+                    <div class="form-text">Úsalo para planes condicionados: por ejemplo, mostrar “Integración gradual” únicamente si antes se eligió una adquisición.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="id_bloqueada_por_accion_previa">Ocultar después de esta decisión (opcional)</label>
+                    {{ form.bloqueada_por_accion_previa }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="id_maximo_ejecuciones">Máximo de ejecuciones por intento</label>
+                    {{ form.maximo_ejecuciones }}
+                    <div class="form-text">Usa 1 para evitar comprar, contratar o ejecutar la misma acción dos veces. Usa 0 solamente si debe poder repetirse.</div>
+                </div>
+                <div class="mb-3">
                     <label class="form-label" for="id_texto">Decision (lo que vera el estudiante)</label>
                     {{ form.texto }}
+                    <div class="form-text">Úsalo para decisiones que no provienen de la tabla de alternativas.</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label" for="id_descripcion">Descripcion / consecuencia (opcional)</label>
@@ -87,8 +112,13 @@
                 <div class="decision-item">
                     <div class="d-flex justify-content-between align-items-start gap-2">
                         <div>
-                            <div class="fw-semibold">{{ item.texto }}</div>
-                            {% if item.descripcion %}<div class="text-muted small">{{ item.descripcion }}</div>{% endif %}
+                            <div class="fw-semibold">{{ item.texto_visible }}</div>
+                            {% if item.opcion_caso %}<div class="small text-success">Vinculada a: {{ item.opcion_caso.nombre }}</div>{% endif %}
+                            {% if item.requiere_accion_previa %}<div class="small text-primary">Requiere antes: {{ item.requiere_accion_previa.texto_visible }}</div>{% endif %}
+                            {% if item.bloqueada_por_accion_previa %}<div class="small text-danger">Se bloquea si antes eligió: {{ item.bloqueada_por_accion_previa.texto_visible }}</div>{% endif %}
+                            <div class="small text-muted">Ejecuciones: {% if item.maximo_ejecuciones %}máximo {{ item.maximo_ejecuciones }}{% else %}sin límite{% endif %}</div>
+                            <div class="mt-1"><span class="chip chip-soft">{% if item.numero_ronda %}Ronda {{ item.numero_ronda }}{% else %}Todas las rondas{% endif %}</span></div>
+                            {% if item.descripcion_visible %}<div class="text-muted small">{{ item.descripcion_visible }}</div>{% endif %}
                         </div>
                         <form method="post" action="{% url 'pro_simulaciones' %}?action=delete_accion&id={{ item.pk }}"
                               onsubmit="return enviar_formulario(this)">

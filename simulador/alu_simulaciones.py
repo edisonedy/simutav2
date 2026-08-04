@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from types import SimpleNamespace
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -16,8 +17,13 @@ from simulador.services import (
     CRITERIOS_DECISION,
     calcular_bonificaciones,
     comprar_investigacion,
+    configuracion_respuesta_ronda,
     construir_estado_inicial,
+    cumple_operador,
+    desempeno_indicador,
+    indicador_mejora,
     investigaciones_disponibles,
+    justificacion_obligatoria,
     construir_recursos_iniciales,
     ejecutar_decision_arbol,
     ejecutar_ronda_ia_dinamica,
@@ -25,6 +31,17 @@ from simulador.services import (
     obtener_conceptos_esperados_ronda,
 )
 from simulador.generator_service import serializar_configuracion_simulacion
+
+
+CODIGOS_EVALUACION_ACADEMICA = {
+    'calidad', 'calidad_analisis', 'claridad', 'claridad_justificacion',
+    'impacto', 'impacto_esperado', 'riesgo', 'riesgo_decision',
+    'viabilidad', 'viabilidad_propuesta',
+}
+
+
+def _es_indicador_academico(codigo):
+    return str(codigo or '').lower() in CODIGOS_EVALUACION_ACADEMICA
 
 
 def _pronostico_desde_post(request):
@@ -100,10 +117,34 @@ def _progreso_objetivo(operador, valor, objetivo, minimo, maximo):
             return 100
         base = maximo - objetivo or 1
         return max(0, min(100, round((maximo - valor) / base * 100)))
+    if operador == 'ABS<=':
+        if abs(valor) <= abs(objetivo):
+            return 100
+        extremo = max(abs(minimo), abs(maximo))
+        base = extremo - abs(objetivo) or 1
+        return max(0, min(100, round((extremo - abs(valor)) / base * 100)))
     return 100 if valor == objetivo else 0
 
 
-def _reaccion_narrada(paso, simulacion):
+def _meta_legible(operador, objetivo, unidad):
+    unidad = unidad or ''
+    objetivo_txt = _valor_legible(objetivo, unidad)
+    if operador == 'ABS<=':
+        return f'entre -{objetivo_txt} y +{objetivo_txt}'
+    return f'{operador} {objetivo_txt}'.strip()
+
+
+def _valor_legible(valor, unidad=''):
+    valor = float(valor)
+    if unidad.strip() == '$':
+        texto = f'{valor:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+        return f'${texto}'
+    decimales = 0 if valor.is_integer() else (2 if abs(valor) < 100 else 1)
+    texto = f'{valor:.{decimales}f}'.replace('.', ',')
+    return f'{texto} {unidad}'.strip()
+
+
+def _reaccion_narrada(paso, intento_o_simulacion):
     """Narra la reaccion de la empresa como una breve historia, a partir de los
     cambios REALES de indicadores. Sin IA: instantaneo, robusto y emotivo. Le da
     'alma' a las consecuencias (lo que la ciencia de serious games llama feedback
@@ -112,7 +153,14 @@ def _reaccion_narrada(paso, simulacion):
         return ''
     antes = paso.estado_antes or {}
     despues = paso.estado_despues or {}
-    inds = {i.codigo: i for i in simulacion.indicadores.filter(activo=True)}
+    # Compatibilidad: el flujo actual entrega el intento (para respetar su
+    # snapshot), pero esta utilidad tambien se usa directamente con una
+    # Simulacion en pruebas y llamadas antiguas.
+    if hasattr(intento_o_simulacion, 'simulacion'):
+        indicadores = _indicadores_del_intento(intento_o_simulacion)
+    else:
+        indicadores = intento_o_simulacion.indicadores.filter(activo=True)
+    inds = {i.codigo: i for i in indicadores}
     mejoras, deterioros = [], []
     for cod, ind in inds.items():
         va, vd = antes.get(cod), despues.get(cod)
@@ -121,8 +169,9 @@ def _reaccion_narrada(paso, simulacion):
         delta = float(vd) - float(va)
         if abs(delta) < 0.05:
             continue
-        es_bajo = ind.direccion_optima == ind.DIRECCION_BAJO
-        bueno = (delta < 0) if es_bajo else (delta > 0)
+        bueno = indicador_mejora(ind, va, vd)
+        if bueno is None:
+            continue
         (mejoras if bueno else deterioros).append((abs(delta), ind.nombre))
     mejoras.sort(reverse=True)
     deterioros.sort(reverse=True)
@@ -163,24 +212,227 @@ def _objetivos_desde_estado(simulacion, estado):
         objetivo = float(f.valor_objetivo if usa_condiciones else f.valor_limite)
         pct = _progreso_objetivo(f.operador, valor, objetivo, ind.valor_minimo, ind.valor_maximo)
         objetivos.append({
+            'codigo': codigo,
             'descripcion': getattr(f, 'descripcion', '') or f'Lleva {ind.nombre} a {f.operador} {objetivo:g}',
             'indicador': ind.nombre,
-            'meta': f'{f.operador} {objetivo:g} {ind.unidad}'.strip(),
+            'meta': _meta_legible(f.operador, objetivo, ind.unidad),
             'valor_actual': round(float(valor), 1),
-            'cumplido': pct >= 100,
+            'valor_actual_legible': _valor_legible(valor, ind.unidad),
+            'cumplido': cumple_operador(f.operador, valor, objetivo),
             'progreso_pct': pct,
+            'tipo': 'meta' if usa_condiciones else 'restriccion',
         })
     return objetivos
 
 
 def _objetivos_mision(intento):
-    return _objetivos_desde_estado(intento.simulacion, intento.estado_actual)
+    snapshot = intento.configuracion_snapshot or {}
+    indicadores = snapshot.get('indicadores') or []
+    if not indicadores:
+        return _objetivos_desde_estado(intento.simulacion, intento.estado_actual)
+    por_codigo = {i.get('codigo'): i for i in indicadores}
+    fuentes = snapshot.get('condiciones_exito') or snapshot.get('restricciones') or []
+    usa_condiciones = bool(snapshot.get('condiciones_exito'))
+    objetivos = []
+    for fuente in fuentes:
+        codigo = fuente.get('codigo_indicador')
+        ind = por_codigo.get(codigo)
+        valor = (intento.estado_actual or {}).get(codigo)
+        if not ind or not isinstance(valor, (int, float)):
+            continue
+        meta = float(fuente.get('valor_objetivo') if usa_condiciones else fuente.get('valor_limite'))
+        inicial = float(ind.get('valor_inicial', 0))
+        operador = fuente.get('operador', '=')
+        pct = _progreso_objetivo(
+            operador, valor, meta, ind.get('valor_minimo', 0), ind.get('valor_maximo', 100),
+        )
+        delta = round(float(valor) - inicial, 2)
+        if operador == 'ABS<=':
+            mejora = abs(float(valor)) < abs(inicial)
+        else:
+            mejora = delta > 0 if operador in ('>=', '>') else delta < 0 if operador in ('<=', '<') else delta == 0
+        objetivos.append({
+            'codigo': codigo,
+            'descripcion': fuente.get('descripcion') or f'Lleva {ind.get("nombre")} a {operador} {meta:g}',
+            'indicador': ind.get('nombre', codigo),
+            'meta': _meta_legible(operador, meta, ind.get('unidad', '')),
+            'valor_actual': round(float(valor), 2),
+            'valor_actual_legible': _valor_legible(valor, ind.get('unidad', '')),
+            'valor_inicial': round(inicial, 2),
+            'valor_inicial_legible': _valor_legible(inicial, ind.get('unidad', '')),
+            'delta': delta,
+            'evolucion': 'sin_cambio' if delta == 0 else ('mejora' if mejora else 'empeora'),
+            'cumplido': cumple_operador(operador, valor, meta),
+            'progreso_pct': pct,
+            'tipo': 'meta' if usa_condiciones else 'restriccion',
+        })
+    return objetivos
+
+
+def _caso_del_intento(intento):
+    """Datos inmutables que vio el estudiante al comenzar el intento."""
+    caso = (intento.configuracion_snapshot or {}).get('caso') or {}
+    if caso:
+        return caso
+    simulacion = intento.simulacion
+    return {
+        'titulo': simulacion.titulo,
+        'tema': simulacion.tema,
+        'tipo_simulacion': simulacion.tipo_simulacion,
+        'maximo_decisiones': simulacion.maximo_decisiones,
+        'rol_estudiante': simulacion.rol_estudiante,
+        'objetivo': simulacion.objetivo,
+        'situacion_inicial': simulacion.situacion_inicial,
+        'parametros': simulacion.parametros or {},
+    }
+
+
+def _indicadores_del_intento(intento):
+    datos = (intento.configuracion_snapshot or {}).get('indicadores') or []
+    if datos:
+        return [SimpleNamespace(**item) for item in datos]
+    return list(intento.simulacion.indicadores.filter(activo=True))
+
+
+def _metas_por_indicador(intento):
+    snapshot = intento.configuracion_snapshot or {}
+    condiciones = snapshot.get('condiciones_exito')
+    if condiciones is None:
+        condiciones = list(
+            intento.simulacion.condiciones_exito.filter(activo=True).values(
+                'codigo_indicador', 'operador', 'valor_objetivo',
+            )
+        )
+    return {
+        item.get('codigo_indicador'): item
+        for item in (condiciones or [])
+        if item.get('codigo_indicador')
+    }
+
+
+def _desempeno_con_meta(indicador, valor, meta=None):
+    """Usa la meta docente como umbral aceptable de 70/100."""
+    if not meta:
+        return desempeno_indicador(indicador, valor)
+    try:
+        valor = float(valor)
+        objetivo = float(meta.get('valor_objetivo'))
+        minimo = float(indicador.valor_minimo)
+        maximo = float(indicador.valor_maximo)
+    except (TypeError, ValueError):
+        return desempeno_indicador(indicador, valor)
+    operador = meta.get('operador')
+    if operador in ('>=', '>'):
+        if valor >= objetivo:
+            return min(100, 70 + (valor - objetivo) / (maximo - objetivo or 1) * 30)
+        return max(0, (valor - minimo) / (objetivo - minimo or 1) * 70)
+    if operador in ('<=', '<'):
+        if valor <= objetivo:
+            return min(100, 70 + (objetivo - valor) / (objetivo - minimo or 1) * 30)
+        return max(0, (maximo - valor) / (maximo - objetivo or 1) * 70)
+    return desempeno_indicador(indicador, valor)
+
+
+def _recursos_del_intento(intento):
+    datos = (intento.configuracion_snapshot or {}).get('recursos')
+    if datos is not None:
+        return [SimpleNamespace(**item) for item in datos]
+    return list(intento.simulacion.recursos.filter(activo=True))
+
+
+def _historial_acciones_seleccionadas(intento):
+    conteos = {}
+    for detalle in intento.pasos.filter(es_valido=True).values_list('evaluacion_detalle', flat=True):
+        seleccion = (detalle or {}).get('seleccion_registrada') or {}
+        accion_id = seleccion.get('accion_id')
+        if accion_id is not None:
+            try:
+                accion_id = int(accion_id)
+                conteos[accion_id] = conteos.get(accion_id, 0) + 1
+            except (TypeError, ValueError):
+                continue
+    return set(conteos), conteos
+
+
+def _accion_habilitada_por_historial(accion, seleccionadas, conteos):
+    requerida = getattr(accion, 'requiere_accion_previa_id', None)
+    bloqueante = getattr(accion, 'bloqueada_por_accion_previa_id', None)
+    maximo = int(getattr(accion, 'maximo_ejecuciones', 0) or 0)
+    accion_id = int(getattr(accion, 'pk', 0) or 0)
+    if requerida is not None and int(requerida) not in seleccionadas:
+        return False
+    if bloqueante is not None and int(bloqueante) in seleccionadas:
+        return False
+    if maximo and conteos.get(accion_id, 0) >= maximo:
+        return False
+    return True
+
+
+def _acciones_del_intento(intento, numero):
+    datos = (intento.configuracion_snapshot or {}).get('acciones_sugeridas') or []
+    seleccionadas, conteos = _historial_acciones_seleccionadas(intento)
+    if not datos or any(item.get('id') is None for item in datos):
+        acciones = list(intento.simulacion.acciones_sugeridas.select_related(
+            'opcion_caso', 'requiere_accion_previa', 'bloqueada_por_accion_previa',
+        ).filter(
+            Q(numero_ronda=numero) | Q(numero_ronda__isnull=True), activo=True,
+        ))
+        return [
+            a for a in acciones
+            if _accion_habilitada_por_historial(a, seleccionadas, conteos)
+        ]
+    opciones = {
+        item.get('id'): item for item in (intento.configuracion_snapshot or {}).get('opciones_caso', [])
+    }
+    acciones = []
+    for item in datos:
+        if item.get('numero_ronda') not in (None, numero):
+            continue
+        requerida = item.get('requiere_accion_previa_id')
+        if requerida is not None and int(requerida) not in seleccionadas:
+            continue
+        bloqueante = item.get('bloqueada_por_accion_previa_id')
+        if bloqueante is not None and int(bloqueante) in seleccionadas:
+            continue
+        maximo = int(item.get('maximo_ejecuciones') or 0)
+        if maximo and conteos.get(int(item.get('id')), 0) >= maximo:
+            continue
+        opcion = opciones.get(item.get('opcion_caso_id')) or {}
+        valores = {k: v for k, v in item.items() if k != 'id'}
+        valores['texto_visible'] = opcion.get('nombre') or item.get('texto', '')
+        valores['descripcion_visible'] = opcion.get('subtitulo') or item.get('descripcion', '')
+        acciones.append(SimpleNamespace(pk=item.get('id'), **valores))
+    return acciones
+
+
+def _investigacion_del_intento(intento, investigacion_id):
+    """Obtiene la averiguacion congelada al iniciar; las ediciones posteriores
+    del docente no cambian el caso que el estudiante ya esta resolviendo."""
+    try:
+        investigacion_id = int(investigacion_id)
+    except (TypeError, ValueError):
+        return None
+    congeladas = (intento.configuracion_snapshot or {}).get('investigaciones')
+    if congeladas is not None:
+        item = next((i for i in congeladas if i.get('id') == investigacion_id), None)
+        if not item or int(item.get('disponible_desde_ronda') or 1) > intento.numero_ronda_actual:
+            return None
+        return SimpleNamespace(**item)
+    return InvestigacionSimulacion.objects.filter(
+        pk=investigacion_id,
+        simulacion=intento.simulacion,
+        activo=True,
+        disponible_desde_ronda__lte=intento.numero_ronda_actual,
+    ).first()
 
 
 def _situacion_actual(intento, numero):
     if numero == 1:
-        s = intento.simulacion
-        return s.situacion_inicial or f'{s.contexto} Actuas como {s.rol_estudiante}. Objetivo: {s.objetivo}.'
+        caso = _caso_del_intento(intento)
+        return caso.get('situacion_inicial') or (
+            f'{caso.get("contexto", "")} Actuas como {caso.get("rol_estudiante", "")}. '
+            f'Objetivo: {caso.get("objetivo", "")}.'
+        )
     ultimo = intento.pasos.order_by('-numero').first()
     if ultimo and ultimo.siguiente_situacion:
         return ultimo.siguiente_situacion
@@ -195,18 +447,18 @@ def _estado_indicadores(intento):
     pasos_validos = list(intento.pasos.filter(es_valido=True).order_by('numero'))
     ultimo = pasos_validos[-1] if pasos_validos else None
     antes = (ultimo.estado_antes if ultimo else {}) or {}
-    inicial = construir_estado_inicial(intento.simulacion)
+    inicial = {i.codigo: float(i.valor_inicial) for i in _indicadores_del_intento(intento)}
     indicadores = []
-    for ind in intento.simulacion.indicadores.filter(activo=True):
+    metas = _metas_por_indicador(intento)
+    for ind in _indicadores_del_intento(intento):
         valor = estado.get(ind.codigo)
         if not isinstance(valor, (int, float)):
             continue
         minimo = float(ind.valor_minimo)
         maximo = float(ind.valor_maximo)
         rango = maximo - minimo or 1
-        pct = max(0.0, min(100.0, (float(valor) - minimo) / rango * 100))
-        es_bajo = ind.direccion_optima == ind.DIRECCION_BAJO
-        desempeno = (100 - pct) if es_bajo else pct
+        desempeno = _desempeno_con_meta(ind, valor, metas.get(ind.codigo))
+        pct = desempeno
         if desempeno >= 66:
             color = 'success'
         elif desempeno >= 40:
@@ -216,9 +468,9 @@ def _estado_indicadores(intento):
         valor_antes = antes.get(ind.codigo)
         delta = round(float(valor) - float(valor_antes), 1) if isinstance(valor_antes, (int, float)) else 0
         if delta > 0:
-            flecha, delta_bueno = '▲', not es_bajo
+            flecha, delta_bueno = '▲', indicador_mejora(ind, valor_antes, valor)
         elif delta < 0:
-            flecha, delta_bueno = '▼', es_bajo
+            flecha, delta_bueno = '▼', indicador_mejora(ind, valor_antes, valor)
         else:
             flecha, delta_bueno = '', None
 
@@ -228,7 +480,8 @@ def _estado_indicadores(intento):
             v = (p.estado_despues or {}).get(ind.codigo)
             valores_serie.append(v if isinstance(v, (int, float)) else valores_serie[-1])
         serie_pct = [
-            max(0.0, min(100.0, (float(v) - minimo) / rango * 100)) if isinstance(v, (int, float)) else 50.0
+            _desempeno_con_meta(ind, v, metas.get(ind.codigo))
+            if isinstance(v, (int, float)) else 50.0
             for v in valores_serie
         ]
         spark_points = _sparkline_points(serie_pct)
@@ -246,6 +499,7 @@ def _estado_indicadores(intento):
             'flecha': flecha,
             'delta_bueno': delta_bueno,
             'spark_points': spark_points,
+            'es_academico': _es_indicador_academico(ind.codigo),
         })
     return indicadores
 
@@ -253,7 +507,7 @@ def _estado_indicadores(intento):
 def _recursos_estado(intento):
     recursos_actuales = intento.recursos_actuales or {}
     items = []
-    for recurso in intento.simulacion.recursos.filter(activo=True):
+    for recurso in _recursos_del_intento(intento):
         valor = recursos_actuales.get(recurso.codigo)
         if not isinstance(valor, (int, float)):
             valor = float(recurso.valor_inicial)
@@ -279,64 +533,123 @@ def _recursos_estado(intento):
     return items
 
 
-def _datos_visibles_caso(simulacion):
+ETIQUETAS_DATOS_CASO = {
+    'alternativas_titulo': 'Alternativas del caso',
+    'alternativa_col': 'Alternativa',
+    'valor_titulo': 'Valor de referencia',
+    'valor_col': 'Valor',
+    'fortaleza_titulo': 'Fortaleza',
+    'fortaleza_col': 'Fortaleza',
+    'riesgo_titulo': 'Riesgo o limitación',
+    'riesgo_col': 'Riesgo o limitación',
+    'matriz_titulo': 'Criterios de comparación',
+    'datos_titulo': 'Información para decidir',
+}
+
+
+def _etiquetas_datos_caso(parametros):
+    """Etiquetas neutrales con compatibilidad para configuraciones antiguas.
+
+    Los nombres históricos (candidato, salario, prueba técnica) solo se usan si
+    el caso los configuró expresamente; nunca vuelven a ser el valor por defecto.
+    """
+    configuradas = dict((parametros or {}).get('caso_labels') or {})
+    equivalencias = {
+        'participantes_titulo': 'alternativas_titulo',
+        'participante_col': 'alternativa_col',
+        'fortalezas_titulo': 'fortaleza_titulo',
+        'fortalezas_col': 'fortaleza_col',
+    }
+    for antigua, nueva in equivalencias.items():
+        if configuradas.get(antigua) and not configuradas.get(nueva):
+            configuradas[nueva] = configuradas[antigua]
+    return {**ETIQUETAS_DATOS_CASO, **configuradas}
+
+
+def _datos_visibles_caso(simulacion, configuracion_snapshot=None):
     """Datos de apoyo que ve el estudiante para decidir.
 
     Primero lee las tablas nuevas. Si un caso antiguo aun usa parametros JSON,
     mantiene compatibilidad.
     """
-    opciones = list(simulacion.opciones_caso.filter(activo=True).order_by('orden', 'nombre'))
-    matriz = list(simulacion.matriz_caso.filter(activo=True).order_by('orden', 'criterio'))
-    parametros = simulacion.parametros or {}
+    snapshot = configuracion_snapshot or {}
+    caso_snapshot = snapshot.get('caso') or {}
+    parametros = caso_snapshot.get('parametros') or simulacion.parametros or {}
+    if configuracion_snapshot is not None and 'opciones_caso' in snapshot:
+        opciones = snapshot.get('opciones_caso') or []
+    else:
+        opciones = list(simulacion.opciones_caso.filter(activo=True).order_by('orden', 'nombre'))
+    if configuracion_snapshot is not None and 'matriz_caso' in snapshot:
+        matriz = snapshot.get('matriz_caso') or []
+    else:
+        matriz = list(simulacion.matriz_caso.filter(activo=True).order_by('orden', 'criterio'))
 
     if opciones:
-        candidatos = [
+        alternativas = [
             {
-                'nombre': item.nombre,
-                'experiencia': item.subtitulo,
-                'salario_pretendido': item.valor_referencia,
-                'valor_display': item.valor_referencia,
-                'fortalezas': item.fortaleza,
-                'debilidades': item.riesgo,
-                'resultados': item.resultados or [],
+                'nombre': item.get('nombre') if isinstance(item, dict) else item.nombre,
+                'subtitulo': item.get('subtitulo', '') if isinstance(item, dict) else item.subtitulo,
+                'valor': item.get('valor_referencia', '') if isinstance(item, dict) else item.valor_referencia,
+                'fortaleza': item.get('fortaleza', '') if isinstance(item, dict) else item.fortaleza,
+                'riesgo': item.get('riesgo', '') if isinstance(item, dict) else item.riesgo,
+                'resultados': (item.get('resultados') or []) if isinstance(item, dict) else (item.resultados or []),
             }
             for item in opciones
         ]
     else:
-        candidatos = []
+        alternativas = []
         for item in parametros.get('candidatos', []) or []:
-            normalizado = dict(item or {})
-            normalizado['valor_display'] = normalizado.get('valor_display') or normalizado.get('salario_pretendido', '')
-            candidatos.append(normalizado)
+            legado = dict(item or {})
+            alternativas.append({
+                'nombre': legado.get('nombre', ''),
+                'subtitulo': legado.get('subtitulo') or legado.get('experiencia', ''),
+                'valor': legado.get('valor_display') or legado.get('salario_pretendido', ''),
+                'fortaleza': legado.get('fortaleza') or legado.get('fortalezas', ''),
+                'riesgo': legado.get('riesgo') or legado.get('debilidades', ''),
+                'resultados': legado.get('resultados') or [],
+            })
 
     if matriz:
         prueba_tecnica = [
-            {'criterio': item.criterio, 'peso': item.peso, 'evalua': item.evalua}
+            {
+                'criterio': item.get('criterio') if isinstance(item, dict) else item.criterio,
+                'peso': item.get('peso') if isinstance(item, dict) else item.peso,
+                'evalua': item.get('evalua', '') if isinstance(item, dict) else item.evalua,
+            }
             for item in matriz
         ]
     else:
         prueba_tecnica = parametros.get('prueba_tecnica', []) or []
 
     columnas = parametros.get('columnas_resultados', []) or []
-    if not columnas and candidatos:
-        for item in candidatos:
+    if not columnas and alternativas:
+        for item in alternativas:
             resultados = item.get('resultados') or []
             if resultados:
                 columnas = [str(r.get('criterio') or '') for r in resultados]
                 break
 
     return {
-        'candidatos': candidatos,
+        'alternativas_caso': alternativas,
+        # Alias temporal para integraciones externas que aun consuman la clave.
+        'candidatos': alternativas,
         'prueba_tecnica': prueba_tecnica,
-        'caso_labels': parametros.get('caso_labels', {}),
+        'caso_labels': _etiquetas_datos_caso(parametros),
         'columnas_resultados': columnas,
     }
 
 
 def _rubrica_visible(intento, numero):
-    conceptos = obtener_conceptos_esperados_ronda(intento.simulacion, numero)
-    indicadores = list(intento.simulacion.indicadores.filter(activo=True).order_by('nombre')[:5])
-    restricciones = list(intento.simulacion.restricciones.filter(activo=True).order_by('codigo_indicador')[:5])
+    conceptos = obtener_conceptos_esperados_ronda(
+        intento.simulacion, numero, configuracion_snapshot=intento.configuracion_snapshot,
+    )
+    indicadores = _indicadores_del_intento(intento)[:5]
+    restricciones_datos = (intento.configuracion_snapshot or {}).get('restricciones') or []
+    restricciones = (
+        [SimpleNamespace(**item) for item in restricciones_datos[:5]]
+        if restricciones_datos else
+        list(intento.simulacion.restricciones.filter(activo=True).order_by('codigo_indicador')[:5])
+    )
     if not conceptos and not indicadores and not restricciones:
         return None
     return {
@@ -346,7 +659,8 @@ def _rubrica_visible(intento, numero):
         # Los criterios del metodo del caso valen nota de verdad, asi que el
         # estudiante debe verlos antes de responder, no descubrirlos despues.
         'criterios_decision': CRITERIOS_DECISION,
-        'peso_decision': intento.simulacion.peso_rubrica_decision,
+        'peso_decision': (_caso_del_intento(intento).get('peso_rubrica_decision')
+                          or intento.simulacion.peso_rubrica_decision),
         'formato': [
             'Decisión concreta',
             'Evidencia del caso',
@@ -358,36 +672,56 @@ def _rubrica_visible(intento, numero):
 
 
 def _calidad_metacognitiva(intento):
-    pasos = list(intento.pasos.order_by('numero'))
+    pasos = list(intento.pasos.filter(es_valido=True).order_by('numero'))
     if not pasos:
         return None
+    parametros = (_caso_del_intento(intento).get('parametros') or {})
+    esperadas = {
+        clave: {
+            p.numero for p in pasos
+            if _visibilidad_ronda(intento.simulacion, p.numero, parametros).get(clave)
+        }
+        for clave in ('pedir_reflexion', 'pedir_pronostico', 'pedir_tradeoff')
+    }
+    rondas_cfg = parametros.get('rondas') or []
+    for clave, tiene_evidencia in (
+        ('pedir_reflexion', any((p.reflexion or '').strip() for p in pasos)),
+        ('pedir_pronostico', any(p.pronostico_indicador for p in pasos)),
+        ('pedir_tradeoff', any(p.tradeoff_aceptado for p in pasos)),
+    ):
+        explicita = any(isinstance(r, dict) and clave in r for r in rondas_cfg)
+        if not explicita and tiene_evidencia:
+            esperadas[clave] = {p.numero for p in pasos}
     total = len(pasos)
     reflexiones = sum(1 for p in pasos if p.reflexion)
     pronosticos = sum(1 for p in pasos if p.pronostico_indicador)
     pronosticos_acertados = sum(1 for p in pasos if (p.pronostico_resultado or {}).get('estado') == 'acierto')
     tradeoffs = sum(1 for p in pasos if p.tradeoff_aceptado)
     tradeoffs_reales = sum(1 for p in pasos if (p.tradeoff_resultado or {}).get('estado') == 'tradeoff_real')
-    puntaje = 0
-    if total:
-        puntaje += reflexiones / total * 35
-        puntaje += (pronosticos_acertados / max(1, pronosticos)) * 30 if pronosticos else 0
-        puntaje += tradeoffs / total * 20
-        puntaje += tradeoffs_reales / max(1, tradeoffs) * 15 if tradeoffs else 0
-    puntaje = round(min(100, puntaje), 1)
-    if puntaje >= 80:
+    componentes = []
+    if esperadas['pedir_reflexion']:
+        componentes.append(sum(1 for p in pasos if p.numero in esperadas['pedir_reflexion'] and p.reflexion) / len(esperadas['pedir_reflexion']) * 100)
+    if esperadas['pedir_pronostico']:
+        componentes.append(sum(1 for p in pasos if p.numero in esperadas['pedir_pronostico'] and (p.pronostico_resultado or {}).get('estado') == 'acierto') / len(esperadas['pedir_pronostico']) * 100)
+    if esperadas['pedir_tradeoff']:
+        componentes.append(sum(1 for p in pasos if p.numero in esperadas['pedir_tradeoff'] and p.tradeoff_aceptado) / len(esperadas['pedir_tradeoff']) * 100)
+    puntaje = round(sum(componentes) / len(componentes), 1) if componentes else None
+    if puntaje is None:
+        nivel = 'No solicitado'
+    elif puntaje >= 80:
         nivel = 'Fuerte'
     elif puntaje >= 55:
         nivel = 'En desarrollo'
     else:
         nivel = 'Inicial'
     recomendaciones = []
-    if reflexiones < total:
-        recomendaciones.append('Completa la reflexion despues de cada decision.')
-    if pronosticos and pronosticos_acertados < pronosticos:
+    if esperadas['pedir_reflexion'] and reflexiones < len(esperadas['pedir_reflexion']):
+        recomendaciones.append('Completa la reflexion en la ronda que la solicita.')
+    if esperadas['pedir_pronostico'] and pronosticos_acertados < len(esperadas['pedir_pronostico']):
         recomendaciones.append('Antes de decidir, revisa mejor la direccion optima de cada indicador.')
-    if tradeoffs < total:
-        recomendaciones.append('Explicita que costo o riesgo aceptas en cada jugada.')
-    if not recomendaciones:
+    if esperadas['pedir_tradeoff'] and tradeoffs < len(esperadas['pedir_tradeoff']):
+        recomendaciones.append('Explicita el costo o riesgo solo en la ronda que lo solicita.')
+    if componentes and not recomendaciones:
         recomendaciones.append('Sigue usando evidencia, pronostico y trade-off para justificar tus decisiones.')
     return {
         'puntaje': puntaje,
@@ -398,6 +732,10 @@ def _calidad_metacognitiva(intento):
         'pronosticos_acertados': pronosticos_acertados,
         'tradeoffs': tradeoffs,
         'tradeoffs_reales': tradeoffs_reales,
+        'reflexiones_esperadas': len(esperadas['pedir_reflexion']),
+        'pronosticos_esperados': len(esperadas['pedir_pronostico']),
+        'tradeoffs_esperados': len(esperadas['pedir_tradeoff']),
+        'solicitada': bool(componentes),
         'recomendaciones': recomendaciones,
     }
 
@@ -549,7 +887,9 @@ def _crear_pista_tutor(intento):
 
     numero = intento.numero_ronda_actual
     andamiaje = _andamiaje_adaptativo(intento)
-    conceptos = obtener_conceptos_esperados_ronda(intento.simulacion, numero)
+    conceptos = obtener_conceptos_esperados_ronda(
+        intento.simulacion, numero, configuracion_snapshot=intento.configuracion_snapshot,
+    )
     usados = list(
         intento.pistas_tutor.filter(numero_ronda=numero).values_list('conceptos_referidos', flat=True)
     )
@@ -622,11 +962,26 @@ def _sparkline_points(serie_pct, ancho=120, alto=28, pad=2):
     return ' '.join(puntos)
 
 
-def _pasos_stepper(simulacion, numero_actual):
-    """Recorrido por etapas de la simulacion (Diagnostico -> Decision -> Plan ...)
-    para que el estudiante vea en que punto del caso esta."""
-    nombres = {1: 'Diagnóstico', 2: 'Decisión', 3: 'Plan'}
-    total = simulacion.maximo_decisiones or 3
+def _configuracion_ronda(simulacion, numero, parametros=None):
+    """Configuracion de una ronda por su numero, sin imponer una secuencia.
+
+    La posicion se conserva como respaldo para datos antiguos, pero una ronda
+    puede llamarse y comportarse como el docente necesite.
+    """
+    fuente = parametros if isinstance(parametros, dict) else (simulacion.parametros or {})
+    rondas = fuente.get('rondas') or []
+    for ronda in rondas:
+        if isinstance(ronda, dict) and ronda.get('numero') == numero:
+            return ronda
+    indice = numero - 1
+    if 0 <= indice < len(rondas) and isinstance(rondas[indice], dict):
+        return rondas[indice]
+    return {}
+
+
+def _pasos_stepper(simulacion, numero_actual, total=None, parametros=None):
+    """Recorrido configurado por el docente; el motor no presupone fases."""
+    total = total or simulacion.maximo_decisiones or 1
     pasos = []
     for n in range(1, total + 1):
         if n < numero_actual:
@@ -635,7 +990,12 @@ def _pasos_stepper(simulacion, numero_actual):
             estado = 'actual'
         else:
             estado = 'pendiente'
-        pasos.append({'numero': n, 'nombre': nombres.get(n, f'Ronda {n}'), 'estado': estado})
+        ronda = _configuracion_ronda(simulacion, n, parametros)
+        pasos.append({
+            'numero': n,
+            'nombre': ronda.get('titulo') or f'Ronda {n}',
+            'estado': estado,
+        })
     return pasos
 
 
@@ -689,12 +1049,23 @@ def _calcular_gamificacion(intento):
     invalidos = intento.pasos.filter(es_valido=False).count()
     final = float(intento.puntuacion_final or 0)
     xp_total = int(round(sum(float(p.puntaje_paso) for p in pasos_validos)))
+    reflexiones = sum(1 for p in pasos_validos if p.reflexion)
+    pronosticos = sum(1 for p in pasos_validos if p.pronostico_indicador)
+    pronosticos_acertados = sum(
+        1 for p in pasos_validos if (p.pronostico_resultado or {}).get('estado') == 'acierto'
+    )
+    tradeoffs = sum(1 for p in pasos_validos if p.tradeoff_aceptado)
 
-    # Rango segun la nota final (de menor a mayor).
+    salud = _salud_indicadores(intento)
+    metas = _objetivos_mision(intento)
+    todas_metas = bool(metas) and all(item['cumplido'] for item in metas)
+
+    # El rango reconoce el aprendizaje, pero no llama "experto" a quien deja
+    # el caso en riesgo o no cumple sus metas principales.
     rangos = [
         (90, 'Maestro', '🏆'),
-        (75, 'Experto', '🥇'),
-        (60, 'Competente', '🥈'),
+        (85, 'Experto', '🥇'),
+        (70, 'Competente', '🥈'),
         (40, 'Aprendiz', '🥉'),
         (0, 'Novato', '🔰'),
     ]
@@ -705,28 +1076,46 @@ def _calcular_gamificacion(intento):
             rango, icono, umbral_actual = nombre, ic, umbral
             siguiente_umbral = rangos[i - 1][0] if i > 0 else 100
             break
+    if salud is not None and (salud < 70 or not todas_metas) and rango in {'Maestro', 'Experto'}:
+        rango, icono, umbral_actual, siguiente_umbral = 'Competente', '🥈', 70, 85
     tramo = max(1, siguiente_umbral - umbral_actual)
     progreso_pct = round(max(0, min(100, (final - umbral_actual) / tramo * 100)), 1)
 
     # Insignias.
-    etiquetas = {1: 'Diagnóstico', 2: 'Decisión', 3: 'Plan'}
     insignias = []
+    parametros = (intento.configuracion_snapshot or {}).get('parametros') or {}
     for p in pasos_validos:
-        if float(p.puntaje_paso) >= 70:
-            nombre_r = etiquetas.get(p.numero, f'Ronda {p.numero}')
+        if float(p.puntaje_paso) >= 80:
+            nombre_r = (
+                _configuracion_ronda(intento.simulacion, p.numero, parametros).get('titulo')
+                or f'Ronda {p.numero}'
+            )
             insignias.append({'nombre': f'{nombre_r} certero', 'icono': '🎯'})
     if pasos_validos and invalidos == 0:
         insignias.append({'nombre': 'Sin intentos fallidos', 'icono': '✅'})
-    if pasos_validos and not any(float(p.penalizacion_aplicada) for p in pasos_validos):
+    criticos_empeorados = any(
+        indicador_mejora(
+            ind,
+            float(ind.valor_inicial),
+            (intento.estado_actual or {}).get(ind.codigo),
+        ) is False
+        for ind in _indicadores_del_intento(intento)
+        if ind.es_critico and isinstance((intento.estado_actual or {}).get(ind.codigo), (int, float))
+    )
+    if (
+        pasos_validos
+        and not any(float(p.penalizacion_aplicada) for p in pasos_validos)
+        and not criticos_empeorados
+        and (salud is None or salud >= 70)
+    ):
         insignias.append({'nombre': 'Decisiones sin riesgo', 'icono': '🛡️'})
-    if final >= 90:
+    if final >= 90 and (salud is None or salud >= 80) and todas_metas:
         insignias.append({'nombre': 'Maestría', 'icono': '🏆'})
-    elif final >= 75:
+    elif final >= 85 and (salud is None or salud >= 70) and todas_metas:
         insignias.append({'nombre': 'Gran desempeño', 'icono': '⭐'})
 
-    # Empresa saneada: salud promedio de indicadores >= 60.
-    salud = _salud_indicadores(intento)
-    if salud is not None and salud >= 60:
+    # Empresa saneada exige salud suficiente y todas las metas, no solo una nota alta.
+    if salud is not None and salud >= 70 and todas_metas:
         insignias.append({'nombre': 'Empresa saneada', 'icono': '🏢'})
 
     return {
@@ -737,23 +1126,32 @@ def _calcular_gamificacion(intento):
         'siguiente_umbral': siguiente_umbral,
         'insignias': insignias,
         'rondas_validas': len(pasos_validos),
+        'reflexiones': reflexiones,
+        'pronosticos': pronosticos,
+        'pronosticos_acertados': pronosticos_acertados,
+        'tradeoffs': tradeoffs,
         'salud': round(salud, 0) if salud is not None else None,
     }
 
 
 def _salud_indicadores(intento):
-    """Promedio 0-100 de desempeno de los indicadores (considera direccion optima)."""
+    """Salud ponderada 0-100 según dirección y peso configurados."""
     estado = intento.estado_actual or {}
     valores = []
-    for ind in intento.simulacion.indicadores.filter(activo=True):
+    indicadores_empresa = [
+        ind for ind in _indicadores_del_intento(intento)
+        if not _es_indicador_academico(ind.codigo)
+    ]
+    metas = _metas_por_indicador(intento)
+    for ind in indicadores_empresa:
         v = estado.get(ind.codigo)
         if not isinstance(v, (int, float)):
             continue
-        minimo, maximo = float(ind.valor_minimo), float(ind.valor_maximo)
-        rango = maximo - minimo or 1
-        pct = max(0.0, min(100.0, (float(v) - minimo) / rango * 100))
-        valores.append((100 - pct) if ind.direccion_optima == ind.DIRECCION_BAJO else pct)
-    return sum(valores) / len(valores) if valores else None
+        peso = max(0.0, float(getattr(ind, 'peso_salud', 1) or 0))
+        if peso:
+            valores.append((_desempeno_con_meta(ind, v, metas.get(ind.codigo)), peso))
+    total_peso = sum(peso for _, peso in valores)
+    return sum(valor * peso for valor, peso in valores) / total_peso if total_peso else None
 
 
 def _hud_simulacion(intento):
@@ -764,19 +1162,19 @@ def _hud_simulacion(intento):
     vidas_max = intento.max_intentos_invalidos_por_ronda or 3
     vidas = max(0, vidas_max - intento.intentos_invalidos_actuales)
     salud = _salud_indicadores(intento)
-    if salud is None:
-        salud = 50.0
-    if salud >= 66:
+    salud_disponible = salud is not None
+    if salud is not None and salud >= 66:
         salud_color = 'success'
-    elif salud >= 40:
+    elif salud is not None and salud >= 40:
         salud_color = 'warning'
     else:
-        salud_color = 'danger'
+        salud_color = 'secondary' if salud is None else 'danger'
     return {
         'xp': xp,
         'vidas': vidas,
         'vidas_max': vidas_max,
-        'salud': round(salud),
+        'salud': round(salud) if salud is not None else None,
+        'salud_disponible': salud_disponible,
         'salud_color': salud_color,
     }
 
@@ -784,11 +1182,20 @@ def _hud_simulacion(intento):
 def _indicadores_finales(intento):
     estado = intento.estado_actual or {}
     indicadores = []
-    for ind in intento.simulacion.indicadores.filter(activo=True).order_by('nombre'):
+    fuentes = sorted(_indicadores_del_intento(intento), key=lambda item: item.nombre)
+    pesos_empresa = {
+        ind.codigo: max(0.0, float(getattr(ind, 'peso_salud', 1) or 0))
+        for ind in fuentes if not _es_indicador_academico(ind.codigo)
+    }
+    total_peso = sum(pesos_empresa.values()) or 1
+    metas = _metas_por_indicador(intento)
+    for ind in fuentes:
         valor = estado.get(ind.codigo)
         if not isinstance(valor, (int, float)):
             continue
-        desempeno = _salud_indicadores_item(ind, float(valor))
+        desempeno = _salud_indicadores_item(ind, float(valor), metas.get(ind.codigo))
+        peso = pesos_empresa.get(ind.codigo, 0)
+        peso_pct = peso / total_peso * 100 if peso else 0
         indicadores.append({
             'codigo': ind.codigo,
             'nombre': ind.nombre,
@@ -796,22 +1203,71 @@ def _indicadores_finales(intento):
             'unidad': ind.unidad,
             'critico': ind.es_critico,
             'desempeno': round(desempeno, 0),
+            'peso_relativo': round(peso_pct, 1),
+            'aporte_salud': round(desempeno * peso_pct / 100, 1),
+            'participa_salud': bool(peso),
+            'direccion': getattr(ind, 'direccion_optima', 'ALTO'),
+            'direccion_legible': {
+                'ALTO': 'más alto es mejor',
+                'BAJO': 'más bajo es mejor',
+                'OBJETIVO': 'mejor cerca del objetivo',
+                'RANGO': 'mejor dentro del rango objetivo',
+            }.get(getattr(ind, 'direccion_optima', 'ALTO'), ''),
+            'es_academico': _es_indicador_academico(ind.codigo),
         })
     return indicadores
 
 
-def _salud_indicadores_item(indicador, valor):
-    minimo, maximo = float(indicador.valor_minimo), float(indicador.valor_maximo)
-    rango = maximo - minimo or 1
-    pct = max(0.0, min(100.0, (float(valor) - minimo) / rango * 100))
-    return (100 - pct) if indicador.direccion_optima == indicador.DIRECCION_BAJO else pct
+def _salud_indicadores_item(indicador, valor, meta=None):
+    return _desempeno_con_meta(indicador, valor, meta)
 
 
 def _explicacion_resultado(intento):
     puntaje = float(intento.puntuacion_final or 0)
     salud = _salud_indicadores(intento)
     indicadores = _indicadores_finales(intento)
-    alertas = [i for i in indicadores if i['desempeno'] < 70]
+    por_codigo = {item['codigo']: item for item in indicadores}
+    objetivos = _objetivos_mision(intento)
+    alertas = []
+    usados = set()
+    # Primero aparecen las metas incumplidas; las críticas tienen prioridad.
+    metas_incumplidas = [meta for meta in objetivos if not meta['cumplido']]
+    metas_incumplidas.sort(
+        key=lambda meta: (
+            not bool(por_codigo.get(meta.get('codigo'), {}).get('critico')),
+            float(por_codigo.get(meta.get('codigo'), {}).get('desempeno', 100)),
+        ),
+    )
+    for meta in metas_incumplidas:
+        item = por_codigo.get(meta.get('codigo'))
+        if not item or item['codigo'] in usados:
+            continue
+        item = dict(item)
+        item['mensaje_alerta'] = (
+            f"{item['nombre']} quedó en {_valor_legible(item['valor'], item['unidad'])}; "
+            f"la meta es {meta['meta']}."
+        )
+        alertas.append(item)
+        usados.add(item['codigo'])
+    objetivos_cumplidos = {
+        meta.get('codigo') for meta in objetivos if meta.get('cumplido')
+    }
+    for item_fuente in sorted(
+        (
+            item for item in indicadores
+            if item['participa_salud'] and item['desempeno'] < 70
+        ),
+        key=lambda item: (not item['critico'], item['desempeno']),
+    ):
+        if item_fuente['codigo'] in usados or item_fuente['codigo'] in objetivos_cumplidos:
+            continue
+        item = dict(item_fuente)
+        item['mensaje_alerta'] = (
+            f"{item['nombre']} quedó en {_valor_legible(item['valor'], item['unidad'])} "
+            f"({item['desempeno']:.0f} de 100; {item['direccion_legible']})."
+        )
+        alertas.append(item)
+        usados.add(item['codigo'])
     if salud is None:
         salud = 0
     if puntaje >= 90 and salud < 80:
@@ -826,20 +1282,27 @@ def _explicacion_resultado(intento):
         )
     return {
         'texto': texto,
-        'alertas': alertas[:3],
+        'alertas': alertas[:4],
     }
 
 
-def _modo_ronda(simulacion, numero, hay_acciones):
+def _selecciones_registradas(intento):
+    selecciones = []
+    for paso in intento.pasos.filter(es_valido=True).order_by('numero'):
+        seleccion = (paso.evaluacion_detalle or {}).get('seleccion_registrada')
+        if seleccion:
+            selecciones.append(seleccion)
+    return selecciones
+
+
+def _modo_ronda(simulacion, numero, hay_acciones, parametros=None):
     """Modo de interaccion de la ronda, PARAMETRIZABLE por el profesor en
     parametros['rondas'][n]['modo']: 'hibrido' (elegir + justificar),
     'elegir' (solo elegir opcion) o 'escribir' (solo texto libre).
     Default 'hibrido'. Si no hay opciones configuradas, cae a 'escribir'."""
     modo = 'hibrido'
-    rondas = (simulacion.parametros or {}).get('rondas') or []
-    idx = numero - 1
-    if 0 <= idx < len(rondas) and isinstance(rondas[idx], dict):
-        modo = (rondas[idx].get('modo') or 'hibrido').lower()
+    ronda = _configuracion_ronda(simulacion, numero, parametros)
+    modo = (ronda.get('modo') or 'hibrido').lower()
     if modo not in ('hibrido', 'elegir', 'escribir'):
         modo = 'hibrido'
     if modo in ('hibrido', 'elegir') and not hay_acciones:
@@ -847,22 +1310,39 @@ def _modo_ronda(simulacion, numero, hay_acciones):
     return modo
 
 
-def _etiquetas_ronda(simulacion, numero):
+def _etiquetas_ronda(simulacion, numero, parametros=None):
     """Etiquetas configurables por el profesor: usa etiqueta_decision /
     etiqueta_justificacion definidas en parametros['rondas'][n] si existen;
-    si no, cae a un valor por defecto segun la ronda."""
-    defaults = {
-        1: ('Diagnóstico', 'Justificación del diagnóstico'),
-        2: ('Decisión', 'Justificación de la decisión'),
-        3: ('Plan de implementación', 'Justificación, control y seguimiento'),
+    si no, usa textos neutrales que no presuponen una fase."""
+    ronda = _configuracion_ronda(simulacion, numero, parametros)
+    return (
+        ronda.get('etiqueta_decision') or 'Tu respuesta',
+        ronda.get('etiqueta_justificacion') or 'Explica tu razonamiento',
+    )
+
+
+VISIBILIDAD_RONDA_DEFAULTS = {
+    # Elementos centrales de una decision informada.
+    'mostrar_objetivos': True,
+    'mostrar_rubrica': True,
+    'mostrar_datos_caso': True,
+    'mostrar_resultados_alternativas': False,
+    'mostrar_indicadores': True,
+    'mostrar_recursos': True,
+    # Herramientas avanzadas: el docente las activa solo cuando aportan.
+    'mostrar_investigaciones': False,
+    'pedir_pronostico': False,
+    'pedir_tradeoff': False,
+    'pedir_reflexion': False,
+}
+
+
+def _visibilidad_ronda(simulacion, numero, parametros=None):
+    ronda = _configuracion_ronda(simulacion, numero, parametros)
+    return {
+        clave: bool(ronda.get(clave, por_defecto))
+        for clave, por_defecto in VISIBILIDAD_RONDA_DEFAULTS.items()
     }
-    dec, jus = defaults.get(numero, ('Decisión', 'Justificación'))
-    rondas = (simulacion.parametros or {}).get('rondas') or []
-    idx = numero - 1
-    if 0 <= idx < len(rondas) and isinstance(rondas[idx], dict):
-        dec = rondas[idx].get('etiqueta_decision') or dec
-        jus = rondas[idx].get('etiqueta_justificacion') or jus
-    return dec, jus
 
 
 def _es_ajax(request):
@@ -926,7 +1406,9 @@ def view(request):
                 periodo=periodo,
                 estado_actual=construir_estado_inicial(simulacion),
                 recursos_actuales=construir_recursos_iniciales(simulacion),
-                configuracion_snapshot=simulacion.configuracion_snapshot or serializar_configuracion_simulacion(simulacion),
+                # Siempre se serializa la version que el estudiante acaba de ver.
+                # No se reutiliza un snapshot de publicacion que pudo quedar viejo.
+                configuracion_snapshot=serializar_configuracion_simulacion(simulacion),
                 escenario_actual=escenario_inicial,
                 situacion_actual=situacion_actual,
                 numero_ronda_actual=1,
@@ -969,13 +1451,11 @@ def view(request):
                 estudiante=request.user,
                 finalizado=False,
             )
-            investigacion = get_object_or_404(
-                InvestigacionSimulacion,
-                pk=request.POST.get('investigacion_id'),
-                simulacion=intento.simulacion,
-                activo=True,
-                disponible_desde_ronda__lte=intento.numero_ronda_actual,
+            investigacion = _investigacion_del_intento(
+                intento, request.POST.get('investigacion_id'),
             )
+            if investigacion is None:
+                return bad_json(mensaje='La averiguacion no pertenece a este intento o no esta disponible.')
             resultado = comprar_investigacion(intento, investigacion)
             if not resultado['ok']:
                 if _es_ajax(request):
@@ -1047,6 +1527,19 @@ def view(request):
             pronostico = _pronostico_desde_post(request)
             tradeoff_aceptado = _tradeoff_desde_post(request)
             if simulacion.tipo_simulacion == Simulacion.TIPO_SIN_IA_ARBOL:
+                reglas_respuesta = configuracion_respuesta_ronda(
+                    simulacion, intento.numero_ronda_actual, intento.configuracion_snapshot,
+                )
+                if reglas_respuesta['pronostico_obligatorio'] and not (
+                    pronostico.get('indicador') and pronostico.get('direccion')
+                ):
+                    return bad_json(
+                        mensaje='Selecciona el indicador y la dirección de tu pronóstico.'
+                    )
+                if reglas_respuesta['tradeoff_obligatorio'] and len(tradeoff_aceptado) < 8:
+                    return bad_json(
+                        mensaje='Explica brevemente qué costo, riesgo o sacrificio aceptas.'
+                    )
                 if not intento.escenario_actual:
                     return bad_json(mensaje='La simulacion no tiene un escenario actual configurado.')
                 decision = get_object_or_404(
@@ -1061,7 +1554,16 @@ def view(request):
                 accion = None
                 accion_id = request.POST.get('accion_id')
                 if accion_id:
-                    accion = intento.simulacion.acciones_sugeridas.filter(pk=accion_id, activo=True).first()
+                    acciones_congeladas = {
+                        str(item.pk): item for item in _acciones_del_intento(intento, intento.numero_ronda_actual)
+                        if item.pk is not None
+                    }
+                    if acciones_congeladas:
+                        accion = acciones_congeladas.get(str(accion_id))
+                    else:
+                        accion = intento.simulacion.acciones_sugeridas.filter(pk=accion_id, activo=True).first()
+                    if accion is None:
+                        return bad_json(mensaje='La decision elegida no pertenece a esta version del intento.')
                 paso = ejecutar_ronda_ia_dinamica(
                     intento,
                     request.POST.get('decision', ''),
@@ -1097,7 +1599,12 @@ def view(request):
             )
             data['simulacion'] = simulacion
             indicadores = simulacion.indicadores.filter(activo=True)
-            data['indicadores'] = indicadores
+            data['indicadores_empresa'] = [
+                item for item in indicadores if not _es_indicador_academico(item.codigo)
+            ]
+            data['indicadores_academicos'] = [
+                item for item in indicadores if _es_indicador_academico(item.codigo)
+            ]
             data['asignacion'] = cursos_service.asignacion_para(request.user, simulacion)
             data['objetivos_mision'] = _objetivos_desde_estado(simulacion, construir_estado_inicial(simulacion))
             data.update(_datos_visibles_caso(simulacion))
@@ -1114,39 +1621,70 @@ def view(request):
             numero = intento.numero_ronda_actual
             data['intento'] = intento
             data['simulacion'] = intento.simulacion
+            data['caso'] = _caso_del_intento(intento)
             data['situacion'] = intento.situacion_actual or _situacion_actual(intento, numero)
             data['numero'] = numero
             data['form'] = PasoSimulacionForm(ronda=numero)
-            data.update(_datos_visibles_caso(intento.simulacion))
-            data['rubrica_visible'] = _rubrica_visible(intento, numero)
-            etq_dec, etq_jus = _etiquetas_ronda(intento.simulacion, numero)
+            parametros_caso = data['caso'].get('parametros') or {}
+            data.update(_datos_visibles_caso(intento.simulacion, intento.configuracion_snapshot))
+            data['ronda_config'] = _configuracion_ronda(intento.simulacion, numero, parametros_caso)
+            data.update(_visibilidad_ronda(intento.simulacion, numero, parametros_caso))
+            data['rubrica_visible'] = (
+                _rubrica_visible(intento, numero) if data['mostrar_rubrica'] else None
+            )
+            etq_dec, etq_jus = _etiquetas_ronda(intento.simulacion, numero, parametros_caso)
             data['etiqueta_decision'] = etq_dec
             data['etiqueta_justificacion'] = etq_jus
             data['ultimo_paso'] = intento.pasos.order_by('-numero').first()
-            data['reaccion_narrada'] = _reaccion_narrada(data['ultimo_paso'], intento.simulacion)
-            data['objetivos_mision'] = _objetivos_mision(intento)
+            data['pedir_reflexion_ultimo'] = bool(
+                data['ultimo_paso']
+                and _visibilidad_ronda(
+                    intento.simulacion, data['ultimo_paso'].numero, parametros_caso,
+                )['pedir_reflexion']
+            )
+            data['reaccion_narrada'] = _reaccion_narrada(data['ultimo_paso'], intento)
+            data['objetivos_mision'] = _objetivos_mision(intento) if data['mostrar_objetivos'] else []
             data['andamiaje'] = _andamiaje_adaptativo(intento)
             indicadores_estado = _estado_indicadores(intento)
             data['indicadores_estado'] = indicadores_estado
+            data['indicadores_empresa'] = [i for i in indicadores_estado if not i['es_academico']]
+            data['indicadores_academicos'] = [i for i in indicadores_estado if i['es_academico']]
             data['cambios_indicadores'] = [i for i in indicadores_estado if i['flecha']]
-            data['pronostico_indicadores'] = indicadores_estado
-            data['pedir_tradeoff'] = bool(indicadores_estado or intento.simulacion.recursos.filter(activo=True).exists())
-            data['investigaciones'] = investigaciones_disponibles(intento)
+            data['pronostico_indicadores'] = indicadores_estado if data['pedir_pronostico'] else []
+            reglas_respuesta = configuracion_respuesta_ronda(
+                intento.simulacion, numero, intento.configuracion_snapshot,
+            )
+            data['pronostico_obligatorio'] = reglas_respuesta['pronostico_obligatorio']
+            data['tradeoff_obligatorio'] = reglas_respuesta['tradeoff_obligatorio']
+            data['minimo_justificacion'] = reglas_respuesta['minimo_justificacion']
+            data['pedir_tradeoff'] = data['pedir_tradeoff'] and bool(
+                indicadores_estado or _recursos_del_intento(intento)
+            )
+            data['investigaciones'] = (
+                investigaciones_disponibles(intento) if data['mostrar_investigaciones'] else []
+            )
             if intento.simulacion.tipo_simulacion == Simulacion.TIPO_SIN_IA_ARBOL:
                 data['escenario'] = intento.escenario_actual
                 data['decisiones'] = intento.escenario_actual.decisiones.filter(activo=True) if intento.escenario_actual else []
             else:
-                acciones_sugeridas = list(intento.simulacion.acciones_sugeridas.filter(
-                    Q(numero_ronda=numero) | Q(numero_ronda__isnull=True),
-                    activo=True,
-                ))
+                acciones_sugeridas = _acciones_del_intento(intento, numero)
                 for accion in acciones_sugeridas:
                     accion.costo_legible = _costo_accion_legible(intento.simulacion, accion.costo_recursos)
                 data['acciones_sugeridas'] = acciones_sugeridas
-                data['modo_ronda'] = _modo_ronda(intento.simulacion, numero, bool(acciones_sugeridas))
+                data['modo_ronda'] = _modo_ronda(
+                    intento.simulacion, numero, bool(acciones_sugeridas), parametros_caso,
+                )
+                if justificacion_obligatoria(intento.simulacion, numero, intento.configuracion_snapshot):
+                    data['form'].fields['justificacion'].widget.attrs.update({
+                        'required': True,
+                        'minlength': reglas_respuesta['minimo_justificacion'],
+                    })
+                    data['justificacion_obligatoria'] = True
                 data['recursos_estado'] = _recursos_estado(intento)
                 data['pistas_tutor'] = intento.pistas_tutor.filter(numero_ronda=numero)
-                data['pasos_stepper'] = _pasos_stepper(intento.simulacion, numero)
+                data['pasos_stepper'] = _pasos_stepper(
+                    intento.simulacion, numero, data['caso'].get('maximo_decisiones'), parametros_caso,
+                )
                 data['hud'] = _hud_simulacion(intento)
             return render(request, 'simulador/alu_simulaciones/simular.html', data)
 
@@ -1157,11 +1695,16 @@ def view(request):
                 estudiante=request.user,
             )
             data['intento'] = intento
+            data['caso'] = _caso_del_intento(intento)
+            data['aviso_version'] = (intento.configuracion_snapshot or {}).get('aviso_version', '')
             data['gamificacion'] = _calcular_gamificacion(intento)
             data['objetivos_mision'] = _objetivos_mision(intento)
             data['comparacion_reintento'] = _comparacion_reintento(intento)
             data['indicadores_finales'] = _indicadores_finales(intento)
+            data['indicadores_empresa'] = [i for i in data['indicadores_finales'] if not i['es_academico']]
+            data['indicadores_academicos'] = [i for i in data['indicadores_finales'] if i['es_academico']]
             data['explicacion_resultado'] = _explicacion_resultado(intento)
+            data['selecciones_registradas'] = _selecciones_registradas(intento)
             data['calidad_metacognitiva'] = _calidad_metacognitiva(intento)
             data['bonificaciones'] = calcular_bonificaciones(intento)
             data['casos_equivalentes'] = _casos_equivalentes(intento, request.user)

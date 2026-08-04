@@ -13,7 +13,7 @@
                 {% elif simulacion.nivel_dificultad == 'AVANZADA' %}<span class="chip chip-avanzada">Avanzada</span>
                 {% else %}<span class="chip chip-media">Media</span>{% endif %}
                 <span class="mission-tag">⏱ {{ simulacion.tiempo_estimado }} min</span>
-                <span class="mission-tag">🎯 {{ simulacion.maximo_decisiones }} rondas</span>
+                <span class="mission-tag">🎯 {{ simulacion.maximo_decisiones }} {% if simulacion.maximo_decisiones == 1 %}ronda{% else %}rondas{% endif %}</span>
                 {% if simulacion.tema %}<span class="mission-tag">{{ simulacion.tema }}</span>{% endif %}
             </div>
         </div>
@@ -61,18 +61,18 @@
             </div>
             {% endif %}
 
-            {% if candidatos %}
-            <div class="game-card mt-3">
-                <div class="game-card-head"><span class="game-tag">👥 {{ caso_labels.participantes_titulo|default:"Candidatos finalistas" }}</span></div>
+            {% if alternativas_caso %}
+            <details class="game-card mt-3">
+                <summary class="game-card-head" style="cursor:pointer"><span class="game-tag">🔀 {{ caso_labels.alternativas_titulo }}</span><span class="small text-muted">{{ alternativas_caso|length }} opciones · ver detalles</span></summary>
                 <div class="row g-2">
-                    {% for c in candidatos %}
+                    {% for alternativa in alternativas_caso %}
                     <div class="col-md-4">
                         <div class="mission-ind h-100">
-                            <div class="fw-bold">{{ c.nombre }}</div>
-                            <div class="small text-muted">{{ c.experiencia }}</div>
-                            <div class="small mt-2"><strong>{{ caso_labels.valor_titulo|default:"Salario" }}:</strong> {{ c.valor_display|default:c.salario_pretendido }}</div>
-                            <div class="small mt-1"><strong>{{ caso_labels.fortalezas_titulo|default:"Fortalezas" }}:</strong> {{ c.fortalezas }}</div>
-                            <div class="small mt-1"><strong>{{ caso_labels.riesgo_titulo|default:"Riesgo" }}:</strong> {{ c.debilidades }}</div>
+                            <div class="fw-bold">{{ alternativa.nombre }}</div>
+                            {% if alternativa.subtitulo %}<div class="small text-muted">{{ alternativa.subtitulo }}</div>{% endif %}
+                            {% if alternativa.valor %}<div class="small mt-2"><strong>{{ caso_labels.valor_titulo }}:</strong> {{ alternativa.valor }}</div>{% endif %}
+                            {% if alternativa.fortaleza %}<div class="small mt-1"><strong>{{ caso_labels.fortaleza_titulo }}:</strong> {{ alternativa.fortaleza }}</div>{% endif %}
+                            {% if alternativa.riesgo %}<div class="small mt-1"><strong>{{ caso_labels.riesgo_titulo }}:</strong> {{ alternativa.riesgo }}</div>{% endif %}
                         </div>
                     </div>
                     {% endfor %}
@@ -81,8 +81,8 @@
             {% endif %}
 
             {% if prueba_tecnica %}
-            <div class="game-card mt-3">
-                <div class="game-card-head"><span class="game-tag">🧪 {{ caso_labels.matriz_titulo|default:"Prueba técnica configurada" }}</span></div>
+            <details class="game-card mt-3">
+                <summary class="game-card-head" style="cursor:pointer"><span class="game-tag">⚖️ {{ caso_labels.matriz_titulo }}</span><span class="small text-muted">ver cómo comparar</span></summary>
                 <div class="vstack gap-2">
                     {% for p in prueba_tecnica %}
                     <div class="mission-ind">
@@ -99,19 +99,34 @@
         </div>
 
         <div class="col-lg-4">
-            {% if indicadores %}
+            {% if indicadores_empresa %}
             <div class="game-card mb-3">
-                <div class="game-card-head"><span class="game-tag">📊 Tus indicadores</span></div>
-                <p class="text-muted small mb-2">Estos son los marcadores que tus decisiones moverán.</p>
+                <div class="game-card-head"><span class="game-tag">📊 Indicadores de la empresa</span></div>
+                <p class="text-muted small mb-2">Muestran el estado del caso; no son la nota académica.</p>
                 <div class="vstack gap-2">
-                    {% for ind in indicadores %}
+                    {% for ind in indicadores_empresa %}
                     <div class="d-flex justify-content-between align-items-center mission-ind">
                         <span class="fw-semibold small">{{ ind.nombre }}{% if ind.es_critico %} <span class="game-crit">clave</span>{% endif %}</span>
                         <span class="mission-ind-val">{{ ind.valor_inicial }}</span>
                     </div>
                     {% endfor %}
                 </div>
-            </div>
+            </details>
+            {% endif %}
+
+            {% if indicadores_academicos %}
+            <div class="game-card mb-3">
+                <div class="game-card-head"><span class="game-tag">🧠 Indicadores académicos heredados</span></div>
+                <p class="text-muted small mb-2">Miden el desempeño de la respuesta y se muestran separados del estado empresarial.</p>
+                <div class="vstack gap-2">
+                    {% for ind in indicadores_academicos %}
+                    <div class="d-flex justify-content-between align-items-center mission-ind">
+                        <span class="fw-semibold small">{{ ind.nombre }}{% if ind.es_critico %} <span class="game-crit">clave</span>{% endif %}</span>
+                        <span class="mission-ind-val">{{ ind.valor_inicial }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
             {% endif %}
 
             {% if objetivos_mision %}
@@ -122,7 +137,7 @@
                     {% for o in objetivos_mision %}
                     <div class="d-flex justify-content-between align-items-center mission-ind">
                         <span class="small">{{ o.descripcion }}</span>
-                        <span class="mission-ind-val">{{ o.meta }}</span>
+                        <span class="mission-ind-val">{{ o.valor_actual_legible }} / {{ o.meta }}</span>
                     </div>
                     {% endfor %}
                 </div>
@@ -139,7 +154,7 @@
                 {% endif %}
             {% endif %}
             <div class="game-card mission-start">
-                <p class="small text-muted mb-3">Tomarás <strong>{{ simulacion.maximo_decisiones }} decisiones</strong>. Cada una mueve la empresa. ¿List@ para jugar?</p>
+                <p class="small text-muted mb-3">Este caso tiene <strong>{{ simulacion.maximo_decisiones }} {% if simulacion.maximo_decisiones == 1 %}ronda{% else %}rondas{% endif %}</strong>, únicamente las necesarias para practicar el aprendizaje. ¿List@ para comenzar?</p>
                 {% if asignacion and asignacion.cerrada %}
                     <button class="btn btn-secondary btn-lg w-100" disabled>Tarea cerrada</button>
                 {% else %}

@@ -647,6 +647,7 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Inicio</a></li>
                     {% if puede_administrar %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}#estado-ia-panel">Estado IA</a></li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Academico</a>
                         <ul class="dropdown-menu">
@@ -801,5 +802,6 @@ function enviar_formulario(formulario) {
     return false;
 }
 </script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>

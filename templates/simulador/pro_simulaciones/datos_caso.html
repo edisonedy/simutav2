@@ -11,8 +11,31 @@
 </div>
 
 <div class="alert alert-info py-2 small">
-    Estos datos son la evidencia que ve el estudiante para decidir: proveedores, candidatos, cotizaciones o alternativas.
+    Estos datos son la evidencia que ve el estudiante para decidir: métodos, proveedores, estrategias,
+    escenarios, candidatos, productos o cualquier otro tipo de alternativa.
     <strong>No reemplazan la rubrica</strong>; la nota sigue saliendo de los conceptos esperados.
+</div>
+
+<div class="module-card p-3 mb-3">
+    <h2 class="h5">Nombres que verá el estudiante</h2>
+    <p class="text-muted small">Los valores iniciales son neutrales. Personalízalos únicamente cuando la materia necesite términos específicos.</p>
+    <form method="post" action="{% url 'pro_simulaciones' %}?action=guardar_etiquetas_caso&id={{ simulacion.pk }}"
+          onsubmit="return enviar_formulario(this)">
+        {% csrf_token %}
+        <div class="row g-2">
+            <div class="col-md-4"><label class="form-label">Título de alternativas</label><input class="form-control" name="alternativas_titulo" value="{{ caso_labels.alternativas_titulo }}"></div>
+            <div class="col-md-4"><label class="form-label">Columna alternativa</label><input class="form-control" name="alternativa_col" value="{{ caso_labels.alternativa_col }}"></div>
+            <div class="col-md-4"><label class="form-label">Título de criterios</label><input class="form-control" name="matriz_titulo" value="{{ caso_labels.matriz_titulo }}"></div>
+            <div class="col-md-4"><label class="form-label">Etiqueta del valor</label><input class="form-control" name="valor_titulo" value="{{ caso_labels.valor_titulo }}"></div>
+            <div class="col-md-4"><label class="form-label">Columna del valor</label><input class="form-control" name="valor_col" value="{{ caso_labels.valor_col }}"></div>
+            <div class="col-md-4"><label class="form-label">Título del bloque de datos</label><input class="form-control" name="datos_titulo" value="{{ caso_labels.datos_titulo }}"></div>
+            <div class="col-md-3"><label class="form-label">Etiqueta de fortaleza</label><input class="form-control" name="fortaleza_titulo" value="{{ caso_labels.fortaleza_titulo }}"></div>
+            <div class="col-md-3"><label class="form-label">Columna fortaleza</label><input class="form-control" name="fortaleza_col" value="{{ caso_labels.fortaleza_col }}"></div>
+            <div class="col-md-3"><label class="form-label">Etiqueta de riesgo</label><input class="form-control" name="riesgo_titulo" value="{{ caso_labels.riesgo_titulo }}"></div>
+            <div class="col-md-3"><label class="form-label">Columna riesgo</label><input class="form-control" name="riesgo_col" value="{{ caso_labels.riesgo_col }}"></div>
+        </div>
+        <button class="btn btn-primary mt-3">Guardar nombres</button>
+    </form>
 </div>
 
 <div class="row g-3 mb-3">

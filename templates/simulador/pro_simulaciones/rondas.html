@@ -7,10 +7,31 @@
     </div>
 </div>
 
+<form method="post" action="{% url 'pro_simulaciones' %}?action=cambiar_cantidad_rondas&id={{ simulacion.pk }}"
+      class="module-card p-3 mb-3" onsubmit="return enviar_formulario(this)">
+    {% csrf_token %}
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="play-label" for="cantidadRondas">Cantidad exacta de rondas</label>
+            <input class="form-control" id="cantidadRondas" name="cantidad_rondas" type="number"
+                   min="1" step="1" required value="{{ simulacion.maximo_decisiones }}">
+        </div>
+        <div class="col-md-5">
+            <p class="small text-muted mb-0">
+                Usa únicamente las que necesita el aprendizaje. Al reducir, se desactivan las
+                alternativas, rúbricas y eventos de las rondas eliminadas.
+            </p>
+        </div>
+        <div class="col-md-3 text-md-end">
+            <button class="btn btn-outline-primary" type="submit">Aplicar cantidad</button>
+        </div>
+    </div>
+</form>
+
 <div class="alert alert-info small">
-    Cada ronda puede pedir una cosa distinta. Lo habitual es abrir con
-    <strong>solo escribir</strong> para que el estudiante diagnostique sin que le sugieras el camino,
-    y despues pasar a <strong>elegir</strong> para que se enfrente a opciones con trade-offs.
+    Cada ronda es completamente configurable. Puede servir para explorar, comparar, decidir,
+    corregir, negociar o aplicar un concepto; <strong>no existe una secuencia obligatoria</strong>.
+    Muestra solamente la información que el estudiante necesita en ese momento.
     {% if not hay_opciones %}
         <div class="mt-2"><strong>Ojo:</strong> este caso no tiene opciones de decision configuradas,
         asi que aunque elijas "elegir" el estudiante vera solo el campo de escribir. Configuralas en
@@ -25,12 +46,36 @@
         <div class="col-lg-6">
             <div class="module-card p-3 h-100">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="section-title mb-0">Ronda {{ ronda.numero }}</div>
+                    <div>
+                        <div class="section-title mb-0">Ronda {{ ronda.numero }}</div>
+                        <div class="fw-semibold">{{ ronda.titulo }}</div>
+                    </div>
                     {% if ronda.degradado %}
                         <span class="badge text-bg-warning" title="Configuraste otro modo, pero sin opciones no se puede aplicar">
                             se aplica: {{ ronda.modo_efectivo }}
                         </span>
                     {% endif %}
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="play-label" for="titulo_{{ ronda.numero }}">Nombre de esta ronda</label>
+                        <input class="form-control" type="text" id="titulo_{{ ronda.numero }}"
+                               name="titulo_{{ ronda.numero }}" value="{{ ronda.titulo }}"
+                               placeholder="Ej. Comparar alternativas">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="play-label" for="proposito_{{ ronda.numero }}">Qué aprendizaje practica</label>
+                        <input class="form-control" type="text" id="proposito_{{ ronda.numero }}"
+                               name="proposito_{{ ronda.numero }}" value="{{ ronda.proposito }}"
+                               placeholder="Ej. Aplicar costo total de propiedad">
+                    </div>
+                    <div class="col-12">
+                        <label class="play-label" for="situacion_{{ ronda.numero }}">Situación o consigna específica</label>
+                        <textarea class="form-control" id="situacion_{{ ronda.numero }}"
+                                  name="situacion_{{ ronda.numero }}" rows="3"
+                                  placeholder="Qué cambió y qué debe decidir el estudiante">{{ ronda.situacion }}</textarea>
+                    </div>
                 </div>
 
                 <div class="mb-3">
@@ -48,13 +93,117 @@
                     <label class="play-label" for="etq_dec_{{ ronda.numero }}">Como llamar a la decision</label>
                     <input class="form-control" type="text" id="etq_dec_{{ ronda.numero }}"
                            name="etiqueta_decision_{{ ronda.numero }}" value="{{ ronda.etiqueta_decision }}"
-                           placeholder="Diagnostico, Decision, Plan...">
+                           placeholder="Ej. Alternativa seleccionada">
                 </div>
                 <div>
                     <label class="play-label" for="etq_jus_{{ ronda.numero }}">Como llamar a la justificacion</label>
                     <input class="form-control" type="text" id="etq_jus_{{ ronda.numero }}"
                            name="etiqueta_justificacion_{{ ronda.numero }}" value="{{ ronda.etiqueta_justificacion }}"
-                           placeholder="Justificacion del diagnostico...">
+                           placeholder="Ej. Explica tu razonamiento con evidencia">
+                </div>
+
+                <label class="d-block mt-3">
+                    <input type="checkbox" name="justificacion_obligatoria_{{ ronda.numero }}"
+                           {% if ronda.justificacion_obligatoria %}checked{% endif %}>
+                    <span class="ms-1">Exigir explicación del razonamiento</span>
+                </label>
+                <div class="row g-2 mt-1">
+                    <div class="col-md-5">
+                        <label class="play-label" for="min_jus_{{ ronda.numero }}">Mínimo de caracteres</label>
+                        <input class="form-control" type="number" min="0" max="500"
+                               id="min_jus_{{ ronda.numero }}"
+                               name="minimo_justificacion_{{ ronda.numero }}"
+                               value="{{ ronda.minimo_justificacion }}">
+                        <div class="small text-muted">12 permite una frase corta; aumenta el valor solo si la fase lo necesita.</div>
+                    </div>
+                    <div class="col-md-7 d-flex align-items-center">
+                        <label class="d-flex gap-2 align-items-start mt-3">
+                            <input type="checkbox" name="bloquear_contradiccion_{{ ronda.numero }}"
+                                   {% if ronda.bloquear_contradiccion %}checked{% endif %}>
+                            <span>
+                                Bloquear opción y explicación contradictorias
+                                <span class="d-block small text-muted">No avanza ni aplica consecuencias hasta corregir.</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <label class="d-block mt-2">
+                    <input type="checkbox" name="alternativas_desde_datos_caso_{{ ronda.numero }}"
+                           {% if ronda.alternativas_desde_datos_caso %}checked{% endif %}>
+                    <span class="ms-1">Elegir exactamente las alternativas de la tabla visible</span>
+                    <span class="d-block small text-muted ms-4">Para candidatos, proveedores, productos u otras opciones mostradas en los datos del caso.</span>
+                </label>
+
+                <div class="border-top mt-3 pt-3">
+                    <div class="play-label mb-2">Campos que la IA puede usar como evidencia</div>
+                    <div class="row g-2">
+                        {% for fuente in ronda.fuentes_evaluacion %}
+                        <div class="col-md-6">
+                            <label class="d-flex gap-2 align-items-start small">
+                                <input type="checkbox" name="fuentes_evaluacion_{{ ronda.numero }}"
+                                       value="{{ fuente.clave }}" {% if fuente.activo %}checked{% endif %}>
+                                <span>{{ fuente.etiqueta }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <label class="d-block mt-2">
+                        <input type="checkbox" name="pronostico_obligatorio_{{ ronda.numero }}"
+                               {% if ronda.pronostico_obligatorio %}checked{% endif %}>
+                        <span class="ms-1">Pronóstico obligatorio cuando el campo esté visible</span>
+                    </label>
+                    <label class="d-block mt-2">
+                        <input type="checkbox" name="tradeoff_obligatorio_{{ ronda.numero }}"
+                               {% if ronda.tradeoff_obligatorio %}checked{% endif %}>
+                        <span class="ms-1">Trade-off obligatorio cuando el campo esté visible</span>
+                    </label>
+                </div>
+
+                <div class="border-top mt-3 pt-3">
+                    <div class="play-label mb-2">Qué mostrar en esta ronda</div>
+                    <div class="row g-2">
+                        {% for control in ronda.controles_visibilidad %}
+                        <div class="col-md-6">
+                            <label class="d-flex gap-2 align-items-start small">
+                                <input type="checkbox" name="{{ control.clave }}_{{ ronda.numero }}"
+                                       {% if control.activo %}checked{% endif %}>
+                                <span>{{ control.etiqueta }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <details class="border-top mt-3 pt-3">
+                    <summary class="play-label" style="cursor:pointer">Indicadores que esta fase puede cambiar</summary>
+                    <p class="small text-muted mt-2 mb-2">
+                        Marca solo resultados que realmente pueden variar en este momento del caso.
+                        Los demás quedan congelados aunque una alternativa o evento intente modificarlos.
+                    </p>
+                    <div class="row g-2">
+                        {% for indicador in ronda.indicadores_modificables %}
+                        <div class="col-md-6">
+                            <label class="d-flex gap-2 align-items-start small">
+                                <input type="checkbox" name="indicadores_modificables_{{ ronda.numero }}"
+                                       value="{{ indicador.codigo }}" {% if indicador.activo %}checked{% endif %}>
+                                <span>{{ indicador.nombre }}</span>
+                            </label>
+                        </div>
+                        {% empty %}
+                        <div class="small text-muted">Primero configura los indicadores del caso.</div>
+                        {% endfor %}
+                    </div>
+                </details>
+
+                <div class="alert {% if ronda.acciones_especificas %}alert-success{% elif ronda.acciones_globales %}alert-warning{% else %}alert-light border{% endif %} py-2 small mt-3 mb-0">
+                    {% if ronda.acciones_especificas %}
+                        {{ ronda.acciones_especificas }} alternativa(s) configurada(s) específicamente para esta ronda.
+                    {% elif ronda.acciones_globales %}
+                        Esta ronda reutiliza {{ ronda.acciones_globales }} alternativa(s) global(es). Asígnalas por ronda si no tienen sentido aquí.
+                    {% else %}
+                        No tiene alternativas predefinidas; los modos de elección se convertirán en respuesta escrita.
+                    {% endif %}
+                    <a href="{% url 'pro_simulaciones' %}?action=acciones&id={{ simulacion.pk }}">Configurar alternativas</a>
                 </div>
             </div>
         </div>

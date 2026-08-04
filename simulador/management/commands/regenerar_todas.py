@@ -64,8 +64,7 @@ def _schema_simulacion_array():
                 'materia': {'type': 'string'},
                 'tema': {'type': 'string'},
                 'nivel_dificultad': {'type': 'string', 'enum': ['BAJA', 'MEDIA', 'ALTA']},
-                'tiempo_estimado': {'type': 'number'},
-                'maximo_decisiones': {'type': 'number'},
+                'tiempo_estimado': {'type': 'integer'},
                 'rol_estudiante': {'type': 'string'},
                 'contexto': {'type': 'string'},
                 'objetivo': {'type': 'string'},
@@ -79,7 +78,10 @@ def _schema_simulacion_array():
                             'codigo': {'type': 'string'}, 'nombre': {'type': 'string'},
                             'valor_inicial': {'type': 'number'}, 'valor_minimo': {'type': 'number'},
                             'valor_maximo': {'type': 'number'},
-                            'direccion_optima': {'type': 'string', 'enum': ['ALTO', 'BAJO']},
+                            'direccion_optima': {'type': 'string', 'enum': ['ALTO', 'BAJO', 'OBJETIVO', 'RANGO']},
+                            'valor_objetivo': {'type': ['number', 'null']},
+                            'valor_objetivo_min': {'type': ['number', 'null']},
+                            'valor_objetivo_max': {'type': ['number', 'null']},
                             'unidad': {'type': 'string'}, 'es_critico': {'type': 'boolean'},
                         },
                         'required': ['codigo', 'nombre', 'valor_inicial', 'valor_minimo', 'valor_maximo', 'direccion_optima', 'unidad', 'es_critico'],
@@ -104,9 +106,21 @@ def _schema_simulacion_array():
                     'items': {
                         'type': 'object',
                         'properties': {
-                            'numero': {'type': 'number'}, 'titulo': {'type': 'string'}, 'pregunta': {'type': 'string'},
+                            'numero': {'type': 'integer'}, 'titulo': {'type': 'string'},
+                            'proposito': {'type': 'string'}, 'situacion': {'type': 'string'},
+                            'modo': {'type': 'string', 'enum': ['elegir', 'escribir', 'hibrido']},
                             'etiqueta_decision': {'type': 'string'}, 'etiqueta_justificacion': {'type': 'string'},
-                            'placeholder_respuesta': {'type': 'string'}, 'placeholder_justificacion': {'type': 'string'},
+                            'justificacion_obligatoria': {'type': 'boolean'},
+                            'mostrar_objetivos': {'type': 'boolean'},
+                            'mostrar_rubrica': {'type': 'boolean'},
+                            'mostrar_datos_caso': {'type': 'boolean'},
+                            'mostrar_resultados_alternativas': {'type': 'boolean'},
+                            'mostrar_indicadores': {'type': 'boolean'},
+                            'mostrar_recursos': {'type': 'boolean'},
+                            'mostrar_investigaciones': {'type': 'boolean'},
+                            'pedir_pronostico': {'type': 'boolean'},
+                            'pedir_tradeoff': {'type': 'boolean'},
+                            'pedir_reflexion': {'type': 'boolean'},
                             'conceptos_esperados': {
                                 'type': 'array',
                                 'items': {
@@ -121,7 +135,16 @@ def _schema_simulacion_array():
                                 },
                             },
                         },
-                        'required': ['numero', 'titulo', 'pregunta', 'etiqueta_decision', 'etiqueta_justificacion', 'placeholder_respuesta', 'placeholder_justificacion', 'conceptos_esperados'],
+                        'required': [
+                            'numero', 'titulo', 'proposito', 'situacion', 'modo',
+                            'etiqueta_decision', 'etiqueta_justificacion',
+                            'justificacion_obligatoria', 'mostrar_objetivos',
+                            'mostrar_rubrica', 'mostrar_datos_caso',
+                            'mostrar_resultados_alternativas', 'mostrar_indicadores',
+                            'mostrar_recursos', 'mostrar_investigaciones',
+                            'pedir_pronostico', 'pedir_tradeoff', 'pedir_reflexion',
+                            'conceptos_esperados',
+                        ],
                         'additionalProperties': False,
                     },
                 },
@@ -130,37 +153,27 @@ def _schema_simulacion_array():
                     'items': {
                         'type': 'object',
                         'properties': {
-                            'numero_ronda': {'type': 'number'},
+                            'numero_ronda': {'type': 'integer'},
                             'texto': {'type': 'string'}, 'descripcion': {'type': 'string'},
+                            'impactos': {
+                                'type': 'array',
+                                'items': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'indicador': {'type': 'string'},
+                                        'cambio': {'type': 'number'},
+                                    },
+                                    'required': ['indicador', 'cambio'],
+                                    'additionalProperties': False,
+                                },
+                            },
                         },
-                        'required': ['numero_ronda', 'texto', 'descripcion'],
+                        'required': ['numero_ronda', 'texto', 'descripcion', 'impactos'],
                         'additionalProperties': False,
                     },
                 },
-                'respuestas_prueba': {
-                    'type': 'object',
-                    'properties': {
-                        'mala': {
-                            'type': 'object',
-                            'properties': {'ronda_1': {'type': 'string'}, 'ronda_2': {'type': 'string'}, 'ronda_3': {'type': 'string'}},
-                            'required': ['ronda_1', 'ronda_2', 'ronda_3'], 'additionalProperties': False,
-                        },
-                        'media': {
-                            'type': 'object',
-                            'properties': {'ronda_1': {'type': 'string'}, 'ronda_2': {'type': 'string'}, 'ronda_3': {'type': 'string'}},
-                            'required': ['ronda_1', 'ronda_2', 'ronda_3'], 'additionalProperties': False,
-                        },
-                        'buena': {
-                            'type': 'object',
-                            'properties': {'ronda_1': {'type': 'string'}, 'ronda_2': {'type': 'string'}, 'ronda_3': {'type': 'string'}},
-                            'required': ['ronda_1', 'ronda_2', 'ronda_3'], 'additionalProperties': False,
-                        },
-                    },
-                    'required': ['mala', 'media', 'buena'],
-                    'additionalProperties': False,
-                },
             },
-            'required': ['titulo', 'materia', 'tema', 'nivel_dificultad', 'tiempo_estimado', 'maximo_decisiones', 'rol_estudiante', 'contexto', 'objetivo', 'resultado_aprendizaje', 'situacion_inicial', 'indicadores', 'restricciones', 'rondas', 'decisiones_sugeridas', 'respuestas_prueba'],
+            'required': ['titulo', 'materia', 'tema', 'nivel_dificultad', 'tiempo_estimado', 'rol_estudiante', 'contexto', 'objetivo', 'resultado_aprendizaje', 'situacion_inicial', 'indicadores', 'restricciones', 'rondas', 'decisiones_sugeridas'],
                     'additionalProperties': False,
                 },
             },
@@ -288,10 +301,15 @@ class Command(BaseCommand):
 
 @transaction.atomic
 def _crear_simulacion(data, materia_malla, profesor, model=''):
-    rondas_data = data.get('rondas', [])
-    max_rondas = max((r['numero'] for r in rondas_data), default=3)
+    rondas_data = [
+        {**ronda, 'numero': numero}
+        for numero, ronda in enumerate(data.get('rondas') or [], 1)
+        if isinstance(ronda, dict)
+    ]
+    if not rondas_data:
+        raise ValueError('La IA no genero ninguna ronda util.')
+    cantidad_rondas = len(rondas_data)
     dif = data.get('nivel_dificultad', 'MEDIA')
-    max_dec = data.get('maximo_decisiones', 3)
 
     s = Simulacion.objects.create(
         materia_malla=materia_malla,
@@ -300,7 +318,7 @@ def _crear_simulacion(data, materia_malla, profesor, model=''):
         titulo=data.get('titulo', ''),
         tema=data.get('tema', ''),
         nivel_dificultad=dif,
-        maximo_decisiones=max_dec,
+        maximo_decisiones=cantidad_rondas,
         tiempo_estimado=data.get('tiempo_estimado', 25),
         rol_estudiante=data.get('rol_estudiante', ''),
         contexto=data.get('contexto', ''),
@@ -314,12 +332,30 @@ def _crear_simulacion(data, materia_malla, profesor, model=''):
             'rondas': [
                 {
                     'numero': r['numero'], 'titulo': r['titulo'],
-                    'proposito': r.get('pregunta', ''),
-                    'situacion': r.get('pregunta', ''),
-                    'etiqueta_decision': r.get('etiqueta_decision', 'Decision'),
-                    'etiqueta_justificacion': r.get('etiqueta_justificacion', 'Justificacion'),
-                    'placeholder_respuesta': r.get('placeholder_respuesta', ''),
-                    'placeholder_justificacion': r.get('placeholder_justificacion', ''),
+                    'proposito': r.get('proposito', ''),
+                    'situacion': r.get('situacion', ''),
+                    'modo': r.get('modo', 'escribir'),
+                    'etiqueta_decision': r.get('etiqueta_decision', 'Tu respuesta'),
+                    'etiqueta_justificacion': r.get(
+                        'etiqueta_justificacion', 'Explica tu razonamiento',
+                    ),
+                    'justificacion_obligatoria': bool(
+                        r.get('justificacion_obligatoria', True)
+                    ),
+                    'mostrar_objetivos': bool(r.get('mostrar_objetivos', True)),
+                    'mostrar_rubrica': bool(r.get('mostrar_rubrica', True)),
+                    'mostrar_datos_caso': bool(r.get('mostrar_datos_caso', True)),
+                    'mostrar_resultados_alternativas': bool(
+                        r.get('mostrar_resultados_alternativas', False)
+                    ),
+                    'mostrar_indicadores': bool(r.get('mostrar_indicadores', True)),
+                    'mostrar_recursos': bool(r.get('mostrar_recursos', True)),
+                    'mostrar_investigaciones': bool(
+                        r.get('mostrar_investigaciones', False)
+                    ),
+                    'pedir_pronostico': bool(r.get('pedir_pronostico', False)),
+                    'pedir_tradeoff': bool(r.get('pedir_tradeoff', False)),
+                    'pedir_reflexion': bool(r.get('pedir_reflexion', False)),
                 }
                 for r in rondas_data
             ],
@@ -336,6 +372,18 @@ def _crear_simulacion(data, materia_malla, profesor, model=''):
             valor_minimo=Decimal(str(ind.get('valor_minimo', 0))),
             valor_maximo=Decimal(str(ind.get('valor_maximo', 100))),
             direccion_optima=ind.get('direccion_optima', 'ALTO'),
+            valor_objetivo=(
+                Decimal(str(ind['valor_objetivo']))
+                if ind.get('valor_objetivo') is not None else None
+            ),
+            valor_objetivo_min=(
+                Decimal(str(ind['valor_objetivo_min']))
+                if ind.get('valor_objetivo_min') is not None else None
+            ),
+            valor_objetivo_max=(
+                Decimal(str(ind['valor_objetivo_max']))
+                if ind.get('valor_objetivo_max') is not None else None
+            ),
             es_critico=bool(ind.get('es_critico', False)),
             unidad=ind.get('unidad', ''),
             usuario_creacion=profesor,
@@ -351,14 +399,21 @@ def _crear_simulacion(data, materia_malla, profesor, model=''):
             usuario_creacion=profesor,
         )
 
-    for ronda in rondas_data:
+    peso_base = Decimal('100') // Decimal(cantidad_rondas)
+    peso_acumulado = Decimal('0')
+    for indice, ronda in enumerate(rondas_data):
+        peso_criterio = (
+            Decimal('100') - peso_acumulado
+            if indice == cantidad_rondas - 1 else peso_base
+        )
         CriterioEvaluacion.objects.create(
             simulacion=s,
             nombre=ronda.get('titulo', f'Ronda {ronda["numero"]}'),
-            descripcion=ronda.get('pregunta', ''),
-            peso=Decimal('100') / Decimal(max(1, max_rondas)),
+            descripcion=ronda.get('proposito', ''),
+            peso=peso_criterio,
             puntaje_maximo=100, usuario_creacion=profesor,
         )
+        peso_acumulado += peso_criterio
         for conc in ronda.get('conceptos_esperados', []):
             palabras = conc.get('palabras_clave', '')
             ConceptoEsperadoRonda.objects.create(
@@ -370,11 +425,21 @@ def _crear_simulacion(data, materia_malla, profesor, model=''):
                 es_critico=conc.get('es_critico', False), usuario_creacion=profesor,
             )
 
+    codigos_validos = {item.get('codigo') for item in data.get('indicadores', [])}
     for dec in data.get('decisiones_sugeridas', []):
+        numero_ronda = int(dec.get('numero_ronda') or 1)
+        if numero_ronda not in range(1, cantidad_rondas + 1):
+            continue
+        impacto = {
+            item.get('indicador'): item.get('cambio')
+            for item in (dec.get('impactos') or [])
+            if item.get('indicador') in codigos_validos
+            and isinstance(item.get('cambio'), (int, float))
+        }
         AccionSugeridaSimulacion.objects.create(
-            simulacion=s, numero_ronda=dec.get('numero_ronda', 2),
+            simulacion=s, numero_ronda=numero_ronda,
             texto=dec.get('texto', ''), descripcion=dec.get('descripcion', ''),
-            impacto_base={}, usuario_creacion=profesor,
+            impacto_base=impacto, usuario_creacion=profesor,
         )
 
     return s

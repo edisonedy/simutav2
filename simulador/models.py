@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -50,7 +51,6 @@ class PlantillaSimulacion(ModeloBase):
         blank=True,
         related_name='plantillas_simulacion',
     )
-    maximo_decisiones = models.PositiveIntegerField(default=3)
     tiempo_estimado = models.PositiveIntegerField(default=30)
     nivel_dificultad = models.CharField(max_length=20, blank=True, default='MEDIA')
     rol_base = models.CharField(max_length=200, blank=True, default='Responsable de decision')
@@ -200,7 +200,11 @@ class Simulacion(ModeloBase):
     titulo = models.CharField(max_length=300)
     tema = models.CharField(max_length=300, blank=True)
     nivel_dificultad = models.CharField(max_length=20, choices=DIFICULTADES, default=DIFICULTAD_MEDIA)
-    maximo_decisiones = models.IntegerField(default=5)
+    maximo_decisiones = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        help_text='Cantidad exacta de rondas que necesita el caso.',
+    )
     tiempo_estimado = models.IntegerField(default=30, help_text='Tiempo estimado en minutos')
     peso_rubrica_decision = models.PositiveSmallIntegerField(
         'peso de la calidad de la decision (%)',
@@ -249,8 +253,8 @@ class Simulacion(ModeloBase):
     fecha_bloqueo = models.DateTimeField(null=True, blank=True)
     api_ia = models.CharField(max_length=40, blank=True, default='responses')
     modelo_ia = models.CharField(max_length=80, blank=True, default='')
-    prompt_version = models.CharField(max_length=40, blank=True, default='simuta-rubrica-v1')
-    esquema_ia_version = models.CharField(max_length=40, blank=True, default='rubrica-docente-v1')
+    prompt_version = models.CharField(max_length=40, blank=True, default='simuta-rubrica-v2')
+    esquema_ia_version = models.CharField(max_length=40, blank=True, default='rubrica-docente-v2')
     ia_habilitada = models.BooleanField(default=True)
     estado = models.CharField(max_length=20, choices=ESTADOS, default=BORRADOR)
     fecha_publicacion = models.DateTimeField(null=True, blank=True)
@@ -265,9 +269,13 @@ class Simulacion(ModeloBase):
 class IndicadorSimulacion(ModeloBase):
     DIRECCION_ALTO = 'ALTO'
     DIRECCION_BAJO = 'BAJO'
+    DIRECCION_OBJETIVO = 'OBJETIVO'
+    DIRECCION_RANGO = 'RANGO'
     DIRECCIONES_OPTIMAS = [
         (DIRECCION_ALTO, 'Mejor cuando es alto'),
         (DIRECCION_BAJO, 'Mejor cuando es bajo'),
+        (DIRECCION_OBJETIVO, 'Mejor cerca de un valor objetivo'),
+        (DIRECCION_RANGO, 'Mejor dentro de un rango objetivo'),
     ]
 
     simulacion = models.ForeignKey(Simulacion, on_delete=models.CASCADE, related_name='indicadores')
@@ -280,7 +288,26 @@ class IndicadorSimulacion(ModeloBase):
         max_length=10,
         choices=DIRECCIONES_OPTIMAS,
         default=DIRECCION_ALTO,
-        help_text='Define si un valor alto o bajo representa un buen desempeno en este indicador.',
+        help_text='Define si conviene subir, bajar, acercarse a un valor o permanecer en un rango.',
+    )
+    valor_objetivo = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text='Solo se usa cuando el indicador debe acercarse a un valor concreto.',
+    )
+    valor_objetivo_min = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text='Límite inferior deseable cuando la dirección óptima es un rango.',
+    )
+    valor_objetivo_max = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text='Límite superior deseable cuando la dirección óptima es un rango.',
+    )
+    peso_salud = models.DecimalField(
+        max_digits=6, decimal_places=2, default=1,
+        help_text=(
+            'Peso relativo de este indicador en la salud del caso. '
+            'No necesita sumar 100; el sistema normaliza todos los pesos.'
+        ),
     )
     es_critico = models.BooleanField(default=False)
     unidad = models.CharField(max_length=50, blank=True, default='')
@@ -361,6 +388,7 @@ class RestriccionSimulacion(ModeloBase):
         ('<', '<'),
         ('<=', '<='),
         ('=', '='),
+        ('ABS<=', 'Valor absoluto <='),
     ]
     simulacion = models.ForeignKey(Simulacion, on_delete=models.CASCADE, related_name='restricciones')
     descripcion = models.TextField()
@@ -433,6 +461,31 @@ class MatrizEvaluacionCaso(ModeloBase):
 
 class AccionSugeridaSimulacion(ModeloBase):
     simulacion = models.ForeignKey(Simulacion, on_delete=models.CASCADE, related_name='acciones_sugeridas')
+    opcion_caso = models.ForeignKey(
+        OpcionCasoSimulacion, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='acciones_vinculadas',
+        help_text='Alternativa visible a la que pertenece esta consecuencia, si aplica.',
+    )
+    requiere_accion_previa = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='acciones_dependientes',
+        help_text=(
+            'Si se configura, esta decisión solo aparece cuando el estudiante '
+            'eligió previamente la decisión indicada.'
+        ),
+    )
+    bloqueada_por_accion_previa = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='acciones_bloqueadas',
+        help_text=(
+            'Si el estudiante eligió previamente esta decisión, la alternativa '
+            'actual deja de estar disponible.'
+        ),
+    )
+    maximo_ejecuciones = models.PositiveSmallIntegerField(
+        default=1,
+        help_text='Número máximo de veces que puede ejecutarse en un intento. 0 significa sin límite.',
+    )
     numero_ronda = models.PositiveIntegerField(null=True, blank=True)
     texto = models.CharField(max_length=300)
     descripcion = models.TextField(blank=True, default='')
@@ -443,7 +496,17 @@ class AccionSugeridaSimulacion(ModeloBase):
         ordering = ['simulacion', 'numero_ronda', 'texto']
 
     def __str__(self):
-        return self.texto
+        return self.texto_visible
+
+    @property
+    def texto_visible(self):
+        return self.opcion_caso.nombre if self.opcion_caso_id else self.texto
+
+    @property
+    def descripcion_visible(self):
+        if self.opcion_caso_id:
+            return self.opcion_caso.subtitulo or self.descripcion
+        return self.descripcion
 
 
 class CondicionExitoSimulacion(ModeloBase):
@@ -453,6 +516,7 @@ class CondicionExitoSimulacion(ModeloBase):
         ('<', '<'),
         ('<=', '<='),
         ('=', '='),
+        ('ABS<=', 'Valor absoluto <='),
     ]
     simulacion = models.ForeignKey(Simulacion, on_delete=models.CASCADE, related_name='condiciones_exito')
     descripcion = models.CharField(max_length=300)
@@ -661,6 +725,10 @@ class PasoSimulacion(ModeloBase):
     esquema_ia_version = models.CharField(max_length=40, blank=True, default='')
     tokens_entrada = models.PositiveIntegerField(default=0)
     tokens_salida = models.PositiveIntegerField(default=0)
+    prompt_ia_enviado = models.TextField(
+        blank=True, default='',
+        help_text='Prompt efectivo enviado al proveedor para auditoría de la evaluación.',
+    )
     impacto_calculado = models.JSONField(default=dict, blank=True)
     estado_antes = models.JSONField(default=dict, blank=True)
     estado_despues = models.JSONField(default=dict, blank=True)

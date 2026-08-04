@@ -2,24 +2,27 @@ from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.utils import timezone
 from datetime import date
+from types import SimpleNamespace
 
 from academico.models import Carrera, Malla, Materia, MateriaMalla, NivelMalla, PeriodoAcademico, ProfesorMateria
 from core.models import Institucion
 from simulador.models import (
     AccionSugeridaSimulacion,
     ConceptoEsperadoRonda,
+    CondicionExitoSimulacion,
     DecisionConfigurada,
     EscenarioSimulacion,
     EventoSimulacion,
     IndicadorSimulacion,
     IntentoSimulacion,
+    OpcionCasoSimulacion,
     PasoSimulacion,
     RecursoSimulacion,
     ResultadoAprendizaje,
     RetoRefuerzo,
     Simulacion,
 )
-from simulador.generator_service import generar_simulacion_desde_plantilla
+from simulador.generator_service import generar_simulacion_desde_plantilla, serializar_configuracion_simulacion
 from simulador.services import (
     TIPO_ERROR_BASURA,
     TIPO_ERROR_GENERICA,
@@ -27,16 +30,421 @@ from simulador.services import (
     TIPO_ERROR_VACIA,
     _normalizar_texto,
     aplicar_costo_recursos,
+    aplicar_impacto,
     aplicar_eventos,
     calcular_puntaje_final,
     construir_recursos_iniciales,
+    cumple_operador,
+    desempeno_indicador,
     detectar_accion_sugerida,
     evaluar_pronostico,
     evaluar_tradeoff,
+    indicador_mejora,
     evaluar_conceptos_esperados,
     validar_recursos,
     validar_respuesta_estudiante,
+    situacion_de_ronda,
 )
+
+
+class SemanticaIndicadoresTests(TestCase):
+    def test_indicador_objetivo_premia_acercarse_no_solo_bajar(self):
+        indicador = SimpleNamespace(
+            valor_minimo=10, valor_maximo=20,
+            direccion_optima='OBJETIVO', valor_objetivo=15,
+        )
+        self.assertEqual(desempeno_indicador(indicador, 15), 100)
+        self.assertTrue(indicador_mejora(indicador, 11, 13))
+        self.assertFalse(indicador_mejora(indicador, 13, 11))
+
+    def test_operador_absoluto_controla_desviaciones_positivas_y_negativas(self):
+        self.assertTrue(cumple_operador('ABS<=', 4500, 5000))
+        self.assertTrue(cumple_operador('ABS<=', -4500, 5000))
+        self.assertFalse(cumple_operador('ABS<=', -7000, 5000))
+
+    def test_indicador_rango_premia_permanecer_entre_sus_dos_limites(self):
+        indicador = SimpleNamespace(
+            valor_minimo=0, valor_maximo=100,
+            direccion_optima='RANGO', valor_objetivo=None,
+            valor_objetivo_min=40, valor_objetivo_max=60,
+        )
+        self.assertEqual(desempeno_indicador(indicador, 40), 100)
+        self.assertEqual(desempeno_indicador(indicador, 50), 100)
+        self.assertEqual(desempeno_indicador(indicador, 60), 100)
+        self.assertLess(desempeno_indicador(indicador, 20), 100)
+        self.assertTrue(indicador_mejora(indicador, 20, 35))
+        self.assertTrue(indicador_mejora(indicador, 75, 65))
+
+    def test_meta_configurada_equivale_a_desempeno_aceptable(self):
+        from simulador.alu_simulaciones import _desempeno_con_meta
+        indicador = SimpleNamespace(
+            valor_minimo=0, valor_maximo=100,
+            direccion_optima='ALTO', valor_objetivo=None,
+        )
+        meta = {'operador': '>=', 'valor_objetivo': 40}
+        self.assertEqual(_desempeno_con_meta(indicador, 40, meta), 70)
+        self.assertGreater(_desempeno_con_meta(indicador, 60, meta), 70)
+        self.assertLess(_desempeno_con_meta(indicador, 20, meta), 70)
+
+
+class EstructuraGenericaPorFasesTests(TestCase):
+    def setUp(self):
+        self.profesor = User.objects.create_user(username='prof_fases')
+        self.estudiante = User.objects.create_user(username='alu_fases')
+        institucion = Institucion.objects.create(
+            nombre='Institucion fases', usuario_creacion=self.profesor,
+        )
+        carrera = Carrera.objects.create(
+            institucion=institucion, nombre='Carrera fases', usuario_creacion=self.profesor,
+        )
+        malla = Malla.objects.create(
+            carrera=carrera, nombre='Malla fases', usuario_creacion=self.profesor,
+        )
+        nivel = NivelMalla.objects.create(
+            malla=malla, numero=1, nombre='Primero', usuario_creacion=self.profesor,
+        )
+        materia = Materia.objects.create(
+            institucion=institucion, nombre='Materia fases', usuario_creacion=self.profesor,
+        )
+        mm = MateriaMalla.objects.create(
+            malla=malla, materia=materia, nivel=nivel, usuario_creacion=self.profesor,
+        )
+        self.sim = Simulacion.objects.create(
+            materia_malla=mm, profesor=self.profesor, titulo='Caso genérico por fases',
+            contexto='Caso con dos resultados medibles.', situacion_inicial='Decide.',
+            maximo_decisiones=2,
+            parametros={'rondas': [
+                {'numero': 1, 'titulo': 'Observar', 'situacion': 'Obtén evidencia.',
+                 'indicadores_modificables': ['informacion']},
+                {'numero': 2, 'titulo': 'Actuar', 'situacion': 'Elige la intervención.',
+                 'indicadores_modificables': ['resultado']},
+            ]},
+            usuario_creacion=self.profesor,
+        )
+        self.info = IndicadorSimulacion.objects.create(
+            simulacion=self.sim, nombre='Información', codigo='informacion',
+            valor_inicial=50, valor_minimo=0, valor_maximo=100,
+            peso_salud=0, usuario_creacion=self.profesor,
+        )
+        self.resultado = IndicadorSimulacion.objects.create(
+            simulacion=self.sim, nombre='Resultado', codigo='resultado',
+            valor_inicial=20, valor_minimo=0, valor_maximo=100,
+            peso_salud=4, usuario_creacion=self.profesor,
+        )
+
+    def test_un_evento_no_modifica_un_indicador_congelado_en_la_fase(self):
+        EventoSimulacion.objects.create(
+            simulacion=self.sim, nombre='Evento mixto', mensaje='Ocurre un cambio.', ronda=1,
+            efecto={'informacion': 10, 'resultado': 70}, usuario_creacion=self.profesor,
+        )
+        estado, _ = aplicar_eventos(
+            self.sim, {'informacion': 50, 'resultado': 20}, 1,
+            serializar_configuracion_simulacion(self.sim),
+        )
+        self.assertEqual(estado['informacion'], 60)
+        self.assertEqual(estado['resultado'], 20)
+
+    def test_el_texto_de_una_opcion_no_regala_el_concepto(self):
+        concepto = ConceptoEsperadoRonda.objects.create(
+            simulacion=self.sim, numero_ronda=1, nombre='Análisis técnico',
+            palabras_clave='analisis', peso=100, usuario_creacion=self.profesor,
+        )
+        evaluacion = evaluar_conceptos_esperados(
+            self.sim, 1, 'Opción con análisis técnico', 'porque es conveniente', 'Decide',
+            evaluaciones_ia=[{
+                'concepto_id': concepto.id, 'cumple': True, 'nivel_evidencia': 'completa',
+                'evidencia': 'análisis técnico', 'retroalimentacion': '',
+                'fuente_evidencia': 'opcion',
+            }],
+            opcion_predefinida=True,
+        )
+        self.assertEqual(evaluacion['puntaje_sugerido'], 0)
+        self.assertEqual(evaluacion['detalle_conceptos'][0]['fuente_evidencia'], 'opcion')
+
+    def test_la_salud_ignora_indicadores_informativos_con_peso_cero(self):
+        from simulador.alu_simulaciones import _salud_indicadores
+        intento = IntentoSimulacion.objects.create(
+            simulacion=self.sim, estudiante=self.estudiante,
+            estado_actual={'informacion': 0, 'resultado': 80},
+            configuracion_snapshot=serializar_configuracion_simulacion(self.sim),
+        )
+        self.assertEqual(_salud_indicadores(intento), 80)
+
+    def test_alertas_ignoran_datos_informativos_y_metas_ya_cumplidas(self):
+        from simulador.alu_simulaciones import _explicacion_resultado
+        CondicionExitoSimulacion.objects.create(
+            simulacion=self.sim, descripcion='Resultado aceptable',
+            codigo_indicador='resultado', operador='>=', valor_objetivo=60,
+            usuario_creacion=self.profesor,
+        )
+        intento = IntentoSimulacion.objects.create(
+            simulacion=self.sim, estudiante=self.estudiante,
+            estado_actual={'informacion': 0, 'resultado': 65},
+            configuracion_snapshot=serializar_configuracion_simulacion(self.sim),
+            puntuacion_final=70,
+        )
+
+        explicacion = _explicacion_resultado(intento)
+
+        self.assertEqual(explicacion['alertas'], [])
+
+    def test_no_se_publica_si_la_tabla_y_las_decisiones_no_son_las_mismas(self):
+        from simulador.pro_simulaciones import _errores_publicacion_pedagogica
+        opcion_a = OpcionCasoSimulacion.objects.create(
+            simulacion=self.sim, nombre='Alternativa A', orden=1,
+            usuario_creacion=self.profesor,
+        )
+        OpcionCasoSimulacion.objects.create(
+            simulacion=self.sim, nombre='Alternativa B', orden=2,
+            usuario_creacion=self.profesor,
+        )
+        AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=2, opcion_caso=opcion_a,
+            texto='Elegir A', impacto_base={'resultado': 10}, usuario_creacion=self.profesor,
+        )
+        AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=2, texto='Elegir una alternativa distinta',
+            impacto_base={'resultado': -5}, usuario_creacion=self.profesor,
+        )
+        parametros = dict(self.sim.parametros)
+        parametros['rondas'][1].update({
+            'modo': 'elegir', 'proposito': 'Comparar alternativas',
+            'alternativas_desde_datos_caso': True,
+        })
+        parametros['rondas'][0]['proposito'] = 'Obtener evidencia'
+        self.sim.parametros = parametros
+        self.sim.save(update_fields=['parametros'])
+        errores = _errores_publicacion_pedagogica(self.sim)
+        self.assertTrue(any('deben vincularse con una alternativa visible' in e for e in errores))
+        self.assertTrue(any('exactamente las mismas alternativas' in e for e in errores))
+
+    def test_contradiccion_explicita_no_avanza_ni_aplica_impacto(self):
+        from simulador.services.core import ejecutar_ronda_ia_dinamica
+        accion = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=1,
+            texto='Aceptar la oferta del proveedor',
+            impacto_base={'informacion': 30}, usuario_creacion=self.profesor,
+        )
+        intento = IntentoSimulacion.objects.create(
+            simulacion=self.sim, estudiante=self.estudiante,
+            estado_actual={'informacion': 50, 'resultado': 20},
+            configuracion_snapshot=serializar_configuracion_simulacion(self.sim),
+            situacion_actual='Evalúa la oferta del proveedor.', numero_ronda_actual=1,
+        )
+
+        paso = ejecutar_ronda_ia_dinamica(
+            intento, '',
+            'No aceptar la oferta del proveedor; recomiendo negociar otra condición.',
+            accion=accion,
+        )
+        intento.refresh_from_db()
+
+        self.assertFalse(paso.es_valido)
+        self.assertEqual(paso.evaluacion_detalle['tipo_error'], 'CONTRADICCION')
+        self.assertEqual(paso.impacto_calculado, {})
+        self.assertEqual(intento.estado_actual['informacion'], 50)
+        self.assertEqual(intento.numero_ronda_actual, 1)
+
+    def test_contradiccion_semantica_detectada_por_ia_conserva_auditoria(self):
+        from unittest.mock import patch
+        from simulador.services.core import ejecutar_ronda_ia_dinamica
+        accion = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=1,
+            texto='Aplicar estrategia A', impacto_base={'informacion': 20},
+            usuario_creacion=self.profesor,
+        )
+        intento = IntentoSimulacion.objects.create(
+            simulacion=self.sim, estudiante=self.estudiante,
+            estado_actual={'informacion': 50, 'resultado': 20},
+            configuracion_snapshot=serializar_configuracion_simulacion(self.sim),
+            situacion_actual='Elige una estrategia para obtener evidencia.', numero_ronda_actual=1,
+        )
+        respuesta = {
+            'evaluacion': 'La opción y la explicación no coinciden.',
+            'evaluacion_detalle': {
+                'decision_justificacion_coherentes': False,
+                'coherencia_motivo': 'La explicación desarrolla la estrategia B.',
+            },
+            'respuesta_ia_estructurada': {'decision_justificacion_coherentes': False},
+            'modelo_ia': 'modelo-prueba', 'api_ia': 'prueba',
+            'prompt_version': 'v-prueba', 'esquema_ia_version': 'e-prueba',
+            'tokens_entrada': 10, 'tokens_salida': 5,
+            'prompt_ia_enviado': 'PROMPT AUDITABLE',
+        }
+
+        with patch('simulador.ia_service.orden_proveedores', return_value=['prueba']), patch(
+            'simulador.ia_service.evaluar_ronda_con_proveedores', return_value=respuesta,
+        ):
+            paso = ejecutar_ronda_ia_dinamica(
+                intento, '',
+                'La evidencia del caso sustenta una estrategia diferente y medible.',
+                accion=accion,
+            )
+
+        self.assertFalse(paso.es_valido)
+        self.assertEqual(paso.impacto_calculado, {})
+        self.assertEqual(paso.modelo_ia, 'modelo-prueba')
+        self.assertEqual(paso.prompt_ia_enviado, 'PROMPT AUDITABLE')
+
+    def test_prompt_evalua_todos_los_campos_escritos_por_el_estudiante(self):
+        from simulador.ia_service import IAServiceLLM
+        servicio = IAServiceLLM()
+        prompt = servicio._construir_prompt_semantico(
+            self.sim, 'Situación', 'Decisión', 'Justificación', 1, [], [],
+            pronostico={'indicador': 'resultado', 'direccion': 'sube'},
+            tradeoff_aceptado='Acepto mayor costo inicial.',
+        )
+        self.assertIn('Pronostico previo', prompt)
+        self.assertIn('resultado', prompt)
+        self.assertIn('Acepto mayor costo inicial', prompt)
+        self.assertIn('pronostico, tradeoff, multiples', prompt)
+
+    def test_prompt_respeta_las_fuentes_de_evidencia_habilitadas(self):
+        from simulador.ia_service import IAServiceLLM
+        prompt = IAServiceLLM()._construir_prompt_semantico(
+            self.sim, 'Situación', 'Decisión', 'Justificación', 1, [], [],
+            pronostico={'indicador': 'resultado', 'direccion': 'sube'},
+            tradeoff_aceptado='Acepto mayor costo.',
+            fuentes_evaluacion=['justificacion'],
+        )
+        self.assertIn('["justificacion"]', prompt)
+        self.assertIn('Solo cuenta evidencia de las fuentes habilitadas', prompt)
+
+    def test_opciones_condicionales_solo_aparecen_tras_la_decision_requerida(self):
+        from simulador.alu_simulaciones import _acciones_del_intento
+        previa = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=1, texto='Elegir alianza',
+            impacto_base={'informacion': 10}, usuario_creacion=self.profesor,
+        )
+        dependiente = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=2, texto='Ejecutar piloto con socio',
+            impacto_base={'resultado': 20}, requiere_accion_previa=previa,
+            usuario_creacion=self.profesor,
+        )
+        intento = IntentoSimulacion.objects.create(
+            simulacion=self.sim, estudiante=self.estudiante,
+            estado_actual={'informacion': 50, 'resultado': 20},
+            configuracion_snapshot=serializar_configuracion_simulacion(self.sim),
+            numero_ronda_actual=2,
+        )
+        self.assertNotIn(dependiente.pk, [a.pk for a in _acciones_del_intento(intento, 2)])
+        PasoSimulacion.objects.create(
+            intento=intento, numero=1, es_valido=True, tipo_paso='VALIDO',
+            situacion_presentada='Elegir entrada', decision_estudiante=previa.texto,
+            justificacion_estudiante='Con evidencia.',
+            evaluacion_detalle={'seleccion_registrada': {'accion_id': previa.pk}},
+        )
+        self.assertIn(dependiente.pk, [a.pk for a in _acciones_del_intento(intento, 2)])
+
+    def test_opcion_condicional_forzada_fuera_de_ruta_es_invalida(self):
+        from simulador.services.core import ejecutar_ronda_ia_dinamica
+        previa = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=1, texto='Elegir adquisición',
+            impacto_base={'informacion': 10}, usuario_creacion=self.profesor,
+        )
+        dependiente = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=2, texto='Integrar empresa adquirida',
+            impacto_base={'resultado': 40}, requiere_accion_previa=previa,
+            usuario_creacion=self.profesor,
+        )
+        intento = IntentoSimulacion.objects.create(
+            simulacion=self.sim, estudiante=self.estudiante,
+            estado_actual={'informacion': 50, 'resultado': 20},
+            configuracion_snapshot=serializar_configuracion_simulacion(self.sim),
+            situacion_actual='Ejecuta el plan.', numero_ronda_actual=2,
+        )
+
+        paso = ejecutar_ronda_ia_dinamica(
+            intento, '', 'Aplicaré hitos y responsables para controlar el resultado.',
+            accion=dependiente,
+        )
+
+        self.assertFalse(paso.es_valido)
+        self.assertEqual(paso.evaluacion_detalle['tipo_error'], 'ACCION_NO_DISPONIBLE')
+        self.assertEqual(paso.impacto_calculado, {})
+
+    def test_opcion_bloqueada_por_una_decision_previa_no_aparece(self):
+        from simulador.alu_simulaciones import _acciones_del_intento
+        bloqueante = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=1, texto='Descartar la compra',
+            impacto_base={'informacion': 5}, usuario_creacion=self.profesor,
+        )
+        bloqueada = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=2, texto='Integrar la empresa comprada',
+            impacto_base={'resultado': 20}, bloqueada_por_accion_previa=bloqueante,
+            usuario_creacion=self.profesor,
+        )
+        intento = IntentoSimulacion.objects.create(
+            simulacion=self.sim, estudiante=self.estudiante,
+            estado_actual={'informacion': 50, 'resultado': 20},
+            configuracion_snapshot=serializar_configuracion_simulacion(self.sim),
+            numero_ronda_actual=2,
+        )
+        PasoSimulacion.objects.create(
+            intento=intento, numero=1, es_valido=True, tipo_paso='VALIDO',
+            situacion_presentada='Diagnóstico', decision_estudiante=bloqueante.texto,
+            evaluacion_detalle={'seleccion_registrada': {'accion_id': bloqueante.pk}},
+        )
+        self.assertNotIn(bloqueada.pk, [a.pk for a in _acciones_del_intento(intento, 2)])
+
+    def test_opcion_no_se_repite_mas_del_maximo_configurado(self):
+        from simulador.alu_simulaciones import _acciones_del_intento
+        accion = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=None, texto='Comprar la empresa',
+            impacto_base={'resultado': 20}, maximo_ejecuciones=1,
+            usuario_creacion=self.profesor,
+        )
+        intento = IntentoSimulacion.objects.create(
+            simulacion=self.sim, estudiante=self.estudiante,
+            estado_actual={'informacion': 50, 'resultado': 20},
+            configuracion_snapshot=serializar_configuracion_simulacion(self.sim),
+            numero_ronda_actual=2,
+        )
+        PasoSimulacion.objects.create(
+            intento=intento, numero=1, es_valido=True, tipo_paso='VALIDO',
+            situacion_presentada='Entrada', decision_estudiante=accion.texto,
+            evaluacion_detalle={'seleccion_registrada': {'accion_id': accion.pk}},
+        )
+        self.assertNotIn(accion.pk, [a.pk for a in _acciones_del_intento(intento, 2)])
+
+    def test_campos_obligatorios_impiden_ejecutar_sin_responderlos(self):
+        from simulador.services.core import ejecutar_ronda_ia_dinamica
+        parametros = dict(self.sim.parametros)
+        parametros['rondas'][0] = {
+            **parametros['rondas'][0],
+            'pronostico_obligatorio': True,
+            'tradeoff_obligatorio': True,
+        }
+        self.sim.parametros = parametros
+        self.sim.save(update_fields=['parametros'])
+        intento = IntentoSimulacion.objects.create(
+            simulacion=self.sim, estudiante=self.estudiante,
+            estado_actual={'informacion': 50, 'resultado': 20},
+            configuracion_snapshot=serializar_configuracion_simulacion(self.sim),
+            situacion_actual='Decide con anticipación.', numero_ronda_actual=1,
+        )
+        paso = ejecutar_ronda_ia_dinamica(
+            intento, 'Aplicar un piloto', 'La evidencia del caso sustenta el piloto.',
+        )
+        self.assertFalse(paso.es_valido)
+        self.assertEqual(paso.evaluacion_detalle['tipo_error'], 'PRONOSTICO_REQUERIDO')
+
+    def test_publicacion_rechaza_requisito_oculto_y_fuentes_vacias(self):
+        from simulador.pro_simulaciones import _errores_publicacion_pedagogica
+        parametros = dict(self.sim.parametros)
+        parametros['rondas'][0] = {
+            **parametros['rondas'][0],
+            'proposito': 'Practicar una decisión con evidencia.',
+            'pronostico_obligatorio': True,
+            'pedir_pronostico': False,
+            'fuentes_evaluacion': [],
+        }
+        parametros['rondas'][1]['proposito'] = 'Aplicar la evidencia reunida.'
+        self.sim.parametros = parametros
+        self.sim.save(update_fields=['parametros'])
+        errores = _errores_publicacion_pedagogica(self.sim)
+        self.assertTrue(any('fuente de evidencia' in error for error in errores))
+        self.assertTrue(any('pronóstico está oculto' in error for error in errores))
 
 
 class EvaluacionRubricaTests(TestCase):
@@ -159,6 +567,34 @@ class EvaluacionRubricaTests(TestCase):
         self.assertEqual(resultado['conceptos_cumplidos'], [])
         self.assertCountEqual(resultado['conceptos_faltantes'], ['Evitar duplicados', 'Concurrencia'])
 
+    def test_ia_clasifica_evidencia_y_el_motor_calcula_los_puntos(self):
+        conceptos = list(self.simulacion.conceptos_esperados.order_by('peso'))
+        evaluaciones_ia = [
+            {
+                'concepto_id': conceptos[0].id,
+                'cumple': True,
+                'nivel_evidencia': 'completa',
+                'evidencia': 'UniqueConstraint',
+                'retroalimentacion': '',
+            },
+            {
+                'concepto_id': conceptos[1].id,
+                'cumple': False,
+                'nivel_evidencia': 'parcial',
+                'evidencia': 'Menciona transacciones sin explicar concurrencia',
+                'retroalimentacion': '',
+            },
+        ]
+
+        resultado = evaluar_conceptos_esperados(
+            self.simulacion, 1, 'Decision concreta', 'Justificacion tecnica',
+            'Proponga una solucion.', evaluaciones_ia=evaluaciones_ia,
+        )
+
+        # Los pesos docentes (40 y 60) convierten completa/parcial en 40 + 30.
+        self.assertEqual(resultado['puntaje_sugerido'], 70)
+        self.assertEqual(resultado['puntaje_conceptos'], 70)
+
     def test_genera_simulacion_desde_plantilla_global(self):
         simulacion = generar_simulacion_desde_plantilla(
             self.simulacion.materia_malla,
@@ -209,6 +645,24 @@ class ValidacionIntentoTests(TestCase):
         self.assertTrue(r['valida'])
         self.assertEqual(r['tipo_error'], TIPO_ERROR_OK)
         self.assertEqual(r['puntaje_maximo'], 100)
+
+    def test_justificacion_obligatoria_no_permite_avanzar_vacia_o_breve(self):
+        decision = 'Revisar la tasa CIF con los datos reales de horas maquina'
+        vacia = validar_respuesta_estudiante(
+            decision, '', requerir_justificacion=True,
+        )
+        breve = validar_respuesta_estudiante(
+            decision, 'Porque mejora el costo.', requerir_justificacion=True,
+        )
+        completa = validar_respuesta_estudiante(
+            decision,
+            'Con los CIF reales y las horas máquina calcularé la variación, mediré la tasa aplicada y corregiré el ajuste sin ocultar el riesgo operativo.',
+            requerir_justificacion=True,
+        )
+        self.assertFalse(vacia['valida'])
+        self.assertTrue(breve['valida'])
+        self.assertLess(breve['puntaje_maximo'], 100)
+        self.assertTrue(completa['valida'])
 
 
 class CalculoNotaFinalTests(TestCase):
@@ -342,6 +796,29 @@ class PermisosPanelProfesorTests(TestCase):
         self.assertContains(response, 'Calidad')
         self.assertContains(response, 'Sim profesor 1')
         self.assertNotContains(response, 'Sim profesor 2')
+
+    def test_nueva_version_copia_configuracion_y_no_toca_publicada(self):
+        self.sim1.estado = Simulacion.PUBLICADA
+        self.sim1.configuracion_bloqueada = True
+        self.sim1.save(update_fields=['estado', 'configuracion_bloqueada'])
+        IndicadorSimulacion.objects.create(
+            simulacion=self.sim1, codigo='costo', nombre='Costo',
+            valor_inicial=50, valor_minimo=0, valor_maximo=100,
+        )
+        client = Client()
+        client.force_login(self.profesor1)
+
+        response = client.post('/simulador/pro_simulaciones', {
+            'action': 'nueva_version', 'pk': self.sim1.pk,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        nueva = Simulacion.objects.exclude(pk=self.sim1.pk).get(titulo__contains='· v2')
+        self.assertEqual(nueva.estado, Simulacion.BORRADOR)
+        self.assertFalse(nueva.configuracion_bloqueada)
+        self.assertTrue(nueva.indicadores.filter(codigo='costo').exists())
+        self.sim1.refresh_from_db()
+        self.assertEqual(self.sim1.estado, Simulacion.PUBLICADA)
 
     def test_export_auditoria_calidad_csv_respeta_permisos(self):
         client = Client()
@@ -1159,6 +1636,72 @@ class AndamiajeAdaptativoTests(TestCase):
         self.assertEqual(calidad['nivel'], 'Fuerte')
         self.assertEqual(calidad['puntaje'], 100)
 
+    def test_metacognicion_ignora_intentos_invalidos(self):
+        from simulador.alu_simulaciones import _calidad_metacognitiva
+        intento = IntentoSimulacion.objects.create(
+            estudiante=self.est, simulacion=self.sim, numero_ronda_actual=2,
+        )
+        PasoSimulacion.objects.create(
+            intento=intento, numero=1, es_valido=True, situacion_presentada='s',
+            decision_estudiante='d', justificacion_estudiante='j', puntaje_paso=80,
+        )
+        PasoSimulacion.objects.create(
+            intento=intento, numero=2, es_valido=False, situacion_presentada='s',
+            decision_estudiante='d', justificacion_estudiante='j', puntaje_paso=0,
+            reflexion='No debe contar', pronostico_indicador='x',
+            pronostico_resultado={'estado': 'acierto'}, tradeoff_aceptado='No debe contar',
+            tradeoff_resultado={'estado': 'tradeoff_real'},
+        )
+        calidad = _calidad_metacognitiva(intento)
+        self.assertEqual(calidad['total'], 1)
+        self.assertEqual(calidad['reflexiones'], 0)
+        self.assertEqual(calidad['pronosticos'], 0)
+        self.assertEqual(calidad['tradeoffs'], 0)
+
+    def test_snapshot_conserva_caso_indicadores_metas_y_rondas(self):
+        from simulador.alu_simulaciones import _caso_del_intento, _objetivos_mision
+        self.sim.titulo = 'Caso original'
+        self.sim.situacion_inicial = 'Situacion original'
+        self.sim.parametros = {'rondas': [
+            {'numero': 1, 'situacion': 'Diagnostico original'},
+            {'numero': 2, 'situacion': 'Decision original'},
+        ]}
+        self.sim.save()
+        indicador = IndicadorSimulacion.objects.create(
+            simulacion=self.sim, codigo='riesgo', nombre='Riesgo original',
+            valor_inicial=50, valor_minimo=0, valor_maximo=100,
+            direccion_optima='BAJO', unidad='pts',
+        )
+        condicion = CondicionExitoSimulacion.objects.create(
+            simulacion=self.sim, descripcion='Mantener riesgo bajo',
+            codigo_indicador='riesgo', operador='<=', valor_objetivo=35,
+        )
+        snapshot = serializar_configuracion_simulacion(self.sim)
+        self.assertIn('recursos', snapshot)
+        self.assertIn('investigaciones', snapshot)
+        self.assertIn('eventos', snapshot)
+        self.assertIn('valor_objetivo', snapshot['indicadores'][0])
+        intento = IntentoSimulacion.objects.create(
+            estudiante=self.est, simulacion=self.sim, estado_actual={'riesgo': 40.0},
+            configuracion_snapshot=snapshot,
+        )
+
+        self.sim.titulo = 'Caso cambiado'
+        self.sim.parametros = {'rondas': [{'situacion': 'Otra simulacion'}]}
+        self.sim.save()
+        indicador.nombre = 'Indicador cambiado'
+        indicador.save()
+        condicion.valor_objetivo = 10
+        condicion.save()
+
+        self.assertEqual(_caso_del_intento(intento)['titulo'], 'Caso original')
+        self.assertEqual(_objetivos_mision(intento)[0]['meta'], '<= 35 pts')
+        self.assertEqual(_objetivos_mision(intento)[0]['indicador'], 'Riesgo original')
+        self.assertEqual(situacion_de_ronda(self.sim, 2, snapshot), 'Decision original')
+
+    def test_impacto_decimal_no_deja_residuos_float(self):
+        self.assertEqual(aplicar_impacto({'x': 0.1}, {'x': 0.2})['x'], 0.3)
+
     def test_rubrica_visible_incluye_conceptos(self):
         from simulador.alu_simulaciones import _rubrica_visible
         ConceptoEsperadoRonda.objects.create(
@@ -1871,6 +2414,132 @@ class EditorDeRondasTests(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(len(respuesta.context['rondas']), 3)
 
+    def test_admite_un_recorrido_con_titulos_y_controles_propios(self):
+        datos = {'action': 'guardar_rondas', 'id': self.sim.pk}
+        titulos = ['Comparar escenarios', 'Responder a la crisis', 'Reasignar recursos']
+        for numero, titulo in enumerate(titulos, 1):
+            datos.update({
+                f'titulo_{numero}': titulo,
+                f'proposito_{numero}': f'Aprendizaje {numero}',
+                f'situacion_{numero}': f'Dato nuevo {numero}',
+                f'modo_{numero}': 'hibrido' if numero != 2 else 'elegir',
+                f'etiqueta_decision_{numero}': 'Alternativa seleccionada',
+                f'etiqueta_justificacion_{numero}': 'Evidencia utilizada',
+                f'mostrar_datos_caso_{numero}': 'on',
+                f'mostrar_indicadores_{numero}': 'on',
+            })
+        respuesta = self.client.post(
+            self.url, datos, headers={'x-requested-with': 'XMLHttpRequest'},
+        )
+        self.assertTrue(respuesta.json()['result'], respuesta.json())
+        self.sim.refresh_from_db()
+        rondas = self.sim.parametros['rondas']
+        self.assertEqual([r['titulo'] for r in rondas], titulos)
+        self.assertEqual(rondas[1]['modo'], 'elegir')
+        self.assertFalse(rondas[1]['pedir_reflexion'])
+
+        from simulador.alu_simulaciones import _pasos_stepper
+        self.assertEqual(
+            [p['nombre'] for p in _pasos_stepper(self.sim, 1)], titulos,
+        )
+
+    def test_las_etiquetas_del_caso_son_neutrales_o_especificas(self):
+        from simulador.alu_simulaciones import _datos_visibles_caso
+        self.sim.parametros = {
+            'candidatos': [{'nombre': 'Opción histórica', 'salario_pretendido': '$10'}],
+        }
+        self.sim.save(update_fields=['parametros'])
+        datos = _datos_visibles_caso(self.sim)
+        self.assertEqual(datos['caso_labels']['alternativa_col'], 'Alternativa')
+        self.assertEqual(datos['caso_labels']['valor_col'], 'Valor')
+        self.assertEqual(datos['alternativas_caso'][0]['valor'], '$10')
+
+        self.sim.parametros['caso_labels'] = {
+            'alternativas_titulo': 'Cotizaciones recibidas',
+            'alternativa_col': 'Proveedor',
+            'valor_col': 'Costo total',
+        }
+        self.sim.save(update_fields=['parametros'])
+        datos = _datos_visibles_caso(self.sim)
+        self.assertEqual(datos['caso_labels']['alternativa_col'], 'Proveedor')
+        self.assertEqual(datos['caso_labels']['valor_col'], 'Costo total')
+
+    def test_el_formulario_de_alternativas_permite_asignarlas_por_ronda(self):
+        from simulador.forms import AccionSugeridaForm
+        self.sim.parametros = {'rondas': [
+            {'numero': 1, 'titulo': 'Comparar ofertas'},
+            {'numero': 2, 'titulo': 'Negociar condiciones'},
+            {'numero': 3, 'titulo': 'Responder al retraso'},
+        ]}
+        self.sim.save(update_fields=['parametros'])
+        form = AccionSugeridaForm(simulacion_obj=self.sim)
+        etiquetas = dict(form.fields['numero_ronda'].choices)
+        self.assertIn('Comparar ofertas', etiquetas[1])
+        self.assertIn('Responder al retraso', etiquetas[3])
+
+    def test_la_cantidad_de_rondas_no_tiene_un_tres_heredado(self):
+        nueva = Simulacion.objects.create(
+            materia_malla=self.sim.materia_malla,
+            profesor=self.profesor,
+            titulo='Caso de una sola decisión',
+        )
+        self.assertEqual(nueva.maximo_decisiones, 1)
+
+        from simulador.pro_simulaciones import _sincronizar_cantidad_rondas
+        nueva.maximo_decisiones = 7
+        nueva.save(update_fields=['maximo_decisiones'])
+        _sincronizar_cantidad_rondas(nueva, 1)
+        nueva.refresh_from_db()
+        self.assertEqual(len(nueva.parametros['rondas']), 7)
+        self.assertEqual(nueva.parametros['rondas'][-1]['titulo'], 'Ronda 7')
+
+    def test_reducir_rondas_no_deja_configuracion_fantasma(self):
+        from simulador.models import EventoSimulacion
+        from simulador.pro_simulaciones import _sincronizar_cantidad_rondas
+
+        accion = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=3, texto='Opción final',
+            usuario_creacion=self.profesor,
+        )
+        concepto = ConceptoEsperadoRonda.objects.create(
+            simulacion=self.sim, numero_ronda=3, nombre='Control final',
+            palabras_clave='control', peso=100, usuario_creacion=self.profesor,
+        )
+        evento = EventoSimulacion.objects.create(
+            simulacion=self.sim, ronda=3, nombre='Cambio final', mensaje='Dato nuevo',
+            usuario_creacion=self.profesor,
+        )
+        self.sim.maximo_decisiones = 1
+        self.sim.save(update_fields=['maximo_decisiones'])
+        _sincronizar_cantidad_rondas(self.sim, 3)
+
+        self.sim.refresh_from_db()
+        accion.refresh_from_db()
+        concepto.refresh_from_db()
+        evento.refresh_from_db()
+        self.assertEqual(len(self.sim.parametros['rondas']), 1)
+        self.assertFalse(accion.activo)
+        self.assertFalse(concepto.activo)
+        self.assertFalse(evento.activo)
+
+    def test_el_docente_cambia_la_cantidad_desde_el_editor_de_rondas(self):
+        respuesta = self.client.post(self.url, {
+            'action': 'cambiar_cantidad_rondas',
+            'id': self.sim.pk,
+            'cantidad_rondas': 5,
+        }, headers={'x-requested-with': 'XMLHttpRequest'})
+        self.assertTrue(respuesta.json()['result'], respuesta.json())
+        self.sim.refresh_from_db()
+        self.assertEqual(self.sim.maximo_decisiones, 5)
+        self.assertEqual(len(self.sim.parametros['rondas']), 5)
+
+        invalida = self.client.post(self.url, {
+            'action': 'cambiar_cantidad_rondas',
+            'id': self.sim.pk,
+            'cantidad_rondas': 0,
+        }, headers={'x-requested-with': 'XMLHttpRequest'})
+        self.assertFalse(invalida.json()['result'])
+
     def test_un_estudiante_no_puede_cambiar_las_rondas(self):
         estudiante = User.objects.create_user(username='alu_rondas')
         cliente = Client()
@@ -1879,3 +2548,141 @@ class EditorDeRondasTests(TestCase):
             'action': 'guardar_rondas', 'id': self.sim.pk, 'modo_1': 'elegir',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
         self.assertEqual(respuesta.status_code, 302)
+
+
+class CalidadDeLosPromptsTests(TestCase):
+    """Los prompts de generacion se editan a mano y es facil partir una frase o
+    dejar un numero clavado. Estos tests vigilan lo que no se ve al leerlos."""
+
+    def setUp(self):
+        usuario = User.objects.create_user(username='prof_prompts')
+        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=usuario)
+        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='CP2', usuario_creacion=usuario)
+        malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MP2', usuario_creacion=usuario)
+        nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=usuario)
+        materia = Materia.objects.create(institucion=institucion, codigo='P2', nombre='Costos', usuario_creacion=usuario)
+        mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
+        self.sim = Simulacion.objects.create(
+            materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Caso prompts', contexto='c', objetivo='o', resultado_aprendizaje='r',
+            situacion_inicial='s', instrucciones_ia='i', usuario_creacion=usuario,
+        )
+        self.indicadores = [{'codigo': 'tasa_cif', 'nombre': 'Tasa CIF', 'direccion_optima': 'BAJO'}]
+
+    def test_la_regla_de_pantalla_tranquila_no_quedo_partida(self):
+        """Estuvo rota: 'deja' seguido de otra instruccion, y su final tres
+        oraciones despues. El modelo leia una frase sin sentido."""
+        from simulador.ia_service import _prompt_generacion_caso
+        texto = _prompt_generacion_caso('Costos', 1)
+        inicio = texto.index('Mantén la pantalla tranquila: deja ')
+        siguiente = texto[inicio:inicio + 160]
+        self.assertIn('desactivados', siguiente)
+        self.assertNotIn('Cada ronda debe declarar', siguiente)
+
+    def test_datos_caso_anuncia_los_cuatro_entregables(self):
+        """Anunciaba dos y pedia cuatro: condiciones y eventos salian flojos."""
+        from simulador.ia_service import _prompt_datos_caso
+        encabezado = _prompt_datos_caso(self.sim, self.indicadores).split('\n\n')[0]
+        for pieza in ('alternativas', 'criterios', 'condiciones de exito', 'eventos'):
+            self.assertIn(pieza, encabezado)
+
+    def test_datos_caso_explica_para_que_sirve_la_direccion_optima(self):
+        from simulador.ia_service import _prompt_datos_caso
+        texto = _prompt_datos_caso(self.sim, self.indicadores)
+        self.assertIn('CONTRA su direccion optima', texto)
+
+    def test_las_cantidades_son_parametros_y_no_numeros_clavados(self):
+        from simulador.ia_service import _prompt_datos_caso, _prompt_investigaciones
+        libre = _prompt_datos_caso(self.sim, self.indicadores)
+        self.assertIn('las que el caso justifique', libre)
+
+        fijo = _prompt_datos_caso(self.sim, self.indicadores, n_alternativas=6, n_criterios=3)
+        self.assertIn('exactamente 6 alternativas', fijo)
+        self.assertIn('3 criterios de comparacion', fijo)
+        self.assertNotIn('4 criterios de comparacion', fijo)
+
+        inv = _prompt_investigaciones(self.sim, ['A'], 'presupuesto', 250, n_averiguaciones=5)
+        self.assertIn('exactamente 5 averiguaciones', inv)
+
+    def test_ningun_prompt_de_generacion_queda_vacio_o_truncado(self):
+        from simulador.ia_service import (
+            _prompt_datos_caso, _prompt_generacion_caso, _prompt_investigaciones,
+        )
+        textos = {
+            'generacion_caso': _prompt_generacion_caso('Costos', 1),
+            'datos_caso': _prompt_datos_caso(self.sim, self.indicadores),
+            'investigaciones': _prompt_investigaciones(self.sim, ['A'], 'presupuesto', 250),
+        }
+        for nombre, texto in textos.items():
+            with self.subTest(prompt=nombre):
+                self.assertGreater(len(texto), 400, f'{nombre} quedo demasiado corto')
+                self.assertIn('JSON', texto, f'{nombre} no pide JSON')
+                # Una regla que termina en preposicion delata una frase partida
+                # al insertar texto en medio, que es como se rompio la de arriba.
+                for regla in texto.split('\n'):
+                    self.assertFalse(
+                        regla.rstrip().endswith((' deja', ' con', ' de', ' para', ' y', ' que')),
+                        f'{nombre}: regla cortada -> ...{regla.rstrip()[-60:]}',
+                    )
+
+
+class VisibilidadDeInvestigacionesTests(TestCase):
+    """Las averiguaciones existian en 7 de 8 casos pero ninguna ronda las
+    mostraba: dato muerto. El interruptor arranca apagado a proposito, pero si
+    el caso TIENE averiguaciones hay que encenderlo o el mecanismo no existe."""
+
+    def setUp(self):
+        from simulador.models import InvestigacionSimulacion
+        usuario = User.objects.create_user(username='prof_vis')
+        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=usuario)
+        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='CV', usuario_creacion=usuario)
+        malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MV', usuario_creacion=usuario)
+        nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=usuario)
+        materia = Materia.objects.create(institucion=institucion, codigo='V1', nombre='V', usuario_creacion=usuario)
+        mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
+        self.sim = Simulacion.objects.create(
+            materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Caso visible', contexto='c', objetivo='o', resultado_aprendizaje='r',
+            situacion_inicial='s', instrucciones_ia='i', estado=Simulacion.PUBLICADA,
+            maximo_decisiones=3, usuario_creacion=usuario,
+        )
+        InvestigacionSimulacion.objects.create(
+            simulacion=self.sim, sujeto='A', nombre='Prueba', hallazgo='dato oculto',
+            costo_recursos={'presupuesto': 10}, disponible_desde_ronda=2, usuario_creacion=usuario)
+
+    def _reparar(self):
+        from django.core.management import call_command
+        call_command('generar_investigaciones', solo_visibilidad=True,
+                     simulacion=self.sim.pk, verbosity=0)
+        self.sim.refresh_from_db()
+        return (self.sim.parametros or {}).get('rondas') or []
+
+    def test_se_encienden_desde_la_ronda_en_que_estan_disponibles(self):
+        rondas = self._reparar()
+        self.assertFalse(rondas[0].get('mostrar_investigaciones'), 'la ronda 1 no las tiene disponibles')
+        self.assertTrue(rondas[1].get('mostrar_investigaciones'))
+        self.assertTrue(rondas[2].get('mostrar_investigaciones'))
+
+    def test_es_idempotente(self):
+        self._reparar()
+        antes = (self.sim.parametros or {}).get('rondas')
+        self._reparar()
+        self.assertEqual((self.sim.parametros or {}).get('rondas'), antes)
+
+    def test_no_toca_las_otras_claves_de_la_ronda(self):
+        self.sim.parametros = {'rondas': [
+            {'modo': 'escribir', 'situacion': 'algo'}, {'modo': 'elegir'}, {},
+        ]}
+        self.sim.save(update_fields=['parametros'])
+        rondas = self._reparar()
+        self.assertEqual(rondas[0]['modo'], 'escribir')
+        self.assertEqual(rondas[0]['situacion'], 'algo')
+        self.assertEqual(rondas[1]['modo'], 'elegir')
+
+    def test_un_caso_sin_averiguaciones_no_se_toca(self):
+        from simulador.models import InvestigacionSimulacion
+        InvestigacionSimulacion.objects.filter(simulacion=self.sim).update(activo=False)
+        self.sim.parametros = {}
+        self.sim.save(update_fields=['parametros'])
+        self._reparar()
+        self.assertFalse((self.sim.parametros or {}).get('rondas'))

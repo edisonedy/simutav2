@@ -134,10 +134,10 @@
             <h2 class="h5">Como corre una ronda</h2>
             <ol class="small ps-3 mb-0">
                 <li class="mb-1">Lee la situacion del caso.</li>
-                <li class="mb-1">Toma una decision y la justifica.</li>
+                <li class="mb-1">Responde de la forma configurada: elige, escribe o combina ambas.</li>
                 <li class="mb-1">La IA compara la respuesta con tu rubrica.</li>
                 <li class="mb-1">El sistema mueve indicadores y aplica cambios si los configuraste.</li>
-                <li>La nota final sale del promedio de las rondas.</li>
+                <li>La nota final usa únicamente las rondas que tiene este caso.</li>
             </ol>
         </div>
 
@@ -173,7 +173,7 @@
             <div class="d-flex flex-wrap gap-2">
                 <span class="chip chip-soft">Estado: {{ simulacion.estado }}</span>
                 <span class="chip chip-soft">Dificultad: {{ simulacion.get_nivel_dificultad_display }}</span>
-                <span class="chip chip-soft">{{ simulacion.maximo_decisiones }} rondas</span>
+                <span class="chip chip-soft">{{ simulacion.maximo_decisiones }} {% if simulacion.maximo_decisiones == 1 %}ronda{% else %}rondas{% endif %}</span>
                 {% if rubrica_completa %}
                     <span class="chip chip-up">&#10003; Rubrica lista</span>
                 {% else %}

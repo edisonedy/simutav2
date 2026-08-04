@@ -32,8 +32,13 @@ class Command(BaseCommand):
         parser.add_argument('--presupuesto', type=int, default=PRESUPUESTO_POR_DEFECTO)
         parser.add_argument('--rehacer', action='store_true',
                             help='reemplaza las averiguaciones que ya tenga el caso')
+        parser.add_argument('--solo-visibilidad', action='store_true', dest='solo_visibilidad',
+                            help='no genera nada: solo enciende las averiguaciones que el '
+                                 'estudiante no puede ver en ninguna ronda')
 
     def handle(self, *args, **opciones):
+        if opciones.get('solo_visibilidad'):
+            return self._reparar_visibilidad(opciones)
         casos = self._seleccionar(opciones)
         if not casos:
             raise CommandError('Ningun caso coincide. Usa --simulacion, --materia, --malla o --todas.')
@@ -42,7 +47,11 @@ class Command(BaseCommand):
         for simulacion in casos:
             ya_tiene = simulacion.investigaciones.filter(activo=True).exists()
             if ya_tiene and not opciones['rehacer']:
-                self.stdout.write(f'- {simulacion.titulo[:52]}: ya tiene, se salta')
+                # Aunque se salte, se revisa la visibilidad: una averiguacion que
+                # el estudiante no ve es dato muerto.
+                encendidas = self._mostrar_en_las_rondas(simulacion)
+                aviso = f' (se encendieron {encendidas} ronda(s))' if encendidas else ''
+                self.stdout.write(f'- {simulacion.titulo[:52]}: ya tiene, se salta{aviso}')
                 saltados += 1
                 continue
             resultado = self._generar_para(simulacion, opciones['presupuesto'], opciones['rehacer'])
@@ -99,6 +108,61 @@ class Command(BaseCommand):
             return ''
         return valor[:120]
 
+    def _reparar_visibilidad(self, opciones):
+        """Un caso puede tener averiguaciones y que ninguna ronda las muestre:
+        entonces el estudiante nunca investiga y el mecanismo no existe."""
+        qs = Simulacion.objects.filter(estado=Simulacion.PUBLICADA, activo=True,
+                                       investigaciones__activo=True).distinct()
+        if opciones.get('malla'):
+            qs = qs.filter(materia_malla__malla__codigo=opciones['malla'])
+        if opciones.get('materia'):
+            qs = qs.filter(materia_malla__materia__nombre__icontains=opciones['materia'])
+        if opciones.get('simulacion'):
+            qs = qs.filter(pk=opciones['simulacion'])
+
+        arreglados = ya_visibles = 0
+        for simulacion in qs:
+            encendidas = self._mostrar_en_las_rondas(simulacion)
+            if encendidas:
+                arreglados += 1
+                self.stdout.write(self.style.SUCCESS(
+                    f'+ {simulacion.titulo[:52]}: visibles desde {encendidas} ronda(s)'))
+            else:
+                ya_visibles += 1
+        self.stdout.write(f'\nArreglados {arreglados}, ya estaban visibles {ya_visibles}.')
+
+    @staticmethod
+    def _mostrar_en_las_rondas(simulacion):
+        """Enciende la visibilidad de las averiguaciones en las rondas donde ya
+        estan disponibles. El interruptor arranca apagado para no saturar la
+        pantalla, pero si el caso TIENE averiguaciones y ninguna ronda las
+        muestra, el estudiante nunca puede investigar y el mecanismo no existe.
+        """
+        disponibles = simulacion.investigaciones.filter(activo=True).values_list(
+            'disponible_desde_ronda', flat=True)
+        if not disponibles:
+            return 0
+        desde = min(disponibles)
+        parametros = dict(simulacion.parametros or {})
+        rondas = list(parametros.get('rondas') or [])
+        while len(rondas) < simulacion.maximo_decisiones:
+            rondas.append({})
+        encendidas = 0
+        for numero in range(desde, simulacion.maximo_decisiones + 1):
+            indice = numero - 1
+            if indice >= len(rondas):
+                break
+            ronda = rondas[indice] if isinstance(rondas[indice], dict) else {}
+            if not ronda.get('mostrar_investigaciones'):
+                ronda['mostrar_investigaciones'] = True
+                encendidas += 1
+            rondas[indice] = ronda
+        if encendidas:
+            parametros['rondas'] = rondas
+            simulacion.parametros = parametros
+            simulacion.save(update_fields=['parametros'])
+        return encendidas
+
     @transaction.atomic
     def _generar_para(self, simulacion, presupuesto, rehacer):
         recurso, _ = RecursoSimulacion.objects.get_or_create(
@@ -151,4 +215,7 @@ class Command(BaseCommand):
             )
             creadas += 1
             total += costo
-        return (creadas, total) if creadas else None
+        if not creadas:
+            return None
+        self._mostrar_en_las_rondas(simulacion)
+        return creadas, total
