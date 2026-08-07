@@ -6,7 +6,6 @@ compatibilidad, riesgo de proveedor). Idempotente.
 Uso: python manage.py crear_caso_compra_computadoras
 """
 import json
-from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand

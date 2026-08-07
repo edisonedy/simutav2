@@ -104,47 +104,63 @@ def _mallas_del_periodo(user, periodo):
 
 
 def _estructura_malla(malla, malla_periodo, permitidas):
-    """El plan de estudios agrupado por nivel.
+    """Las materias CREADAS en el periodo, agrupadas por nivel.
 
-    Salen SIEMPRE todas las asignaturas de la malla; abrirla en el periodo no es
-    un filtro, solo marca cuales ya tienen materia. Un nivel sin asignaturas no
-    ocupa sitio.
+    Solo se lista lo que existe: la materia aparece cuando se crea, y es ahi
+    donde viven sus temas, sus juegos y sus casos. Mostrar tambien las
+    asignaturas sin crear confundia, porque salian con contadores de contenido
+    que en realidad son del plan y no de la materia.
+
+    Devuelve (grupos, creadas, pendientes); `pendientes` es solo el contador que
+    necesita el boton de crear.
     """
-    asignaturas = permitidas.filter(malla=malla).select_related(
-        'materia', 'nivel',
+    if malla_periodo is None:
+        pendientes = permitidas.filter(malla=malla).count()
+        return [], 0, pendientes
+
+    materias = MateriaPeriodo.objects.filter(
+        malla_periodo=malla_periodo,
+        materia_malla__in=permitidas.filter(malla=malla),
+        activo=True,
+    ).select_related(
+        'materia_malla__materia',
+        'materia_malla__nivel',
     ).annotate(
-        total_temas=Count('temas', filter=Q(temas__activo=True), distinct=True),
+        total_temas=Count(
+            'materia_malla__temas',
+            filter=Q(materia_malla__temas__activo=True),
+            distinct=True,
+        ),
         total_actividades=Count(
-            'actividades', filter=Q(actividades__activo=True), distinct=True,
+            'materia_malla__actividades',
+            filter=Q(materia_malla__actividades__activo=True),
+            distinct=True,
         ),
         total_simulaciones=Count(
-            'simulaciones', filter=Q(simulaciones__activo=True), distinct=True,
+            'materia_malla__simulaciones',
+            filter=Q(materia_malla__simulaciones__activo=True),
+            distinct=True,
         ),
-    ).order_by('nivel__numero', 'orden', 'materia__nombre')
-
-    # Que asignatura ya tiene materia en esta apertura concreta.
-    materias_por_asignatura = {}
-    if malla_periodo is not None:
-        for materia_periodo in MateriaPeriodo.objects.filter(
-            malla_periodo=malla_periodo, activo=True,
-        ):
-            materias_por_asignatura[materia_periodo.materia_malla_id] = materia_periodo
+        total_juegos=Count(
+            'materia_malla__actividades_interactivas',
+            filter=Q(materia_malla__actividades_interactivas__activo=True),
+            distinct=True,
+        ),
+    ).order_by(
+        'materia_malla__nivel__numero',
+        'materia_malla__orden',
+        'materia_malla__materia__nombre',
+    )
 
     por_nivel = {}
-    creadas = 0
-    pendientes = 0
-    for asignatura in asignaturas:
-        materia_periodo = materias_por_asignatura.get(asignatura.pk)
-        if materia_periodo is None:
-            pendientes += 1
-        else:
-            creadas += 1
-        por_nivel.setdefault(asignatura.nivel_id, []).append({
-            'materia_malla': asignatura,
-            'materia_periodo': materia_periodo,
-            'total_temas': asignatura.total_temas,
-            'total_actividades': asignatura.total_actividades,
-            'total_simulaciones': asignatura.total_simulaciones,
+    for materia in materias:
+        por_nivel.setdefault(materia.materia_malla.nivel_id, []).append({
+            'materia_malla': materia.materia_malla,
+            'materia_periodo': materia,
+            'total_temas': materia.total_temas,
+            'total_actividades': materia.total_actividades,
+            'total_simulaciones': materia.total_simulaciones,
+            'total_juegos': materia.total_juegos,
         })
 
     grupos = []
@@ -153,14 +169,14 @@ def _estructura_malla(malla, malla_periodo, permitidas):
         filas = por_nivel.get(nivel.pk, [])
         if not filas:
             continue
-        grupos.append({
-            'nivel': nivel,
-            'filas': filas,
-            'total_creadas': sum(1 for f in filas if f['materia_periodo']),
-            'total_pendientes': sum(1 for f in filas if not f['materia_periodo']),
-        })
+        grupos.append({'nivel': nivel, 'filas': filas, 'total': len(filas)})
 
+    creadas = len(materias)
+    pendientes = malla_periodo.asignaturas_disponibles().filter(
+        pk__in=permitidas.filter(malla=malla).values('pk'),
+    ).count()
     return grupos, creadas, pendientes
+
 
 def _contenido_materia(materia_malla):
     actividades = list(

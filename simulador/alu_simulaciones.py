@@ -7,7 +7,7 @@ from django.db.models import Q
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.utils import timezone
-from django.shortcuts import get_object_or_404, render, redirect
+from django.shortcuts import get_object_or_404, render
 from core.funciones import ok_json, bad_json
 from academico.models import InscripcionMalla, MateriaMalla, PeriodoAcademico
 from simulador.models import InvestigacionSimulacion, Simulacion, IntentoSimulacion

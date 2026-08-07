@@ -6,7 +6,6 @@ criterios medibles y una prueba tecnica para diferenciarlos (no decidir por
 Uso: python manage.py crear_caso_talento_django
 """
 import json
-from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand

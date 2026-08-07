@@ -5,7 +5,6 @@ ciberseguridad bien medidos. Idempotente.
 Uso: python manage.py crear_caso_seguridad_redes
 """
 import json
-from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand

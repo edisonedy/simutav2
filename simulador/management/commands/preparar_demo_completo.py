@@ -16,10 +16,8 @@ from django.db import transaction
 from academico.models import InscripcionMalla, MateriaMalla, Malla, PeriodoAcademico, ProfesorMateria
 from core.models import PerfilUsuario
 from simulador.models import (
-    AccionSugeridaSimulacion,
     EventoSimulacion,
     IndicadorSimulacion,
-    RecursoSimulacion,
     Simulacion,
 )
 

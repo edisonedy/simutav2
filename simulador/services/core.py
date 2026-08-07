@@ -1496,17 +1496,6 @@ def calcular_puntaje_paso(puntaje_ia_sugerido, penalizacion):
     return max(0, min(100, puntaje))
 
 
-def _hubo_movimiento(antes, despues):
-    """True si algun indicador cambio entre el estado anterior y el nuevo."""
-    antes = antes or {}
-    for clave, valor in (despues or {}).items():
-        prev = antes.get(clave)
-        if isinstance(valor, (int, float)) and isinstance(prev, (int, float)):
-            if round(float(valor), 3) != round(float(prev), 3):
-                return True
-    return False
-
-
 def _delta_estados(antes, despues):
     cambios = {}
     for codigo in set((antes or {}).keys()) | set((despues or {}).keys()):
@@ -1766,10 +1755,6 @@ def _calcular_score_indicadores(simulacion, estado):
         count += 1
 
     return round(total / count, 2) if count > 0 else 50.0
-
-
-def _calcular_desempeno_indicador(indicador, valor):
-    return desempeno_indicador(indicador, valor)
 
 
 def calcular_puntaje_final(intento):

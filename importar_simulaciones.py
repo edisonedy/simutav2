@@ -1,7 +1,6 @@
 import os, sys, json, django
 from pathlib import Path
 from decimal import Decimal
-from collections import defaultdict
 
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))

@@ -1,7 +1,6 @@
 import json
 import re
 import unicodedata
-from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand

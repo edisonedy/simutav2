@@ -5,7 +5,7 @@ Funciones puras sobre el ORM (sin tocar plantillas): las vistas las consumen.
 La nota de un estudiante en una asignacion = su MEJOR intento finalizado de la
 simulacion asignada (premia la mejora; encaja con el reintento existente)."""
 
-from collections import Counter, defaultdict
+from collections import Counter
 
 from django.db.models import Count, Max
 

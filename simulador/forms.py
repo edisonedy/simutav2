@@ -20,7 +20,6 @@ from .models import (
     EscenarioSimulacion,
     EventoSimulacion,
     IndicadorSimulacion,
-    IntentoSimulacion,
     InvestigacionSimulacion,
     MatrizEvaluacionCaso,
     OpcionCasoSimulacion,

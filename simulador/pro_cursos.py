@@ -8,10 +8,8 @@ from collections import OrderedDict
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Prefetch
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
 
 from core.funciones import bad_json, errores_formulario, ok_json, periodo_de_sesion
 from simulador import cursos_service

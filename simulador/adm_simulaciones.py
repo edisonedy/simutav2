@@ -5,9 +5,7 @@ from academico.models import Malla
 from core.permisos import solo_administrativos
 from core.funciones import ok_json, bad_json, errores_formulario, periodo_de_sesion
 from simulador import catalogo_malla
-from simulador.models import Simulacion, IndicadorSimulacion, RestriccionSimulacion
-from simulador.models import CriterioEvaluacion, ConceptoEsperadoRonda
-from simulador.models import EscenarioSimulacion, DecisionConfigurada
+from simulador.models import ConceptoEsperadoRonda, EscenarioSimulacion, Simulacion
 from simulador.forms import SimulacionForm
 
 

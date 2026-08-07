@@ -630,6 +630,13 @@ class ContenidoDeMateriaTests(_BaseAcademicaMixin, TestCase):
             self.assertTrue(guia_guardada.read().startswith(b'%PDF-1.4'))
 
     def test_profesor_solo_ve_y_edita_la_materia_asignada(self):
+        # Las dos estan creadas en el periodo; el profesor solo debe ver la suya.
+        MateriaPeriodo.objects.create(
+            malla_periodo=self.malla_periodo, materia_malla=self.materias[1],
+        )
+        MateriaPeriodo.objects.create(
+            malla_periodo=self.malla_periodo, materia_malla=self.materias[2],
+        )
         self.client.force_login(self.profesor)
         listado = self.client.get(reverse('adm_materias'))
         self.assertContains(listado, self.malla.nombre)
@@ -753,7 +760,7 @@ class SelectorDePeriodoTests(_BaseAcademicaMixin, TestCase):
         )
         self.assertContains(respuesta, 'Asignaturas de la malla')
 
-    def test_materias_primero_muestra_mallas_y_luego_sus_niveles(self):
+    def test_materias_primero_muestra_mallas_y_luego_sus_materias_creadas(self):
         NivelMalla.objects.create(malla=self.malla, numero=4, nombre='Nivel vacio 4')
         listado = self.client.get(reverse('adm_materias'))
         self.assertContains(listado, self.malla.nombre)
@@ -762,14 +769,16 @@ class SelectorDePeriodoTests(_BaseAcademicaMixin, TestCase):
             f"{reverse('adm_materias')}?action=malla&pk={self.malla.pk}",
         )
 
+        MateriaPeriodo.objects.create(
+            malla_periodo=self.malla_periodo, materia_malla=self.materias[1],
+        )
         detalle = self.client.get(reverse('adm_materias'), {
             'action': 'malla', 'pk': self.malla.pk,
         })
+        # Solo la materia creada; el resto del plan no ocupa sitio.
         self.assertContains(detalle, 'Nivel 1')
-        self.assertContains(detalle, 'Nivel 2')
-        # Todos los niveles de la malla, con sus asignaturas, sin filtrar.
         self.assertContains(detalle, 'Programacion 1')
-        self.assertContains(detalle, 'Programacion 2')
+        self.assertNotContains(detalle, 'Programacion 2')
 
     def test_crear_materia_desde_un_nivel_la_agrega_a_la_malla(self):
         nivel = self.niveles[2]
@@ -793,15 +802,20 @@ class SelectorDePeriodoTests(_BaseAcademicaMixin, TestCase):
         self.assertEqual(materia_malla.nivel, nivel)
 
     def test_un_nivel_nuevo_se_ve_sin_tener_que_habilitarlo(self):
-        """Conectar la malla con el periodo no es un candado: los niveles y sus
-        asignaturas se ven siempre."""
+        """Un nivel nuevo aparece en cuanto se le crea una materia, sin tener que
+        habilitar el nivel por separado."""
         nivel = NivelMalla.objects.create(
             malla=self.malla, numero=5, nombre='Nivel 5',
         )
         materia = Materia.objects.create(
             codigo='NV5', nombre='Materia del quinto',
         )
-        MateriaMalla.objects.create(malla=self.malla, nivel=nivel, materia=materia)
+        asignatura = MateriaMalla.objects.create(
+            malla=self.malla, nivel=nivel, materia=materia,
+        )
+        MateriaPeriodo.objects.create(
+            malla_periodo=self.malla_periodo, materia_malla=asignatura,
+        )
 
         pagina = self.client.get(reverse('adm_materias'), {
             'action': 'malla', 'pk': self.malla.pk,
@@ -895,7 +909,8 @@ class AltaDelCatalogoAcademicoTests(TestCase):
 
 class MallaEnElPeriodoTests(_BaseAcademicaMixin, TestCase):
     """El escalon intermedio conecta la malla con el periodo y lleva nombre
-    propio. No filtra nada: los niveles y asignaturas se ven siempre."""
+    propio. La pantalla lista SOLO las materias creadas: la materia aparece
+    cuando se crea, porque es ahi donde viven sus temas, juegos y casos."""
 
     @classmethod
     def setUpTestData(cls):
@@ -909,8 +924,13 @@ class MallaEnElPeriodoTests(_BaseAcademicaMixin, TestCase):
         return self.client.get(reverse('adm_materias'), {'action': 'malla', 'pk': self.malla.pk})
 
     @staticmethod
-    def _asignaturas_listadas(pagina):
+    def _materias_listadas(pagina):
         return sum(len(bloque['filas']) for bloque in pagina.context['niveles'])
+
+    def _crear_materia(self, asignatura):
+        return MateriaPeriodo.objects.create(
+            malla_periodo=self.malla_periodo, materia_malla=asignatura,
+        )
 
     def test_se_abre_la_malla_en_el_periodo_con_nombre_propio(self):
         self.malla_periodo.delete()
@@ -964,6 +984,8 @@ class MallaEnElPeriodoTests(_BaseAcademicaMixin, TestCase):
         self.assertEqual(self.malla_periodo.nombre, 'Software vespertina')
 
     def test_quitarla_del_periodo_no_toca_el_plan(self):
+        self._crear_materia(self.materias[1])
+
         respuesta = self.client.post(reverse('adm_materias'), {
             'action': 'delete_malla_periodo', 'pk': self.malla_periodo.pk,
         }, headers={'x-requested-with': 'XMLHttpRequest'})
@@ -971,31 +993,40 @@ class MallaEnElPeriodoTests(_BaseAcademicaMixin, TestCase):
         self.assertTrue(respuesta.json()['result'], respuesta.json())
         self.malla_periodo.refresh_from_db()
         self.assertFalse(self.malla_periodo.activo)
-        # El plan sigue entero y visible.
-        pagina = self._pagina_malla()
-        self.assertContains(pagina, 'Programacion 1')
-        self.assertEqual(self._asignaturas_listadas(pagina), 3)
+        # Las asignaturas del plan siguen intactas; lo que se cierra es la apertura.
+        self.assertEqual(MateriaMalla.objects.filter(malla=self.malla, activo=True).count(), 3)
 
-    def test_sin_abrirla_en_el_periodo_se_ven_igual_las_asignaturas(self):
+    def test_solo_se_listan_las_materias_creadas(self):
+        """La asignatura del plan sin materia NO aparece: salia con contadores de
+        contenido que son del plan y no de la materia, y confundia."""
+        self._crear_materia(self.materias[1])
+
+        pagina = self._pagina_malla()
+
+        self.assertEqual(self._materias_listadas(pagina), 1)
+        self.assertContains(pagina, 'Programacion 1')
+        self.assertNotContains(pagina, 'Programacion 2')
+        self.assertNotContains(pagina, 'Programacion 3')
+
+    def test_sin_abrirla_en_el_periodo_no_hay_materias(self):
         self.malla_periodo.delete()
 
         pagina = self._pagina_malla()
 
         self.assertIsNone(pagina.context['malla_periodo'])
-        self.assertEqual(self._asignaturas_listadas(pagina), 3)
-        for numero in (1, 2, 3):
-            self.assertContains(pagina, f'Programacion {numero}')
+        self.assertEqual(self._materias_listadas(pagina), 0)
+        self.assertContains(pagina, 'Todavia no hay materias creadas')
 
-    def test_las_asignaturas_salen_agrupadas_y_en_orden_de_nivel(self):
-        """Un nivel sin asignaturas no ocupa sitio."""
-        vacio = NivelMalla.objects.create(malla=self.malla, numero=9, nombre='Nivel 9')
+    def test_las_materias_salen_agrupadas_y_en_orden_de_nivel(self):
+        """Un nivel sin materias creadas no ocupa sitio."""
+        self._crear_materia(self.materias[1])
+        self._crear_materia(self.materias[3])
 
         pagina = self._pagina_malla()
 
         numeros = [bloque['nivel'].numero for bloque in pagina.context['niveles']]
-        self.assertEqual(numeros, sorted(numeros))
-        self.assertNotIn(vacio.numero, numeros)
-        self.assertNotContains(pagina, 'Nivel 9')
+        self.assertEqual(numeros, [1, 3])
+        self.assertNotContains(pagina, 'Nivel 2')
 
 
 class MateriaDelPeriodoTests(_BaseAcademicaMixin, TestCase):
@@ -1138,7 +1169,7 @@ class MateriaDelPeriodoTests(_BaseAcademicaMixin, TestCase):
         self.assertFalse(respuesta.json()['result'])
         self.assertEqual(MateriaPeriodo.objects.count(), 0)
 
-    def test_la_pantalla_marca_lo_creado_y_lo_pendiente(self):
+    def test_la_pantalla_cuenta_lo_creado_y_lo_que_falta(self):
         MateriaPeriodo.objects.create(
             malla_periodo=self.malla_periodo, materia_malla=self.materias[1],
         )
@@ -1149,8 +1180,9 @@ class MateriaDelPeriodoTests(_BaseAcademicaMixin, TestCase):
 
         self.assertEqual(pagina.context['total_materias'], 1)
         self.assertEqual(pagina.context['pendientes'], 2)
-        self.assertContains(pagina, 'Materia creada')
-        self.assertContains(pagina, 'Sin crear')
+        # Se lista la creada; las dos que faltan solo se cuentan.
+        self.assertContains(pagina, 'Programacion 1')
+        self.assertNotContains(pagina, 'Programacion 2')
 
     def test_quitar_la_materia_no_borra_la_asignatura_de_la_malla(self):
         materia = MateriaPeriodo.objects.create(
