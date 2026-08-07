@@ -50,6 +50,8 @@ def _materias_qs(profesor):
 
 
 def _limit_form_materia(form, profesor):
+    # Aunque la materia venga fija (oculta), el queryset sigue acotado al
+    # profesor: es lo que impide que alguien mande el id de una materia ajena.
     form.fields['materia_malla'].queryset = _materias_qs(profesor).select_related(
         'malla', 'materia', 'nivel',
     )
@@ -1192,7 +1194,12 @@ def view(request):
                 )
 
         if action == 'add':
-            form = _limit_form_materia(SimulacionForm(request.POST), request.user)
+            materia_fija = _materias_qs(request.user).filter(
+                pk=request.POST.get('materia_malla'),
+            ).first()
+            form = _limit_form_materia(
+                SimulacionForm(request.POST, materia_fija=materia_fija), request.user,
+            )
             _simplificar_form_creacion(form)
             if form.is_valid():
                 simulacion = form.save(commit=False)
@@ -1737,13 +1744,15 @@ def view(request):
         if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
             return redirect('pro_simulaciones')
         initial = {}
-        materia_malla = request.GET.get('materia_malla')
-        if materia_malla and _materias_qs(request.user).filter(pk=materia_malla).exists():
-            initial['materia_malla'] = materia_malla
+        # Si se entra desde una materia, el caso queda amarrado a ella.
+        materia_fija = _materias_qs(request.user).filter(
+            pk=request.GET.get('materia_malla'),
+        ).select_related('malla', 'materia', 'nivel').first()
         tema_materia = request.GET.get('tema_materia')
         if tema_materia:
             initial['tema_materia'] = tema_materia
-        form = SimulacionForm(initial=initial)
+        form = SimulacionForm(initial=initial, materia_fija=materia_fija)
+        data['materia_fija'] = materia_fija
         _limit_form_materia(form, request.user)
         _simplificar_form_creacion(form)
         data['form'] = form

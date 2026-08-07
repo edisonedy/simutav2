@@ -1,10 +1,19 @@
 <form method="post" action="{% url 'pro_simulaciones' %}?action=add" onsubmit="return enviar_formulario(this)">
     {% csrf_token %}
     <div class="modal-header">
-        <h5 class="modal-title">Nueva simulacion</h5>
+        <h5 class="modal-title">Nuevo caso real</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
     </div>
     <div class="modal-body">
+        {% if materia_fija %}
+        <div class="alert alert-secondary small mb-2">
+            <strong>Materia:</strong> {{ materia_fija.materia.nombre }}
+            <span class="text-muted">
+                &middot; {{ materia_fija.malla.nombre }} &middot; Nivel {{ materia_fija.nivel.numero }}
+            </span>
+            <div class="text-muted">El caso queda amarrado a esta materia.</div>
+        </div>
+        {% endif %}
         <div class="alert alert-info small">
             <strong>Para empezar:</strong> aqui solo ves lo necesario para crear el caso.
             Despues podras completar indicadores, rubrica, recursos, eventos y opciones avanzadas.

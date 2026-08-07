@@ -209,11 +209,24 @@ class EquipoForm(forms.ModelForm):
 
 
 class SimulacionForm(MateriaMallaLegibleMixin, forms.ModelForm):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, materia_fija=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['materia_malla'].help_text = (
-            'La simulacion se publica en una materia de una malla concreta.'
-        )
+
+        # El caso SIEMPRE pertenece a una materia. Cuando se crea desde ella, la
+        # materia queda fija y no se ofrece cambiarla: el desplegable con la
+        # opcion vacia hacia parecer que el caso podia quedar suelto.
+        self.materia_fija = materia_fija
+        campo_materia = self.fields['materia_malla']
+        if materia_fija is not None:
+            self.initial['materia_malla'] = materia_fija.pk
+            campo_materia.widget = forms.HiddenInput()
+            campo_materia.help_text = ''
+        else:
+            campo_materia.empty_label = 'Elige la materia'
+            campo_materia.help_text = (
+                'Obligatorio: el caso vive dentro de una materia de la malla.'
+            )
+        campo_materia.required = True
         materia_id = (
             self.data.get('materia_malla') if self.is_bound
             else (
