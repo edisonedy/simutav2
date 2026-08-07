@@ -300,6 +300,281 @@
         }
     });
 
+    // --------------------------------------------------------------- clasificar
+    SimutaJugadores.registrar('clasificar', {
+        dibujar: function (zona, config) {
+            var banco = crear('div', 'juego-banco');
+            banco.dataset.banco = '1';
+
+            function soltar(destino, ficha) {
+                destino.appendChild(ficha);
+                zona.dispatchEvent(new Event('change', {bubbles: true}));
+            }
+
+            (config.elementos || []).forEach(function (elemento) {
+                var ficha = crear('button', 'juego-ficha', elemento.texto);
+                ficha.type = 'button';
+                ficha.dataset.elemento = elemento.id;
+                ficha.addEventListener('click', function () {
+                    // Un clic la selecciona; el siguiente clic en un grupo la manda alli.
+                    var activa = zona.querySelector('.juego-ficha.is-activa');
+                    if (activa) {
+                        activa.classList.remove('is-activa');
+                    }
+                    if (activa !== ficha) {
+                        ficha.classList.add('is-activa');
+                    }
+                });
+                banco.appendChild(ficha);
+            });
+
+            var grupos = crear('div', 'juego-grupos');
+            (config.categorias || []).forEach(function (categoria) {
+                var caja = crear('div', 'juego-grupo');
+                caja.dataset.categoria = categoria.id;
+                caja.appendChild(crear('div', 'juego-grupo-nombre', categoria.nombre));
+                var dentro = crear('div', 'juego-grupo-fichas');
+                caja.appendChild(dentro);
+                caja.addEventListener('click', function () {
+                    var activa = zona.querySelector('.juego-ficha.is-activa');
+                    if (activa) {
+                        activa.classList.remove('is-activa');
+                        soltar(dentro, activa);
+                    }
+                });
+                grupos.appendChild(caja);
+            });
+
+            // Devolver al banco lo que se puso mal.
+            banco.addEventListener('click', function (evento) {
+                if (evento.target !== banco) {
+                    return;
+                }
+                var activa = zona.querySelector('.juego-ficha.is-activa');
+                if (activa) {
+                    activa.classList.remove('is-activa');
+                    soltar(banco, activa);
+                }
+            });
+
+            zona.appendChild(crear('p', 'text-muted small mb-1',
+                'Toca un elemento y despues el grupo al que pertenece.'));
+            zona.appendChild(banco);
+            zona.appendChild(grupos);
+        },
+        responder: function (zona) {
+            var asignaciones = {};
+            Array.prototype.forEach.call(
+                zona.querySelectorAll('[data-categoria]'),
+                function (caja) {
+                    Array.prototype.forEach.call(
+                        caja.querySelectorAll('[data-elemento]'),
+                        function (ficha) {
+                            asignaciones[ficha.dataset.elemento] = caja.dataset.categoria;
+                        }
+                    );
+                }
+            );
+            return {asignaciones: asignaciones};
+        },
+        progreso: function (zona) {
+            var total = zona.querySelectorAll('[data-elemento]').length;
+            var banco = zona.querySelector('[data-banco]');
+            var sueltas = banco ? banco.querySelectorAll('[data-elemento]').length : 0;
+            return total ? (total - sueltas) / total : 1;
+        }
+    });
+
+    // ------------------------------------------------------------ sopa de letras
+    SimutaJugadores.registrar('sopa_letras', {
+        dibujar: function (zona, config) {
+            var hallazgos = {};
+            zona.__hallazgos = hallazgos;
+            var seleccionada = null;
+            var primera = null;
+
+            var tabla = crear('div', 'juego-sopa');
+            var tablero = config.tablero || [];
+            tabla.style.gridTemplateColumns = 'repeat(' + (tablero[0] || []).length + ', 1fr)';
+
+            function celdasEntre(a, b) {
+                var df = Math.sign(b[0] - a[0]);
+                var dc = Math.sign(b[1] - a[1]);
+                var largoF = Math.abs(b[0] - a[0]);
+                var largoC = Math.abs(b[1] - a[1]);
+                // Solo valen lineas rectas: horizontal, vertical o diagonal exacta.
+                if (largoF && largoC && largoF !== largoC) {
+                    return null;
+                }
+                var pasos = Math.max(largoF, largoC);
+                var salida = [];
+                for (var i = 0; i <= pasos; i += 1) {
+                    salida.push([a[0] + df * i, a[1] + dc * i]);
+                }
+                return salida;
+            }
+
+            function pintar(celdas, clase) {
+                celdas.forEach(function (par) {
+                    var nodo = tabla.querySelector('[data-celda="' + par[0] + '-' + par[1] + '"]');
+                    if (nodo) {
+                        nodo.classList.add(clase);
+                    }
+                });
+            }
+
+            tablero.forEach(function (fila, f) {
+                fila.forEach(function (letra, c) {
+                    var celda = crear('button', 'juego-celda', letra);
+                    celda.type = 'button';
+                    celda.dataset.celda = f + '-' + c;
+                    celda.addEventListener('click', function () {
+                        if (!seleccionada) {
+                            zona.querySelectorAll('.juego-celda.is-punta').forEach(function (n) {
+                                n.classList.remove('is-punta');
+                            });
+                            return;
+                        }
+                        if (!primera) {
+                            primera = [f, c];
+                            celda.classList.add('is-punta');
+                            return;
+                        }
+                        var camino = celdasEntre(primera, [f, c]);
+                        tabla.querySelectorAll('.is-punta').forEach(function (n) {
+                            n.classList.remove('is-punta');
+                        });
+                        primera = null;
+                        if (!camino) {
+                            return;
+                        }
+                        hallazgos[seleccionada.id] = camino;
+                        pintar(camino, 'is-hallada');
+                        seleccionada.nodo.classList.add('is-hallada');
+                        seleccionada = null;
+                        zona.dispatchEvent(new Event('change', {bubbles: true}));
+                    });
+                    tabla.appendChild(celda);
+                });
+            });
+
+            var lista = crear('div', 'juego-palabras');
+            (config.palabras || []).forEach(function (palabra) {
+                var chip = crear('button', 'juego-palabra', palabra.texto);
+                chip.type = 'button';
+                chip.dataset.palabra = palabra.id;
+                chip.title = palabra.pista || '';
+                chip.addEventListener('click', function () {
+                    zona.querySelectorAll('.juego-palabra.is-activa').forEach(function (n) {
+                        n.classList.remove('is-activa');
+                    });
+                    chip.classList.add('is-activa');
+                    seleccionada = {id: palabra.id, nodo: chip};
+                    primera = null;
+                });
+                lista.appendChild(chip);
+            });
+
+            zona.appendChild(crear('p', 'text-muted small mb-1',
+                'Elige una palabra de la lista y marca su primera y su ultima letra en el tablero.'));
+            zona.appendChild(lista);
+            zona.appendChild(tabla);
+        },
+        responder: function (zona) {
+            return {hallazgos: zona.__hallazgos || {}};
+        },
+        progreso: function (zona) {
+            var total = zona.querySelectorAll('[data-palabra]').length;
+            var halladas = Object.keys(zona.__hallazgos || {}).length;
+            return total ? halladas / total : 1;
+        }
+    });
+
+    // ---------------------------------------------------------------- crucigrama
+    SimutaJugadores.registrar('crucigrama', {
+        dibujar: function (zona, config) {
+            var filas = config.filas || 0;
+            var columnas = config.columnas || 0;
+            var tabla = crear('div', 'juego-crucigrama');
+            tabla.style.gridTemplateColumns = 'repeat(' + columnas + ', 1fr)';
+
+            var casillas = {};
+            (config.palabras || []).forEach(function (palabra) {
+                for (var i = 0; i < palabra.largo; i += 1) {
+                    var f = palabra.fila + (palabra.horizontal ? 0 : i);
+                    var c = palabra.columna + (palabra.horizontal ? i : 0);
+                    casillas[f + '-' + c] = true;
+                }
+            });
+
+            for (var f = 0; f < filas; f += 1) {
+                for (var c = 0; c < columnas; c += 1) {
+                    var clave = f + '-' + c;
+                    if (!casillas[clave]) {
+                        tabla.appendChild(crear('div', 'juego-cru-vacia'));
+                        continue;
+                    }
+                    var entrada = crear('input', 'juego-cru-celda');
+                    entrada.type = 'text';
+                    entrada.maxLength = 1;
+                    entrada.dataset.celda = clave;
+                    entrada.addEventListener('input', function () {
+                        this.value = this.value.toUpperCase();
+                    });
+                    tabla.appendChild(entrada);
+                }
+            }
+
+            var pistas = crear('div', 'juego-pistas');
+            [['Horizontales', true], ['Verticales', false]].forEach(function (par) {
+                var grupo = (config.palabras || []).filter(function (p) {
+                    return p.horizontal === par[1];
+                });
+                if (!grupo.length) {
+                    return;
+                }
+                var caja = crear('div', '');
+                caja.appendChild(crear('div', 'juego-pistas-titulo', par[0]));
+                grupo.forEach(function (palabra) {
+                    caja.appendChild(crear(
+                        'div', 'juego-pista',
+                        palabra.numero + '. ' + palabra.pista + ' (' + palabra.largo + ')'
+                    ));
+                });
+                pistas.appendChild(caja);
+            });
+
+            zona.appendChild(tabla);
+            zona.appendChild(pistas);
+            zona.__palabras = config.palabras || [];
+        },
+        responder: function (zona) {
+            var respuestas = {};
+            (zona.__palabras || []).forEach(function (palabra) {
+                var letras = '';
+                for (var i = 0; i < palabra.largo; i += 1) {
+                    var f = palabra.fila + (palabra.horizontal ? 0 : i);
+                    var c = palabra.columna + (palabra.horizontal ? i : 0);
+                    var celda = zona.querySelector('[data-celda="' + f + '-' + c + '"]');
+                    letras += celda && celda.value ? celda.value : ' ';
+                }
+                respuestas[palabra.id] = letras.trim();
+            });
+            return {respuestas: respuestas};
+        },
+        progreso: function (zona) {
+            var celdas = zona.querySelectorAll('.juego-cru-celda');
+            if (!celdas.length) {
+                return 1;
+            }
+            var llenas = 0;
+            Array.prototype.forEach.call(celdas, function (celda) {
+                llenas += celda.value.trim() ? 1 : 0;
+            });
+            return llenas / celdas.length;
+        }
+    });
+
     // ------------------------------------------------------------------ arranque
     document.addEventListener('DOMContentLoaded', function () {
         var zona = document.getElementById('zona-juego');
@@ -364,11 +639,16 @@
         var datos_url_evento = datos.dataset.urlEvento;
         registrar('inicio', '', {renderer: zona.dataset.renderer});
 
-        /* Cuanto llevas resuelto. Cuenta los grupos que ya tienen respuesta, sin
-         * saber nada del motor: sirve igual para preguntas, pares y espacios. */
+        /* Cuanto llevas resuelto. El motor puede decirlo con `progreso`; si no,
+         * se cuentan los grupos que ya tienen respuesta, sin saber de que motor
+         * se trata: sirve igual para preguntas, pares y espacios. */
         var barra = document.querySelector('.juego-progreso-barra');
         function actualizarProgreso() {
             if (!barra) {
+                return;
+            }
+            if (typeof jugador.progreso === 'function') {
+                barra.style.width = Math.round(jugador.progreso(zona) * 100) + '%';
                 return;
             }
             var grupos = zona.querySelectorAll('[data-pregunta], [data-izquierda]');

@@ -164,6 +164,21 @@ STATICFILES_DIRS = [
 # Destino de collectstatic en el servidor (ignorado por git).
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# En produccion el nombre de cada archivo lleva el hash de su contenido
+# (juegos.a1b2c3.css). Sin esto, al publicar un cambio de CSS o JS el navegador
+# del estudiante sigue mostrando el archivo viejo que tiene en cache hasta que
+# recargue a mano, y la pantalla queda a medio estilo. Exige collectstatic al
+# desplegar, que es lo que ya se hace en el servidor.
+if not DEBUG:
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage',
+        },
+    }
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 

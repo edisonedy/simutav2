@@ -237,6 +237,101 @@
     border-bottom-color: var(--cyan);
 }
 
+/* ------------------------------------------------------------- clasificar */
+.juego-banco {
+    display: flex; flex-wrap: wrap; gap: .5rem;
+    min-height: 3.4rem; padding: .8rem;
+    border: 2px dashed var(--line); border-radius: .9rem;
+    background: var(--paper); margin-bottom: .9rem;
+}
+.juego-ficha {
+    border: 2px solid var(--line); border-radius: .7rem;
+    background: #fff; padding: .5rem .85rem;
+    font-size: .92rem; font-weight: 600; color: var(--ink); cursor: pointer;
+    transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease;
+}
+.juego-ficha:hover { border-color: var(--cyan); }
+.juego-ficha.is-activa {
+    border-color: var(--accent); color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(var(--accent-rgb), .16);
+    transform: translateY(-2px);
+}
+.juego-grupos {
+    display: grid; gap: .7rem;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+.juego-grupo {
+    border: 2px solid var(--line); border-radius: .9rem;
+    background: var(--card); padding: .8rem; min-height: 7rem; cursor: pointer;
+    transition: border-color .16s ease, background-color .16s ease;
+}
+.juego-grupo:hover { border-color: var(--cyan); background: rgba(53,182,232,.05); }
+.juego-grupo-nombre {
+    font-family: "Fredoka", "Nunito", sans-serif;
+    font-weight: 600; margin-bottom: .5rem; color: var(--accent);
+}
+.juego-grupo-fichas { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+/* --------------------------------------------------------- sopa de letras */
+.juego-palabras { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
+.juego-palabra {
+    border: 2px solid var(--line); border-radius: 999px;
+    background: #fff; padding: .3rem .8rem;
+    font-size: .85rem; font-weight: 600; cursor: pointer; color: var(--ink);
+}
+.juego-palabra:hover { border-color: var(--cyan); }
+.juego-palabra.is-activa {
+    border-color: var(--accent); color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .16);
+}
+.juego-palabra.is-hallada {
+    text-decoration: line-through; opacity: .55;
+    border-color: var(--forest); color: var(--forest);
+}
+.juego-sopa {
+    display: grid; gap: 2px;
+    max-width: 34rem; margin: 0 auto;
+    background: var(--line); border: 2px solid var(--line); border-radius: .6rem;
+    overflow: hidden;
+}
+.juego-celda {
+    aspect-ratio: 1; border: none; background: #fff;
+    font-family: "IBM Plex Mono", monospace; font-weight: 600;
+    font-size: .92rem; color: var(--ink); cursor: pointer;
+    transition: background-color .12s ease;
+}
+.juego-celda:hover { background: rgba(53,182,232,.16); }
+.juego-celda.is-punta { background: var(--cyan); color: #fff; }
+.juego-celda.is-hallada { background: rgba(14,122,110,.20); color: var(--forest); }
+
+/* ------------------------------------------------------------- crucigrama */
+.juego-crucigrama {
+    display: grid; gap: 2px; justify-content: center;
+    margin-bottom: 1rem;
+}
+.juego-cru-vacia { aspect-ratio: 1; min-width: 1.9rem; background: transparent; }
+.juego-cru-celda {
+    aspect-ratio: 1; min-width: 1.9rem; width: 100%;
+    border: 1.5px solid var(--accent); border-radius: .2rem;
+    background: #fff; text-align: center; padding: 0;
+    font-family: "IBM Plex Mono", monospace; font-weight: 700;
+    font-size: .95rem; color: var(--ink); text-transform: uppercase;
+}
+.juego-cru-celda:focus {
+    outline: none; background: rgba(53,182,232,.16);
+    box-shadow: 0 0 0 3px rgba(53,182,232,.22);
+}
+.juego-pistas {
+    display: grid; gap: 1.2rem;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+.juego-pistas-titulo {
+    font-family: "IBM Plex Mono", monospace; font-size: .7rem;
+    font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--forest); margin-bottom: .35rem;
+}
+.juego-pista { font-size: .9rem; line-height: 1.5; color: var(--ink); }
+
 /* --------------------------------------------------------- pie de la partida */
 .juego-pie {
     display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;

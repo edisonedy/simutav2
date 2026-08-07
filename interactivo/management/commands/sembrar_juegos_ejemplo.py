@@ -139,6 +139,47 @@ EJEMPLOS = [
             'ecuacion sigue [[cuadrada|balanceada|equilibrada]].'
         )},
     },
+    {
+        'motor': 'clasificar',
+        'titulo': 'Costo fijo o costo variable',
+        'instrucciones': 'Toca cada elemento y despues el grupo al que pertenece.',
+        'config': {
+            'categorias': [{'nombre': 'Costo fijo'}, {'nombre': 'Costo variable'}],
+            'elementos': [
+                {'texto': 'Arriendo de la planta', 'categoria': 1},
+                {'texto': 'Sueldo del gerente', 'categoria': 1},
+                {'texto': 'Depreciacion de la maquinaria', 'categoria': 1},
+                {'texto': 'Materia prima', 'categoria': 2},
+                {'texto': 'Comisiones por venta', 'categoria': 2},
+                {'texto': 'Energia de las maquinas', 'categoria': 2},
+            ],
+        },
+    },
+    {
+        'motor': 'sopa_letras',
+        'titulo': 'Terminos del balance general',
+        'instrucciones': 'Elige una palabra de la lista y marca su primera y ultima letra.',
+        'config': {'palabras': [
+            {'texto': 'ACTIVO', 'pista': 'Lo que la empresa posee'},
+            {'texto': 'PASIVO', 'pista': 'Lo que la empresa debe'},
+            {'texto': 'PATRIMONIO', 'pista': 'Lo que queda para los duenios'},
+            {'texto': 'BALANCE', 'pista': 'Estado que cuadra la ecuacion'},
+            {'texto': 'CARTERA', 'pista': 'Lo que los clientes deben'},
+            {'texto': 'INVENTARIO', 'pista': 'Mercaderia lista para vender'},
+        ]},
+    },
+    {
+        'motor': 'crucigrama',
+        'titulo': 'Crucigrama de costos',
+        'instrucciones': 'Completa el tablero con las pistas de cada palabra.',
+        'config': {'palabras': [
+            {'texto': 'COSTO', 'pista': 'Lo que sale producir una unidad'},
+            {'texto': 'MARGEN', 'pista': 'Diferencia entre precio y costo'},
+            {'texto': 'PRECIO', 'pista': 'Lo que paga el cliente'},
+            {'texto': 'GASTO', 'pista': 'Salida que no se suma al producto'},
+            {'texto': 'UTILIDAD', 'pista': 'Lo que queda despues de los costos'},
+        ]},
+    },
 ]
 
 
