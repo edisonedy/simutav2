@@ -21,9 +21,13 @@ from simulador.models import ActividadMateria, Simulacion, TemaMateria
 
 
 def _url_malla(malla_id):
-    """La pantalla de la malla vive sobre la MALLA, no sobre su apertura: el plan
-    de estudios se ve igual este o no abierto en el periodo."""
+    """Las aperturas de la malla en el periodo."""
     return f"{reverse('adm_materias')}?action=malla&pk={malla_id}"
+
+
+def _url_apertura(malla_periodo_id):
+    """Las materias creadas dentro de una apertura concreta."""
+    return f"{reverse('adm_materias')}?action=apertura&pk={malla_periodo_id}"
 
 
 def _url_materia(materia_malla_id, malla_periodo_id=None):
@@ -81,24 +85,27 @@ def _mallas_del_periodo(user, periodo):
         ),
     ).order_by('carrera__nombre', 'nombre')
 
+    # Una malla puede tener VARIAS aperturas en el mismo periodo, asi que se
+    # agrupan en lista y no en un solo enlace.
     aperturas = {}
     if periodo is not None:
         for enlace in MallaPeriodo.objects.filter(
             periodo=periodo, activo=True,
         ).annotate(
             total_materias=Count('materias', filter=Q(materias__activo=True), distinct=True),
-        ):
-            aperturas[enlace.malla_id] = enlace
+        ).order_by('nombre', 'pk'):
+            aperturas.setdefault(enlace.malla_id, []).append(enlace)
 
     filas = []
     for malla in qs:
-        apertura = aperturas.get(malla.pk)
+        de_esta = aperturas.get(malla.pk, [])
         filas.append({
             'malla': malla,
-            'malla_periodo': apertura,
+            'aperturas': de_esta,
+            'total_aperturas': len(de_esta),
             'total_niveles': malla.total_niveles,
             'total_asignaturas': malla.total_asignaturas,
-            'total_materias': apertura.total_materias if apertura else 0,
+            'total_materias': sum(a.total_materias for a in de_esta),
         })
     return filas
 
@@ -296,7 +303,7 @@ def _post(request):
 
         return respuesta_ok(
             request,
-            _url_malla(enlace.malla_id),
+            _url_apertura(enlace.pk),
             'Malla abierta en el periodo',
         )
 
@@ -307,7 +314,7 @@ def _post(request):
             pk=request.POST.get('malla_periodo'),
             periodo=periodo_de_sesion(request), activo=True,
         )
-        retorno = _url_malla(malla_periodo.malla_id)
+        retorno = _url_apertura(malla_periodo.pk)
 
         if action == 'add_materia_periodo':
             nivel = None
@@ -387,7 +394,7 @@ def _post(request):
         materia.activo = False
         materia.save(update_fields=['activo', 'fecha_modificacion'])
         return respuesta_ok(
-            request, _url_malla(materia.malla_periodo.malla_id), 'Materia quitada del periodo',
+            request, _url_apertura(materia.malla_periodo_id), 'Materia quitada del periodo',
         )
 
     if action == 'edit_malla_periodo':
@@ -403,7 +410,7 @@ def _post(request):
         if not nombre:
             return respuesta_error(
                 request,
-                _url_malla(enlace.malla_id),
+                _url_apertura(enlace.pk),
                 'El nombre de la apertura es obligatorio.',
             )
 
@@ -416,7 +423,7 @@ def _post(request):
         if repetida:
             return respuesta_error(
                 request,
-                _url_malla(enlace.malla_id),
+                _url_apertura(enlace.pk),
                 'Ya existe otra apertura con esa malla y ese nombre.',
             )
 
@@ -427,7 +434,7 @@ def _post(request):
         ])
         return respuesta_ok(
             request,
-            _url_malla(enlace.malla_id),
+            _url_apertura(enlace.pk),
             'Nombre actualizado',
         )
 
@@ -607,18 +614,49 @@ def _get(request):
         )
 
     if action == 'malla':
+        # Escalon 2 del recorrido: las aperturas de esta malla en el periodo.
+        # Una misma malla puede abrirse varias veces (matutina, vespertina...).
         periodo = periodo_de_sesion(request)
         malla = get_object_or_404(
             Malla.objects.select_related('carrera'),
             pk=request.GET.get('pk'),
             activo=True,
         )
-        # Abrirla en el periodo es opcional: sin apertura el plan se ve igual,
-        # solo que no hay materias creadas todavia.
-        malla_periodo = MallaPeriodo.objects.filter(
-            malla=malla, periodo=periodo, activo=True,
-        ).select_related('malla', 'periodo').first()
+        permitidas = _materias_permitidas(request.user).filter(malla=malla)
+        if not es_administrativo(request.user) and not permitidas.exists():
+            raise PermissionDenied('No tienes materias asignadas en esta malla.')
 
+        aperturas = []
+        if periodo is not None:
+            aperturas = list(
+                MallaPeriodo.objects.filter(
+                    malla=malla, periodo=periodo, activo=True,
+                ).annotate(
+                    total_materias=Count(
+                        'materias', filter=Q(materias__activo=True), distinct=True,
+                    ),
+                ).order_by('nombre', 'pk')
+            )
+
+        return render(request, 'academico/adm_materias/malla.html', {
+            'title': malla.nombre,
+            'malla': malla,
+            'periodo': periodo,
+            'aperturas': aperturas,
+            'total_asignaturas': permitidas.count(),
+            'puede_editar': es_administrativo(request.user),
+        })
+
+    if action == 'apertura':
+        # Escalon 3: las materias creadas dentro de UNA apertura concreta.
+        periodo = periodo_de_sesion(request)
+        malla_periodo = get_object_or_404(
+            MallaPeriodo.objects.select_related('malla', 'malla__carrera', 'periodo'),
+            pk=request.GET.get('pk'),
+            periodo=periodo,
+            activo=True,
+        )
+        malla = malla_periodo.malla
         permitidas = _materias_permitidas(request.user).filter(malla=malla)
 
         if not es_administrativo(request.user) and not permitidas.exists():
@@ -630,8 +668,8 @@ def _get(request):
             permitidas,
         )
 
-        return render(request, 'academico/adm_materias/malla.html', {
-            'title': malla_periodo.nombre_visible if malla_periodo else malla.nombre,
+        return render(request, 'academico/adm_materias/apertura.html', {
+            'title': malla_periodo.nombre_visible,
             'malla': malla,
             'periodo': periodo,
             'malla_periodo': malla_periodo,

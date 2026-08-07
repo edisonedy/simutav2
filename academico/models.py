@@ -338,8 +338,12 @@ class MallaPeriodo(ModeloBase):
             '-periodo__fecha_inicio',
             'malla__nombre',
         ]
+        # Una misma malla se puede abrir VARIAS veces en el mismo periodo, y
+        # cada apertura lleva su nombre: 'Software 2026-1 matutina' y
+        # 'Software 2026-1 vespertina' son dos. Lo unico que no se repite es el
+        # nombre dentro de la misma malla y periodo.
         unique_together = [
-            ('periodo', 'malla'),
+            ('periodo', 'malla', 'nombre'),
         ]
 
     def __str__(self):

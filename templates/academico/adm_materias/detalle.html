@@ -4,14 +4,21 @@
     <div>
         <div class="page-kicker">
             <a href="{% url 'adm_materias' %}" class="text-decoration-none">Materias</a> /
-            <a href="{% url 'adm_materias' %}?action=malla&pk={{ malla.pk }}" class="text-decoration-none">{% if malla_periodo %}{{ malla_periodo.nombre_visible }}{% else %}{{ malla.nombre }}{% endif %}</a> /
+            <a href="{% url 'adm_materias' %}?action=malla&pk={{ malla.pk }}" class="text-decoration-none">{{ malla.nombre }}</a> /
+            {% if malla_periodo %}
+                <a href="{% url 'adm_materias' %}?action=apertura&pk={{ malla_periodo.pk }}" class="text-decoration-none">{{ malla_periodo.nombre_visible }}</a> /
+            {% endif %}
 Nivel {{ nivel.numero }} &middot; {{ nivel.nombre }}
         </div>
         <h1 class="h3">{{ materia_malla.materia.nombre }}</h1>
         <div class="text-muted"><span class="cell-code">{{ materia_malla.materia.codigo }}</span> &middot; {{ malla.carrera }}</div>
     </div>
     <div class="page-head-actions">
-        <a class="btn btn-outline-secondary" href="{% url 'adm_materias' %}?action=malla&pk={{ malla.pk }}">Volver a la malla</a>
+        {% if malla_periodo %}
+            <a class="btn btn-outline-secondary" href="{% url 'adm_materias' %}?action=apertura&pk={{ malla_periodo.pk }}">Volver a la apertura</a>
+        {% else %}
+            <a class="btn btn-outline-secondary" href="{% url 'adm_materias' %}?action=malla&pk={{ malla.pk }}">Volver a la malla</a>
+        {% endif %}
         <a class="btn btn-outline-primary" href="{% url 'interactivo:lista' materia_malla.pk %}">&#127918; Juegos</a>
         <button class="btn btn-outline-primary"
                 onclick="abrir_modal('{% url 'adm_materias' %}?action=add_tema&materia_malla={{ materia_malla.pk }}')">+ Tema</button>

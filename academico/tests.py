@@ -644,7 +644,7 @@ class ContenidoDeMateriaTests(_BaseAcademicaMixin, TestCase):
         listado = self.client.get(reverse('adm_materias'))
         self.assertContains(listado, self.malla.nombre)
         detalle_malla = self.client.get(reverse('adm_materias'), {
-            'action': 'malla', 'pk': self.malla.pk,
+            'action': 'apertura', 'pk': self.malla_periodo.pk,
         })
         self.assertContains(detalle_malla, 'Nivel 1')
         self.assertNotContains(detalle_malla, 'Nivel 2')
@@ -776,7 +776,7 @@ class SelectorDePeriodoTests(_BaseAcademicaMixin, TestCase):
             malla_periodo=self.malla_periodo, materia_malla=self.materias[1],
         )
         detalle = self.client.get(reverse('adm_materias'), {
-            'action': 'malla', 'pk': self.malla.pk,
+            'action': 'apertura', 'pk': self.malla_periodo.pk,
         })
         # Solo la materia creada; el resto del plan no ocupa sitio.
         self.assertContains(detalle, 'Nivel 1')
@@ -821,7 +821,7 @@ class SelectorDePeriodoTests(_BaseAcademicaMixin, TestCase):
         )
 
         pagina = self.client.get(reverse('adm_materias'), {
-            'action': 'malla', 'pk': self.malla.pk,
+            'action': 'apertura', 'pk': self.malla_periodo.pk,
         })
 
         self.assertIn(
@@ -935,7 +935,11 @@ class MallaEnElPeriodoTests(_BaseAcademicaMixin, TestCase):
         self.client.force_login(self.admin)
 
     def _pagina_malla(self):
-        return self.client.get(reverse('adm_materias'), {'action': 'malla', 'pk': self.malla.pk})
+        """Las materias viven dentro de la APERTURA, no de la malla."""
+        return self.client.get(
+            reverse('adm_materias'),
+            {'action': 'apertura', 'pk': self.malla_periodo.pk},
+        )
 
     @staticmethod
     def _materias_listadas(pagina):
@@ -957,7 +961,10 @@ class MallaEnElPeriodoTests(_BaseAcademicaMixin, TestCase):
         self.assertTrue(respuesta.json()['result'], respuesta.json())
         enlace = MallaPeriodo.objects.get(periodo=self.periodo, malla=self.malla)
         self.assertEqual(enlace.nombre, 'Software 2026-1 matutina')
-        self.assertContains(self._pagina_malla(), 'Software 2026-1 matutina')
+        pagina = self.client.get(reverse('adm_materias'), {
+            'action': 'apertura', 'pk': enlace.pk,
+        })
+        self.assertContains(pagina, 'Software 2026-1 matutina')
 
     def test_sin_nombre_propio_se_usa_el_de_la_malla(self):
         self.malla_periodo.delete()
@@ -1022,14 +1029,50 @@ class MallaEnElPeriodoTests(_BaseAcademicaMixin, TestCase):
         self.assertNotContains(pagina, 'Programacion 2')
         self.assertNotContains(pagina, 'Programacion 3')
 
-    def test_sin_abrirla_en_el_periodo_no_hay_materias(self):
+    def test_sin_abrirla_en_el_periodo_la_malla_lo_dice(self):
         self.malla_periodo.delete()
 
-        pagina = self._pagina_malla()
+        pagina = self.client.get(reverse('adm_materias'), {
+            'action': 'apertura', 'pk': self.malla_periodo.pk,
+        })
 
-        self.assertIsNone(pagina.context['malla_periodo'])
-        self.assertEqual(self._materias_listadas(pagina), 0)
-        self.assertContains(pagina, 'Todavia no hay materias creadas')
+        self.assertEqual(pagina.context['aperturas'], [])
+        self.assertContains(pagina, 'no esta abierta en el periodo')
+
+    def test_la_misma_malla_se_abre_varias_veces_en_el_mismo_periodo(self):
+        """Matutina y vespertina son dos aperturas de la misma malla, cada una
+        con sus propias materias."""
+        self.malla_periodo.nombre = 'Matutina'
+        self.malla_periodo.save()
+        vespertina = MallaPeriodo.objects.create(
+            periodo=self.periodo, malla=self.malla, nombre='Vespertina',
+        )
+        MateriaPeriodo.objects.create(
+            malla_periodo=self.malla_periodo, materia_malla=self.materias[1],
+        )
+
+        pagina = self.client.get(reverse('adm_materias'), {
+            'action': 'apertura', 'pk': self.malla_periodo.pk,
+        })
+
+        nombres = [a.nombre_visible for a in pagina.context['aperturas']]
+        self.assertEqual(nombres, ['Matutina', 'Vespertina'])
+
+        # Cada apertura lleva sus propias materias.
+        matutina = self._pagina_malla()
+        self.assertEqual(self._materias_listadas(matutina), 1)
+        otra = self.client.get(reverse('adm_materias'), {
+            'action': 'apertura', 'pk': vespertina.pk,
+        })
+        self.assertEqual(self._materias_listadas(otra), 0)
+
+    def test_no_se_repite_el_nombre_de_la_apertura_en_la_misma_malla(self):
+        respuesta = self.client.post(reverse('adm_materias'), {
+            'action': 'add_malla_periodo', 'malla': self.malla.pk,
+            'nombre': self.malla_periodo.nombre,
+        }, headers={'x-requested-with': 'XMLHttpRequest'})
+
+        self.assertFalse(respuesta.json()['result'])
 
     def test_las_materias_salen_agrupadas_y_en_orden_de_nivel(self):
         """Un nivel sin materias creadas no ocupa sitio."""
@@ -1189,7 +1232,7 @@ class MateriaDelPeriodoTests(_BaseAcademicaMixin, TestCase):
         )
 
         pagina = self.client.get(reverse('adm_materias'), {
-            'action': 'malla', 'pk': self.malla.pk,
+            'action': 'apertura', 'pk': self.malla_periodo.pk,
         })
 
         self.assertEqual(pagina.context['total_materias'], 1)
