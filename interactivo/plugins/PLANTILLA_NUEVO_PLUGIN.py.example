@@ -1,0 +1,60 @@
+"""
+Copie este archivo como, por ejemplo, interactivo/plugins/mi_juego.py.
+Django descubrirá automáticamente el módulo al reiniciar el servicio.
+
+Un solo .py basta cuando el nuevo plugin reutiliza un reproductor existente.
+Para una interacción visual nueva, agregue además un archivo JavaScript y
+registre window.SimutaRenderers['mi_juego'].
+"""
+from .base import PluginActividadBase
+from .registry import register_plugin
+
+
+@register_plugin
+class MiJuegoPlugin(PluginActividadBase):
+    codigo = 'mi_juego'
+    nombre = 'Mi juego'
+    descripcion = 'Descripción para el catálogo.'
+    version = '1.0.0'
+
+    # Reutiliza el reproductor visual de verdadero/falso.
+    renderer = 'verdadero_falso'
+
+    schema = {
+        'fields': [
+            {
+                'name': 'preguntas',
+                'type': 'list',
+                'label': 'Afirmaciones',
+                'min_items': 1,
+                'item_fields': [
+                    {'name': 'enunciado', 'type': 'text', 'label': 'Afirmación', 'required': True},
+                    {'name': 'correcta', 'type': 'boolean', 'label': 'Es verdadera'},
+                ],
+            },
+        ],
+    }
+
+    def normalize_config(self, config):
+        # Aquí convierta lo escrito por el docente al formato definitivo.
+        return config
+
+    def validate_config(self, config):
+        return [] if config.get('preguntas') else ['Agregue al menos una afirmación.']
+
+    def public_config(self, config):
+        # Nunca envíe las respuestas correctas al navegador.
+        return {
+            'preguntas': [
+                {'id': str(index), 'enunciado': item['enunciado']}
+                for index, item in enumerate(config.get('preguntas', []), start=1)
+            ],
+        }
+
+    def grade(self, config, response):
+        recibidas = response.get('respuestas', {})
+        aciertos = 0
+        for index, item in enumerate(config.get('preguntas', []), start=1):
+            if bool(recibidas.get(str(index))) == bool(item.get('correcta')):
+                aciertos += 1
+        return self.result(aciertos, len(config.get('preguntas', [])))

@@ -1,11 +1,27 @@
 <form action="{% url 'adm_materias' %}" method="post" onsubmit="return enviar_formulario(this)">
     {% csrf_token %}
     <input type="hidden" name="action" value="add">
+    {% if malla %}<input type="hidden" name="malla" value="{{ malla.pk }}">{% endif %}
+    {% if nivel %}<input type="hidden" name="nivel" value="{{ nivel.pk }}">{% endif %}
     <div class="modal-header">
-        <h5 class="modal-title">Nueva materia</h5>
+        <h5 class="modal-title">{% if nivel %}Nueva materia en nivel {{ nivel.numero }}{% else %}Nueva materia{% endif %}</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
     </div>
     <div class="modal-body">
+        {% if malla %}
+        <p class="text-muted">
+            Se creara en el catalogo y se agregara a <strong>{{ malla.nombre }}</strong>{% if nivel %} / Nivel {{ nivel.numero }}{% endif %}.
+        </p>
+        {% endif %}
+        {% if niveles %}
+        <p>
+            <label for="id_nivel_nueva_materia">Nivel de la malla</label>
+            <select name="nivel" id="id_nivel_nueva_materia" required>
+                {% for n in niveles %}<option value="{{ n.pk }}">Nivel {{ n.numero }} - {{ n.nombre }}</option>{% endfor %}
+            </select>
+            <span class="helptext">La materia se ubica en un nivel; la lista se ordena por ese nivel.</span>
+        </p>
+        {% endif %}
         {{ form.as_p }}
     </div>
     <div class="modal-footer">

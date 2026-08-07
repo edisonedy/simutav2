@@ -12,8 +12,8 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from simulador.models import (
-    CondicionExitoSimulacion, EventoSimulacion, MatrizEvaluacionCaso,
-    OpcionCasoSimulacion, Simulacion,
+    AccionSugeridaSimulacion, CondicionExitoSimulacion, EventoSimulacion,
+    MatrizEvaluacionCaso, OpcionCasoSimulacion, Simulacion,
 )
 
 # ---------------------------------------------------------------- CONTABILIDAD
@@ -44,6 +44,20 @@ CONTABILIDAD = {
          [('Correlacion con el CIF real', 95), ('Costo de implementar', 35),
           ('Precision por orden', 94), ('Facilidad de control', 55)]),
     ],
+    'decisiones': [
+        ('Horas maquina', 2, 'Aplicar los CIF sobre horas maquina y recalcular la tasa predeterminada',
+         {'tasa_cif': 1.67, 'sub_sobre_aplicacion': -11333, 'eficiencia_cif': 0.12,
+          'margen_contribucion': 300, 'punto_equilibrio': -3}),
+        ('Horas de mano de obra directa', 2, 'Mantener los CIF sobre horas de mano de obra directa',
+         {'tasa_cif': -0.5, 'sub_sobre_aplicacion': 4000, 'eficiencia_cif': -0.15,
+          'margen_contribucion': -200, 'punto_equilibrio': 4}),
+        ('Costo de materiales directos', 2, 'Aplicar los CIF como porcentaje del costo de materiales directos',
+         {'tasa_cif': -1.0, 'sub_sobre_aplicacion': 5500, 'eficiencia_cif': -0.20,
+          'margen_contribucion': -300, 'punto_equilibrio': 5}),
+        ('Costeo ABC por actividades', 2, 'Implementar costeo ABC con cuatro inductores de actividad',
+         {'tasa_cif': 1.9, 'sub_sobre_aplicacion': -12500, 'eficiencia_cif': 0.18,
+          'margen_contribucion': 500, 'punto_equilibrio': -5}),
+    ],
     'matriz': [
         ('Correlacion con el CIF real', 30, 'que tan bien la base explica el consumo real de costos indirectos'),
         ('Precision por orden', 25, 'si el costo unitario resultante sirve para fijar precio y margen'),
@@ -51,18 +65,18 @@ CONTABILIDAD = {
         ('Costo de implementar', 20, 'esfuerzo y sistemas que exige poner la base en marcha'),
     ],
     'exito': [
-        ('Cerrar el ejercicio con la sub o sobreaplicacion controlada', 'sub_sobre_aplicacion', '<=', 5, 6),
-        ('Sostener el margen de contribucion sobre el 35%', 'margen_contribucion', '>=', 35, 6),
+        ('Cerrar el ejercicio con la sub o sobreaplicacion bajo 3.000', 'sub_sobre_aplicacion', '<=', 3000, 6),
+        ('Sostener el margen de contribucion sobre 2.200 por orden', 'margen_contribucion', '>=', 2200, 6),
     ],
     'eventos': [
         ('Reclamo de un cliente grande', 2,
          'Un cliente reclama: dice que sus ordenes pagan un CIF que no consumen. La gerencia '
          'pide revisar si la base de aplicacion esta subsidiando a las ordenes pequenas.',
-         {'sub_sobre_aplicacion': 3.5}),
+         {'sub_sobre_aplicacion': 4200}),
         ('Sube la tarifa electrica', 3,
          'La tarifa industrial sube 12%. El CIF real del periodo se eleva y la tasa '
          'predeterminada que fijaste queda corta.',
-         {'tasa_cif': 1.8, 'eficiencia_cif': -4}),
+         {'tasa_cif': 1.8, 'eficiencia_cif': -0.08}),
     ],
 }
 
@@ -72,19 +86,32 @@ CONTABILIDAD = {
 # equivoca; si decide solo por VAN, ignora el riesgo y el payback.
 FINANCIERA = {
     'materia': 'Administracion Financiera',
+    # Las cifras van en MILLONES porque el indicador van del caso mide en
+    # millones USD. Si aqui dijeran 92.000, el alumno leeria miles y el tablero
+    # mediria millones: elegiria bien y el sistema le diria que no creo valor.
     'opciones': [
-        ('Proyecto A: planta propia', 'Inversion $480.000 - VAN $92.000 - TIR 18,4% - Payback 4,2 anos', 'VAN $92.000',
+        ('Proyecto A: planta propia', 'Inversion $4,8 M - VAN $1,9 M - TIR 18,4% - Payback 4,2 anos', 'VAN $1,9 M',
          'El VAN mas alto de los tres con deuda a tasa fija y activo propio como garantia.',
          'Inmoviliza caja cuatro anos y sube el apalancamiento a 1,9 veces.',
          [('VAN', 92), ('TIR sobre el WACC', 72), ('Payback', 45), ('Riesgo y apalancamiento', 48)]),
-        ('Proyecto B: tercerizar y ampliar canal', 'Inversion $180.000 - VAN $61.000 - TIR 24,7% - Payback 2,1 anos', 'TIR 24,7%',
+        ('Proyecto B: tercerizar y ampliar canal', 'Inversion $1,8 M - VAN $1,2 M - TIR 24,7% - Payback 2,1 anos', 'TIR 24,7%',
          'La TIR mas alta y recupera la inversion en dos anos, sin comprometer la estructura.',
-         'Depende de un tercero y su VAN es 34% menor: crea menos valor absoluto.',
+         'Depende de un tercero y su VAN es 37% menor: crea menos valor absoluto.',
          [('VAN', 61), ('TIR sobre el WACC', 95), ('Payback', 92), ('Riesgo y apalancamiento', 78)]),
-        ('Proyecto C: adquirir un competidor', 'Inversion $650.000 - VAN $105.000 - TIR 15,2% - Payback 5,6 anos', 'VAN $105.000',
+        ('Proyecto C: adquirir un competidor', 'Inversion $6,5 M - VAN $2,4 M - TIR 15,2% - Payback 5,6 anos', 'VAN $2,4 M',
          'Crea el mayor valor absoluto y suma participacion de mercado de inmediato.',
          'Su TIR de 15,2% deja poco margen sobre el WACC y exige emitir capital.',
          [('VAN', 100), ('TIR sobre el WACC', 42), ('Payback', 28), ('Riesgo y apalancamiento', 35)]),
+    ],
+    # Cada decision aterriza en los numeros que la alternativa declara: elegir A
+    # deja el VAN en 1,9 y la TIR en 18,4, no en un delta simbolico.
+    'decisiones': [
+        ('Proyecto A: planta propia', 2, 'Ejecutar el Proyecto A: planta propia financiada con deuda a tasa fija',
+         {'van': 1.9, 'tir': 18.4, 'payback': 0.2, 'roi': 19, 'apalancamiento': 0.5, 'wacc': 0.4}),
+        ('Proyecto B: tercerizar y ampliar canal', 2, 'Ejecutar el Proyecto B: tercerizar y ampliar el canal comercial',
+         {'van': 1.2, 'tir': 24.7, 'payback': -1.9, 'roi': 24, 'apalancamiento': 0.1, 'wacc': 0}),
+        ('Proyecto C: adquirir un competidor', 2, 'Ejecutar el Proyecto C: adquirir al competidor emitiendo capital',
+         {'van': 2.4, 'tir': 15.2, 'payback': 1.6, 'roi': 14, 'apalancamiento': 0.8, 'wacc': 1.2}),
     ],
     'matriz': [
         ('VAN', 30, 'valor absoluto que crea el proyecto, descontado al WACC'),
@@ -93,7 +120,7 @@ FINANCIERA = {
         ('Payback', 20, 'en cuanto tiempo se recupera la inversion'),
     ],
     'exito': [
-        ('Elegir el proyecto que mas valor crea', 'van', '>=', 90000, 6),
+        ('Elegir el proyecto que mas valor crea (VAN sobre 1,5 M)', 'van', '>=', 1.5, 6),
         ('No encarecer el costo del capital', 'wacc', '<=', 12, 6),
     ],
     'eventos': [
@@ -135,6 +162,27 @@ TALENTO = {
          'Busca crecer rapido: alto riesgo de irse de un puesto sin linea de ascenso.',
          [('Competencia tecnica', 80), ('Trabajo en equipo', 78), ('Riesgo de rotacion', 82),
           ('Ajuste al presupuesto', 45)]),
+    ],
+    # Contratar a cada perfil deja consecuencias distintas: ninguna es gratis.
+    # Carlos es el mas barato y el que mas riesgo de error deja; Daniela cuesta
+    # mas y es la unica que baja la rotacion y acorta el tiempo a productividad.
+    'decisiones': [
+        ('Andrea Villacis', 2, 'Contratar a Andrea Villacis',
+         {'competencia_tecnica': 30, 'ajuste_perfil': 18, 'clima_equipo': -22,
+          'riesgo_rotacion': 5, 'costo_contratacion': -450, 'tiempo_productividad': -3,
+          'riesgo_error_seleccion': -5}),
+        ('Carlos Bermeo', 2, 'Contratar a Carlos Bermeo',
+         {'competencia_tecnica': 5, 'ajuste_perfil': -8, 'clima_equipo': 12,
+          'riesgo_rotacion': 0, 'costo_contratacion': -500, 'tiempo_productividad': 4,
+          'riesgo_error_seleccion': 25}),
+        ('Daniela Freire', 2, 'Contratar a Daniela Freire',
+         {'competencia_tecnica': 38, 'ajuste_perfil': 32, 'clima_equipo': 20,
+          'riesgo_rotacion': -30, 'costo_contratacion': -450, 'tiempo_productividad': -5,
+          'riesgo_error_seleccion': -30}),
+        ('Mateo Ludena', 2, 'Contratar a Mateo Ludena',
+         {'competencia_tecnica': 22, 'ajuste_perfil': 12, 'clima_equipo': 15,
+          'riesgo_rotacion': 25, 'costo_contratacion': -400, 'tiempo_productividad': -2,
+          'riesgo_error_seleccion': 8}),
     ],
     'matriz': [
         ('Competencia tecnica', 30, 'resultado en la prueba practica, no lo declarado en la hoja de vida'),
@@ -193,6 +241,8 @@ class Command(BaseCommand):
             MatrizEvaluacionCaso.objects.create(
                 simulacion=simulacion, criterio=criterio, peso=peso, evalua=evalua, orden=orden)
 
+        n_dec = self._decisiones(simulacion, spec.get('decisiones'), codigos)
+
         exito_ok = 0
         CondicionExitoSimulacion.objects.filter(simulacion=simulacion).delete()
         for descripcion, indicador, operador, objetivo, bonificacion in spec['exito']:
@@ -218,4 +268,30 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             f'{spec["materia"]}: {len(spec["opciones"])} alternativas, {len(spec["matriz"])} criterios, '
-            f'{exito_ok} condiciones de exito, {eventos_ok} eventos.'))
+            f'{n_dec} decisiones vinculadas, {exito_ok} condiciones de exito, {eventos_ok} eventos.'))
+
+    def _decisiones(self, simulacion, decisiones, codigos):
+        """Cada decision queda VINCULADA a la alternativa que ejecuta y aterriza
+        en los numeros que esa alternativa declara. Sin el vinculo el motor no
+        sabe que consecuencia aplicar cuando el alumno elige."""
+        if not decisiones:
+            return 0
+        creadas = 0
+        for nombre_alternativa, ronda, texto, impacto in decisiones:
+            alternativa = OpcionCasoSimulacion.objects.filter(
+                simulacion=simulacion, nombre=nombre_alternativa, activo=True).first()
+            if alternativa is None:
+                continue
+            impacto_valido = {k: v for k, v in impacto.items() if k in codigos}
+            AccionSugeridaSimulacion.objects.update_or_create(
+                simulacion=simulacion, texto=texto,
+                defaults={
+                    'descripcion': f'{alternativa.fortaleza} Riesgo: {alternativa.riesgo}',
+                    'impacto_base': impacto_valido,
+                    'numero_ronda': ronda,
+                    'opcion_caso': alternativa,
+                    'activo': True,
+                },
+            )
+            creadas += 1
+        return creadas

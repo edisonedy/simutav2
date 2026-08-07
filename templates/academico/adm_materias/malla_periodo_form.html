@@ -1,0 +1,59 @@
+<form action="{% url 'adm_materias' %}" method="post" onsubmit="return enviar_formulario(this)">
+    {% csrf_token %}
+
+    {% if malla_periodo %}
+        <input type="hidden" name="action" value="edit_malla_periodo">
+        <input type="hidden" name="pk" value="{{ malla_periodo.pk }}">
+    {% else %}
+        <input type="hidden" name="action" value="add_malla_periodo">
+        <input type="hidden" name="malla" value="{{ malla.pk }}">
+    {% endif %}
+
+    <div class="modal-header">
+        <h5 class="modal-title">
+            {% if malla_periodo %}
+                Editar apertura de malla
+            {% else %}
+                Crear apertura de malla
+            {% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+
+    <div class="modal-body">
+        <div class="alert alert-light border">
+            <strong>{{ malla.nombre }}</strong><br>
+            {{ malla.carrera }}
+            {% if periodo %} · {{ periodo.nombre }}{% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="id_nombre_malla_periodo" class="form-label">
+                Nombre de esta apertura
+            </label>
+            <input
+                type="text"
+                name="nombre"
+                id="id_nombre_malla_periodo"
+                maxlength="150"
+                value="{{ malla_periodo.nombre|default:'' }}"
+                class="form-control"
+                placeholder="Ejemplo: Software A - Matutina"
+                required
+            >
+            <div class="form-text">
+                Es obligatorio porque la misma malla puede abrirse varias veces en el periodo.
+                Ejemplos: “Paralelo A”, “Matutina”, “Grupo 01”.
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary">
+            {% if malla_periodo %}Guardar{% else %}Crear apertura{% endif %}
+        </button>
+    </div>
+</form>

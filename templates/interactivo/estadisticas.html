@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker">Interactivo &middot; {{ actividad.motor }}</div>
+        <h1 class="h3">{{ actividad.titulo }}</h1>
+        <div class="text-muted">Solo cuenta el mejor intento completado de cada estudiante.</div>
+    </div>
+    <div class="page-head-actions">
+        <a class="btn btn-outline-secondary" href="{% url 'interactivo:lista' actividad.materia_malla_id %}">Volver</a>
+        <a class="btn btn-outline-primary" href="{% url 'interactivo:editar' actividad.pk %}">Editar</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="module-card p-3 metric-card">
+            <span class="metric-ico">&#128101;</span>
+            <div><div class="metric-label">Estudiantes</div><div class="mission-ind-val">{{ resumen.estudiantes|default:0 }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="module-card p-3 metric-card">
+            <span class="metric-ico">&#127919;</span>
+            <div><div class="metric-label">Intentos</div><div class="mission-ind-val">{{ resumen.intentos|default:0 }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="module-card p-3 metric-card">
+            <span class="metric-ico">&#128200;</span>
+            <div><div class="metric-label">Promedio</div><div class="mission-ind-val">{{ resumen.promedio|floatformat:1|default:"0" }}%</div></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="module-card p-3 metric-card">
+            <span class="metric-ico">&#9989;</span>
+            <div><div class="metric-label">Aprobados</div><div class="mission-ind-val">{{ resumen.aprobados|default:0 }} / {{ resumen.intentos|default:0 }}</div></div>
+        </div>
+    </div>
+</div>
+
+{% if mejores %}
+<div class="module-card p-3 table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Estudiante</th><th>Mejor resultado</th><th>Intentos</th></tr></thead>
+        <tbody>
+        {% for fila in mejores %}
+            <tr>
+                <td>
+                    {% if fila.estudiante__first_name or fila.estudiante__last_name %}
+                        {{ fila.estudiante__first_name }} {{ fila.estudiante__last_name }}
+                    {% else %}
+                        {{ fila.estudiante__username }}
+                    {% endif %}
+                </td>
+                <td class="game-points">{{ fila.mejor }}%</td>
+                <td class="text-muted">{{ fila.intentos }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="module-card data-card">
+    <div class="empty-state">
+        <span class="empty-ico">&#128202;</span>
+        <div class="empty-title">Nadie la ha terminado todavia</div>
+        <p class="empty-text">Los resultados aparecen cuando el primer estudiante finaliza su intento.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

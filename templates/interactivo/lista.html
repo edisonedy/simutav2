@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker">
+            {{ materia_malla.malla.nombre }} &middot; Nivel {{ materia_malla.nivel.numero }}
+        </div>
+        <h1 class="h3">Juegos de {{ materia_malla.materia.nombre }} <span class="count-pill">{{ total }}</span></h1>
+        <div class="text-muted">
+            Crea los que quieras: sueltos de la materia o colgados de un tema.
+            Los obligatorios que apuntan a un caso hay que aprobarlos antes de entrar a el.
+        </div>
+    </div>
+    {% if puede_gestionar %}
+    <div class="page-head-actions">
+        <a class="btn btn-outline-secondary" href="{% url 'interactivo:catalogo' %}">Tipos de juego</a>
+        <a class="btn btn-primary" href="{% url 'interactivo:crear' materia_malla.pk %}">+ Nuevo juego</a>
+    </div>
+    {% endif %}
+</div>
+
+{% for grupo in grupos %}
+<div class="module-card mb-3">
+    <div class="group-head">
+        <div>
+            <div class="page-kicker">{% if grupo.tema %}Tema{% else %}General{% endif %}</div>
+            <h2 class="h6 mb-0">
+                {% if grupo.tema %}{{ grupo.tema.nombre }}{% else %}Toda la materia{% endif %}
+            </h2>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="count-pill">{{ grupo.actividades|length }}</span>
+            {% if puede_gestionar and grupo.tema %}
+            <a class="btn btn-sm btn-outline-primary"
+               href="{% url 'interactivo:crear' materia_malla.pk %}?tema={{ grupo.tema.pk }}">+ Juego del tema</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Juego</th>
+                    <th>Tipo</th>
+                    <th>Caso</th>
+                    <th>Minimo</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for actividad in grupo.actividades %}
+                <tr>
+                    <td>
+                        <div class="fw-semibold">{{ actividad.titulo }}</div>
+                        {% if actividad.obligatoria %}
+                            <span class="chip chip-alta">Obligatorio</span>
+                        {% else %}
+                            <span class="chip chip-basica">Opcional</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ actividad.motor }}</td>
+                    <td class="text-muted">
+                        {% if actividad.simulacion %}{{ actividad.simulacion.titulo }}{% else %}&mdash;{% endif %}
+                    </td>
+                    <td>{{ actividad.puntaje_minimo }}%</td>
+                    <td>
+                        {% if actividad.publicada %}
+                            <span class="chip chip-media">Publicado</span>
+                        {% else %}
+                            <span class="chip">Borrador</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-primary" href="{% url 'interactivo:jugar' actividad.pk %}">Jugar</a>
+                        {% if puede_gestionar %}
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'interactivo:editar' actividad.pk %}">Editar</a>
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'interactivo:estadisticas' actividad.pk %}">Resultados</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% empty %}
+<div class="module-card data-card">
+    <div class="empty-state">
+        <span class="empty-ico">&#127918;</span>
+        <div class="empty-title">Todavia no hay juegos en esta materia</div>
+        <p class="empty-text">
+            {% if puede_gestionar %}
+                Arma uno corto por tema para que el estudiante practique jugando antes
+                de enfrentarse a un caso real.
+            {% else %}
+                Tu profesor todavia no ha publicado ninguno.
+            {% endif %}
+        </p>
+        {% if puede_gestionar %}
+        <a class="btn btn-primary" href="{% url 'interactivo:crear' materia_malla.pk %}">+ Nuevo juego</a>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

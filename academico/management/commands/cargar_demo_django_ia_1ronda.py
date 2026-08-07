@@ -11,7 +11,6 @@ from academico.models import (
     PeriodoAcademico,
     ProfesorMateria,
 )
-from core.models import Institucion
 from simulador.models import (
     ConceptoEsperadoRonda,
     CriterioEvaluacion,
@@ -27,12 +26,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         usuario = User.objects.filter(username='emoyolema').first() or User.objects.filter(is_superuser=True).first()
 
-        institucion, _ = Institucion.objects.get_or_create(
-            nombre='Universidad Tecnica de Ambato',
-            defaults={'siglas': 'UTA', 'direccion': 'Ambato, Ecuador', 'usuario_creacion': usuario},
-        )
         carrera, _ = Carrera.objects.get_or_create(
-            institucion=institucion,
             codigo='SOFT-DEMO',
             defaults={
                 'nombre': 'Ingenieria de Software',
@@ -53,7 +47,6 @@ class Command(BaseCommand):
             defaults={'nombre': '5 Periodo', 'usuario_creacion': usuario},
         )
         materia, _ = Materia.objects.get_or_create(
-            institucion=institucion,
             codigo='WEB-DJANGO',
             defaults={
                 'nombre': 'Programacion Web con Django',
@@ -69,7 +62,6 @@ class Command(BaseCommand):
             defaults={'nivel': nivel, 'orden': 1, 'obligatoria': True, 'usuario_creacion': usuario},
         )
         periodo, _ = PeriodoAcademico.objects.get_or_create(
-            institucion=institucion,
             nombre='Demo 2026',
             defaults={
                 'fecha_inicio': timezone.datetime(2026, 1, 1).date(),

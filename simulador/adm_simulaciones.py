@@ -1,8 +1,10 @@
 from django.db import transaction
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 
+from academico.models import Malla
 from core.permisos import solo_administrativos
-from core.funciones import ok_json, bad_json, errores_formulario
+from core.funciones import ok_json, bad_json, errores_formulario, periodo_de_sesion
+from simulador import catalogo_malla
 from simulador.models import Simulacion, IndicadorSimulacion, RestriccionSimulacion
 from simulador.models import CriterioEvaluacion, ConceptoEsperadoRonda
 from simulador.models import EscenarioSimulacion, DecisionConfigurada
@@ -83,7 +85,24 @@ def view(request):
                 'escenarios': escenarios,
             })
         else:
-            data['list'] = Simulacion.objects.select_related(
-                'materia_malla__materia', 'profesor',
-            ).all()
+            # Mismo recorrido que ve el estudiante: primero la malla, despues sus
+            # materias por nivel con las simulaciones de cada una.
+            malla_id = request.GET.get('malla')
+            if not malla_id:
+                # Sin malla se vuelve al recorrido academico: Materias elige la
+                # malla y desde alli abre niveles, asignaturas y simulaciones.
+                return redirect('adm_materias')
+
+            malla = get_object_or_404(Malla, pk=malla_id)
+            niveles, total = catalogo_malla.niveles_de_la_malla(
+                malla, Simulacion.objects.filter(activo=True),
+            )
+            data.update({
+                'title': f'Simulaciones de {malla.nombre}',
+                'malla': malla,
+                'periodo': periodo_de_sesion(request),
+                'pestana': 'simulaciones',
+                'niveles': niveles,
+                'total_simulaciones': total,
+            })
             return render(request, 'simulador/adm_simulaciones/view.html', data)

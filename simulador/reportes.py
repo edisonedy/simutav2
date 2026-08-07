@@ -3,6 +3,7 @@ de un curso, en PDF, con reportlab. Pensado para evidencia tipo CACES."""
 
 from io import BytesIO
 
+from django.conf import settings
 from django.utils import timezone
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
@@ -48,11 +49,10 @@ def reporte_acreditacion_pdf(seccion):
     analitica = cursos_service.analitica_seccion(seccion)
     resultados = cursos_service.logro_resultados_aprendizaje(seccion)
     materia = seccion.materia_malla.materia
-    institucion = getattr(materia, 'institucion', None)
-    profesor = seccion.profesor.get_full_name() or seccion.profesor.username
+    profesor = seccion.nombre_profesor
 
     elementos = []
-    elementos.append(Paragraph(institucion.nombre if institucion else 'Institucion', est['titulo']))
+    elementos.append(Paragraph(settings.NOMBRE_INSTITUCION, est['titulo']))
     elementos.append(Paragraph('Reporte de logro de resultados de aprendizaje', est['sub']))
     elementos.append(Spacer(1, 6))
 

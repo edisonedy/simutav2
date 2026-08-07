@@ -54,5 +54,5 @@ def view(request):
             obj = get_object_or_404(Carrera, pk=pk)
             return render(request, 'academico/adm_carreras/delete.html', {'object': obj})
         else:
-            data['list'] = Carrera.objects.filter(activo=True).select_related('institucion')
+            data['list'] = Carrera.objects.filter(activo=True)
             return render(request, 'academico/adm_carreras/view.html', data)

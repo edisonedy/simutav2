@@ -184,6 +184,22 @@
             <h2 class="h5">Evaluación académica</h2>
             <div class="display-6">{{ intento.puntuacion_final|floatformat:2 }}</div>
             <div class="small text-muted mb-2">Evalua que tan bien cumpliste la rubrica y los conceptos esperados.</div>
+            {% if resultado_caso %}
+            <div class="mb-2">
+                <div class="hud-label mb-1">Como quedo la empresa ({{ peso_resultado }}% de la nota)</div>
+                <div class="d-flex justify-content-between gap-2">
+                    <span>
+                        {% if resultado_caso.fuente == 'condiciones_exito' %}
+                            Metas logradas <span class="text-muted">({{ resultado_caso.logradas }} de {{ resultado_caso.de }})</span>
+                        {% else %}
+                            Salud de los indicadores
+                        {% endif %}
+                    </span>
+                    <strong>{{ resultado_caso.puntaje|floatformat:0 }}/100</strong>
+                </div>
+                <div class="small text-muted">No basta con razonar bien: cuenta como dejaste el caso.</div>
+            </div>
+            {% endif %}
             {% if bonificaciones.detalle %}
             <div class="mb-2">
                 <div class="hud-label mb-1">De donde salio tu nota</div>

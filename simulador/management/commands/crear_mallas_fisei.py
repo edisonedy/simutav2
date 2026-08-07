@@ -23,7 +23,7 @@ from academico.models import (
     Carrera, Malla, NivelMalla, Materia, MateriaMalla, PeriodoAcademico,
     ProfesorMateria, InscripcionMalla,
 )
-from core.models import Institucion, PerfilUsuario
+from core.models import PerfilUsuario
 from simulador.models import (
     AccionSugeridaSimulacion, ConceptoEsperadoRonda, CondicionExitoSimulacion,
     CriterioEvaluacion, IndicadorSimulacion, RestriccionSimulacion, Simulacion,
@@ -146,7 +146,7 @@ RONDAS_SW = [
 ]
 
 
-def _crear_usuario(username, first, last, rol, institucion):
+def _crear_usuario(username, first, last, rol):
     u, _ = User.objects.get_or_create(username=username)
     u.first_name = first
     u.last_name = last
@@ -155,7 +155,7 @@ def _crear_usuario(username, first, last, rol, institucion):
     u.set_password('12345')
     u.save()
     PerfilUsuario.objects.update_or_create(
-        usuario=u, defaults={'rol': rol, 'institucion': institucion},
+        usuario=u, defaults={'rol': rol},
     )
     return u
 
@@ -218,16 +218,14 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options):
         admin = User.objects.filter(is_superuser=True).first() or User.objects.filter(is_staff=True).first()
-        institucion = Institucion.objects.first() or Institucion.objects.create(
-            nombre='Universidad Tecnica de Ambato', usuario_creacion=admin)
 
         # Usuarios solicitados
-        bpalate = _crear_usuario('bpalate', 'Byron', 'Palate', PerfilUsuario.PROFESOR, institucion)
-        jnunez = _crear_usuario('jnunez18', 'Jenrry', 'Nunez', PerfilUsuario.ESTUDIANTE, institucion)
+        bpalate = _crear_usuario('bpalate', 'Byron', 'Palate', PerfilUsuario.PROFESOR)
+        jnunez = _crear_usuario('jnunez18', 'Jenrry', 'Nunez', PerfilUsuario.ESTUDIANTE)
 
         # Carrera + malla Software (FISEI)
         carrera_sw, _ = Carrera.objects.get_or_create(
-            institucion=institucion, codigo='SW-FISEI',
+            codigo='SW-FISEI',
             defaults={'nombre': 'Software', 'modalidad': 'Presencial', 'duracion_periodos': 9,
                       'titulo_otorga': 'Ingeniero en Software', 'usuario_creacion': bpalate})
         malla_sw, _ = Malla.objects.get_or_create(
@@ -241,7 +239,7 @@ class Command(BaseCommand):
                 malla=malla_sw, numero=nivel_num,
                 defaults={'nombre': f'Nivel {nivel_num}', 'usuario_creacion': bpalate})
             materia, _ = Materia.objects.get_or_create(
-                institucion=institucion, codigo=codigo,
+                codigo=codigo,
                 defaults={'nombre': nombre, 'creditos': 4, 'horas': 64, 'usuario_creacion': bpalate})
             mm, _ = MateriaMalla.objects.get_or_create(
                 malla=malla_sw, materia=materia,
@@ -267,7 +265,7 @@ class Command(BaseCommand):
 
         # Periodo + asignaciones (bpalate profesor, jnunez + emoyolema estudiantes)
         periodo, _ = PeriodoAcademico.objects.get_or_create(
-            institucion=institucion, nombre='Periodo Pruebas SimutaV2',
+            nombre='Periodo Pruebas SimutaV2',
             defaults={'fecha_inicio': date(2026, 1, 1), 'fecha_fin': date(2026, 12, 31),
                       'activo_matricula': True, 'usuario_creacion': admin})
         periodo.activo = True

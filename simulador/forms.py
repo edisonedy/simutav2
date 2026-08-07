@@ -2,13 +2,15 @@ from django import forms
 
 from django.utils.html import format_html
 
-from academico.forms import _ayuda_por_rol
+from academico.forms import _ayuda_por_rol, etiqueta_materia_malla
+from academico.models import MateriaMalla
 from core.funciones import conservar_seleccion_actual
 from core.models import PerfilUsuario
 from core.permisos import usuarios_con_rol
 
 from .models import (
     AccionSugeridaSimulacion,
+    ActividadMateria,
     Asignacion,
     CondicionExitoSimulacion,
     ConceptoEsperadoRonda,
@@ -33,7 +35,24 @@ from .models import (
     RestriccionSimulacion,
     Seccion,
     Simulacion,
+    TemaMateria,
 )
+
+
+class MateriaMallaLegibleMixin:
+    """Cualquier desplegable de materia dice de que malla y de que nivel es.
+
+    Antes cada formulario la nombraba a su manera y en pantalla salian materias
+    sueltas sin saber a que plan de estudios pertenecen."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        campo = self.fields.get('materia_malla')
+        if campo is None:
+            return
+        campo.label = 'Materia de la malla'
+        campo.queryset = campo.queryset.select_related('malla', 'nivel', 'materia')
+        campo.label_from_instance = etiqueta_materia_malla
 
 
 class _DateTimeInput(forms.DateTimeInput):
@@ -43,15 +62,90 @@ class _DateTimeInput(forms.DateTimeInput):
         super().__init__(attrs=attrs, format='%Y-%m-%dT%H:%M')
 
 
-class SeccionForm(forms.ModelForm):
+class TemaMateriaForm(forms.ModelForm):
+    class Meta:
+        model = TemaMateria
+        fields = ['nombre', 'descripcion', 'orden', 'activo']
+        widgets = {'descripcion': forms.Textarea(attrs={'rows': 3})}
+
+
+class ActividadMateriaForm(forms.ModelForm):
+    class Meta:
+        model = ActividadMateria
+        fields = [
+            'tema', 'categoria', 'tipo', 'titulo', 'descripcion',
+            'archivo', 'orden', 'activo',
+        ]
+        widgets = {'descripcion': forms.Textarea(attrs={'rows': 3})}
+
+    def __init__(
+        self, *args, materia_malla=None, tema_inicial=None, categoria=None,
+        tipo_inicial=None, solo_guia_ape=False, **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.materia_malla = materia_malla
+        self.solo_guia_ape = solo_guia_ape
+        if materia_malla is not None:
+            self.instance.materia_malla = materia_malla
+            self.fields['tema'].queryset = TemaMateria.objects.filter(
+                materia_malla=materia_malla, activo=True,
+            )
+        else:
+            self.fields['tema'].queryset = TemaMateria.objects.none()
+        self.fields['tema'].required = False
+        self.fields['tema'].help_text = (
+            'Dejalo vacio si abarca varios temas o toda la asignatura.'
+        )
+        self.fields['archivo'].help_text = (
+            'Opcional. Para una guia APE puedes subir aqui el archivo que vera el estudiante.'
+        )
+        if tema_inicial is not None and not self.instance.pk:
+            self.fields['tema'].initial = tema_inicial
+        if categoria in dict(ActividadMateria.CATEGORIAS) and not self.instance.pk:
+            self.fields['categoria'].initial = categoria
+        if tipo_inicial in dict(ActividadMateria.TIPOS) and not self.instance.pk:
+            self.fields['tipo'].initial = tipo_inicial
+        if solo_guia_ape:
+            self.fields['tema'].initial = None
+            self.fields['categoria'].initial = ActividadMateria.EVALUACION
+            self.fields['tipo'].initial = ActividadMateria.GUIA_APE
+            for nombre in ('tema', 'categoria', 'tipo'):
+                self.fields[nombre].widget = forms.HiddenInput()
+            self.fields['archivo'].help_text = (
+                'Sube el documento de la Guia APE. El mismo archivo aparecera en Materias.'
+            )
+
+    def clean(self):
+        cleaned = super().clean()
+        tema = cleaned.get('tema')
+        if self.materia_malla is None:
+            raise forms.ValidationError('No se indico la materia de la malla.')
+        if tema and tema.materia_malla_id != self.materia_malla.pk:
+            raise forms.ValidationError('El tema no pertenece a esta materia.')
+        if self.solo_guia_ape:
+            cleaned['tema'] = None
+            cleaned['categoria'] = ActividadMateria.EVALUACION
+            cleaned['tipo'] = ActividadMateria.GUIA_APE
+            if not cleaned.get('archivo') and not self.instance.archivo:
+                self.add_error('archivo', 'Debes subir el documento de la Guia APE.')
+        return cleaned
+
+
+class SeccionForm(MateriaMallaLegibleMixin, forms.ModelForm):
     class Meta:
         model = Seccion
         fields = ['materia_malla', 'periodo', 'paralelo', 'estudiantes', 'activo']
         widgets = {'estudiantes': forms.SelectMultiple(attrs={'size': 8})}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, periodo=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['materia_malla'].label = 'Materia'
+        materia = self.fields['materia_malla']
+        materia.queryset = MateriaMalla.objects.filter(
+            activo=True, malla__activo=True,
+        ).select_related('malla__carrera', 'materia', 'nivel')
+        materia.help_text = 'El curso siempre nace de una materia de una malla, no de la nada.'
+        if periodo is not None and not self.instance.pk:
+            self.fields['periodo'].initial = periodo
         self.fields['paralelo'].help_text = 'Ejemplo: A, B, "Matutino".'
         estudiantes = self.fields['estudiantes']
         estudiantes.queryset = usuarios_con_rol(PerfilUsuario.ESTUDIANTE).order_by(
@@ -78,7 +172,7 @@ class AsignacionForm(forms.ModelForm):
             'fecha_limite': _DateTimeInput(),
         }
 
-    def __init__(self, *args, simulaciones=None, **kwargs):
+    def __init__(self, *args, simulaciones=None, seccion=None, **kwargs):
         super().__init__(*args, **kwargs)
         if simulaciones is not None:
             self.fields['simulacion'].queryset = simulaciones
@@ -89,14 +183,13 @@ class AsignacionForm(forms.ModelForm):
         conservar_seleccion_actual(self)
 
 
-class ResultadoAprendizajeForm(forms.ModelForm):
+class ResultadoAprendizajeForm(MateriaMallaLegibleMixin, forms.ModelForm):
     class Meta:
         model = ResultadoAprendizaje
         fields = ['materia_malla', 'codigo', 'descripcion', 'nivel_bloom', 'activo']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['materia_malla'].label = 'Materia'
         self.fields['codigo'].help_text = 'Ejemplo: RA1, RA2.'
         self.fields['nivel_bloom'].label = 'Nivel de Bloom'
 
@@ -116,20 +209,44 @@ class EquipoForm(forms.ModelForm):
         conservar_seleccion_actual(self)
 
 
-class SimulacionForm(forms.ModelForm):
+class SimulacionForm(MateriaMallaLegibleMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['materia_malla'].label = 'Materia'
-        self.fields['materia_malla'].help_text = 'Elige la materia donde se publicara la simulacion.'
+        self.fields['materia_malla'].help_text = (
+            'La simulacion se publica en una materia de una malla concreta.'
+        )
+        materia_id = (
+            self.data.get('materia_malla') if self.is_bound
+            else (
+                getattr(self.instance, 'materia_malla_id', None)
+                or self.initial.get('materia_malla')
+            )
+        )
+        self.fields['tema_materia'].queryset = TemaMateria.objects.filter(
+            materia_malla_id=materia_id, activo=True,
+        ) if materia_id else TemaMateria.objects.none()
+        self.fields['tema_materia'].label = 'Tema de la materia'
+        self.fields['tema_materia'].help_text = (
+            'Opcional. Sin tema se mostrara en Actividades generales.'
+        )
         self.fields['perfil_materia_ia'].label = 'Perfil IA de la materia'
         self.fields['perfil_materia_ia'].help_text = 'Configuracion avanzada de apoyo para la materia.'
         self.fields['tipo_simulacion'].label = 'Modo de simulacion'
         self.fields['tipo_simulacion'].help_text = 'Elige si la simulacion usara IA para evaluar respuestas o si trabajara como arbol de decisiones.'
         self.fields['titulo'].label = 'Titulo del caso'
         self.fields['titulo'].help_text = 'Ejemplo: Compra de computadoras para laboratorio.'
-        self.fields['tema'].label = 'Tema'
-        self.fields['tema'].help_text = 'Ejemplo: Evaluacion de proveedores, presupuesto y riesgo.'
+        self.fields['tema'].label = 'Enfoque del caso (opcional)'
+        self.fields['tema'].help_text = (
+            'Detalle libre del caso, por ejemplo: presupuesto y riesgo. '
+            'La ubicacion dentro de la materia se elige en "Tema de la materia".'
+        )
         self.fields['nivel_dificultad'].label = 'Nivel de dificultad'
+        self.fields['peso_resultado'].label = 'Peso del resultado del caso (%)'
+        self.fields['peso_resultado'].help_text = (
+            'Cuanto de la nota depende de COMO QUEDO la empresa: condiciones de exito cumplidas '
+            'o salud de los indicadores. Con 0 el estudiante puede hundir el caso y aprobar '
+            'igual si uso el vocabulario correcto. Recomendado: 30.'
+        )
         self.fields['peso_rubrica_decision'].label = 'Peso de la calidad de la decision (%)'
         self.fields['peso_rubrica_decision'].help_text = (
             'Metodo del caso: cuanto de la nota mide COMO decide el estudiante (toma postura, '
@@ -175,10 +292,11 @@ class SimulacionForm(forms.ModelForm):
     class Meta:
         model = Simulacion
         fields = [
-            'materia_malla', 'plantilla_origen', 'perfil_materia_ia',
+            'materia_malla', 'tema_materia', 'plantilla_origen', 'perfil_materia_ia',
             'tipo_simulacion', 'titulo', 'tema',
             'nivel_dificultad', 'maximo_decisiones', 'tiempo_estimado',
-            'peso_rubrica_decision', 'bonus_pronostico', 'bonus_reflexion', 'bonus_adaptacion',
+            'peso_resultado', 'peso_rubrica_decision',
+            'bonus_pronostico', 'bonus_reflexion', 'bonus_adaptacion',
             'rol_estudiante', 'contexto', 'objetivo',
             'resultado_aprendizaje', 'situacion_inicial',
             'instrucciones_ia', 'nivel_ayuda_ia', 'tono_retroalimentacion',
@@ -197,7 +315,7 @@ class SimulacionForm(forms.ModelForm):
         }
 
 
-class PerfilMateriaIAForm(forms.ModelForm):
+class PerfilMateriaIAForm(MateriaMallaLegibleMixin, forms.ModelForm):
     class Meta:
         model = PerfilMateriaIA
         fields = [
@@ -212,7 +330,7 @@ class PerfilMateriaIAForm(forms.ModelForm):
         }
 
 
-class PlantillaSimulacionForm(forms.ModelForm):
+class PlantillaSimulacionForm(MateriaMallaLegibleMixin, forms.ModelForm):
     class Meta:
         model = PlantillaSimulacion
         fields = [

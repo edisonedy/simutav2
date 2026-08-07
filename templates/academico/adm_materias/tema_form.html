@@ -1,0 +1,22 @@
+<form action="{% url 'adm_materias' %}" method="post" onsubmit="return enviar_formulario(this)">
+    {% csrf_token %}
+    {% if tema %}
+    <input type="hidden" name="action" value="edit_tema">
+    <input type="hidden" name="pk" value="{{ tema.pk }}">
+    {% else %}
+    <input type="hidden" name="action" value="add_tema">
+    <input type="hidden" name="materia_malla" value="{{ materia_malla.pk }}">
+    {% endif %}
+    <div class="modal-header">
+        <h5 class="modal-title">{% if tema %}Editar tema{% else %}Nuevo tema{% endif %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+        <p class="text-muted">{{ materia_malla.materia.nombre }}</p>
+        {{ form.as_p }}
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar tema</button>
+    </div>
+</form>

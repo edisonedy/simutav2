@@ -13,7 +13,7 @@ from academico.models import (
     PeriodoAcademico,
     ProfesorMateria,
 )
-from core.models import Institucion, PerfilUsuario
+from core.models import PerfilUsuario
 from simulador.models import (
     ConceptoEsperadoRonda,
     CondicionExitoSimulacion,
@@ -49,19 +49,10 @@ class Command(BaseCommand):
         estudiante.set_password('demo12345')
         estudiante.save()
 
-        institucion, _ = Institucion.objects.get_or_create(
-            nombre='Instituto Demo SimutaV2',
-            defaults={
-                'siglas': 'IDSM',
-                'direccion': 'Ambato',
-                'usuario_creacion': profesor,
-            },
-        )
         PerfilUsuario.objects.update_or_create(
             usuario=profesor,
             defaults={
                 'rol': PerfilUsuario.PROFESOR,
-                'institucion': institucion,
                 'usuario_creacion': profesor,
             },
         )
@@ -69,13 +60,11 @@ class Command(BaseCommand):
             usuario=estudiante,
             defaults={
                 'rol': PerfilUsuario.ESTUDIANTE,
-                'institucion': institucion,
                 'usuario_creacion': profesor,
             },
         )
 
         carrera, _ = Carrera.objects.get_or_create(
-            institucion=institucion,
             codigo='TI-DEMO',
             defaults={
                 'nombre': 'Tecnologia de la Informacion',
@@ -100,7 +89,6 @@ class Command(BaseCommand):
             defaults={'nombre': 'Primer periodo', 'usuario_creacion': profesor},
         )
         materia, _ = Materia.objects.get_or_create(
-            institucion=institucion,
             codigo='COMP-DEC',
             defaults={
                 'nombre': 'Toma de decisiones tecnicas',
@@ -121,7 +109,6 @@ class Command(BaseCommand):
             },
         )
         periodo, _ = PeriodoAcademico.objects.get_or_create(
-            institucion=institucion,
             nombre='Demo Computadoras 2026',
             defaults={
                 'fecha_inicio': timezone.datetime(2026, 1, 1).date(),

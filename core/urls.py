@@ -1,13 +1,10 @@
 from django.urls import path
 
-from core import views
+from . import views
 
 app_name = 'core'
 
 urlpatterns = [
-    path('', views.instituciones, name='home'),
+    path('cambiar-periodo/', views.cambiar_periodo, name='cambiar_periodo'),
     path('estado-ia/', views.estado_ia, name='estado_ia'),
-    path('instituciones/', views.instituciones, name='instituciones'),
-    path('instituciones/add/', views.institucion_add, name='institucion_add'),
-    path('instituciones/<int:pk>/edit/', views.institucion_edit, name='institucion_edit'),
 ]

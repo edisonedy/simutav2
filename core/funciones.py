@@ -53,6 +53,27 @@ def respuesta_error(request, url_retorno, mensaje='Error al procesar la solicitu
     return HttpResponseRedirect(url_retorno)
 
 
+CLAVE_PERIODO_SESION = 'periodo_id'
+
+
+def periodo_de_sesion(request):
+    """El periodo elegido en la barra superior.
+
+    Igual que en el SGA: el periodo no se pide en cada pantalla, se elige una
+    vez arriba y las pantallas academicas trabajan sobre el. Si nadie ha elegido
+    todavia, manda el que tiene la matricula abierta y, si tampoco hay, el mas
+    reciente."""
+    from academico.models import PeriodoAcademico
+
+    periodos = PeriodoAcademico.objects.filter(activo=True)
+    elegido = request.session.get(CLAVE_PERIODO_SESION)
+    if elegido:
+        periodo = periodos.filter(pk=elegido).first()
+        if periodo:
+            return periodo
+    return periodos.filter(activo_matricula=True).first() or periodos.first()
+
+
 def conservar_seleccion_actual(form):
     """Vuelve a meter en los desplegables el valor que el registro YA tiene.
 

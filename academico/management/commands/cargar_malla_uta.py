@@ -5,9 +5,6 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
 from academico.models import Carrera, Malla, Materia, MateriaMalla, NivelMalla
-from core.models import Institucion
-
-
 def generar_codigo(nombre, numero_nivel, orden):
     texto = unicodedata.normalize('NFKD', nombre).encode('ascii', 'ignore').decode('ascii')
     texto = re.sub(r'[^A-Z0-9]+', '_', texto.upper()).strip('_')
@@ -21,18 +18,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         usuario = User.objects.filter(is_superuser=True).first()
 
-        institucion, _ = Institucion.objects.get_or_create(
-            nombre='Universidad Tecnica de Ambato',
-            defaults={
-                'siglas': 'UTA',
-                'direccion': 'Ambato, Ecuador',
-                'email': '',
-                'usuario_creacion': usuario,
-            },
-        )
 
         carrera, _ = Carrera.objects.get_or_create(
-            institucion=institucion,
             codigo='ADM-EMP',
             defaults={
                 'nombre': 'Administracion de Empresas',
@@ -117,7 +104,6 @@ class Command(BaseCommand):
             for orden, nombre_materia in enumerate(materias, start=1):
                 codigo = generar_codigo(nombre_materia, numero_nivel, orden)
                 materia, _ = Materia.objects.get_or_create(
-                    institucion=institucion,
                     codigo=codigo,
                     defaults={
                         'nombre': nombre_materia,

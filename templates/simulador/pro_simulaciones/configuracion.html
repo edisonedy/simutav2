@@ -182,6 +182,17 @@
             </div>
             <a class="btn btn-sm btn-outline-info mt-3" href="{% url 'pro_simulaciones' %}?action=analitica&id={{ simulacion.pk }}">Ver analitica del caso</a>
         </div>
+
+        <div class="module-card p-3 mb-3">
+            <h2 class="h5">Juegos de la materia</h2>
+            <p class="small text-muted mb-2">
+                Juegos cortos (seleccion, relacionar, ordenar, memoria...) que el docente
+                crea por tema o para toda la materia. Los que apuntan a este caso y son
+                obligatorios hay que aprobarlos antes de empezarlo.
+            </p>
+            <a class="btn btn-sm btn-outline-primary"
+               href="{% url 'interactivo:lista' simulacion.materia_malla_id %}">Gestionar juegos</a>
+        </div>
     </div>
 </div>
 {% endblock %}

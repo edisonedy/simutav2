@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from academico.forms import InscripcionMallaForm
-from core.models import Institucion, PerfilUsuario
+from core.models import PerfilUsuario
 from core.permisos import es_administrativo, es_docente, usuarios_con_rol
 
 
@@ -14,10 +14,9 @@ class GestionPerfilesTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.institucion = Institucion.objects.create(nombre='UTA')
         cls.admin = User.objects.create_user('rector', password='x')
         PerfilUsuario.objects.create(
-            usuario=cls.admin, institucion=cls.institucion, rol=PerfilUsuario.ADMIN,
+            usuario=cls.admin, rol=PerfilUsuario.ADMIN,
         )
 
     def setUp(self):
@@ -27,7 +26,7 @@ class GestionPerfilesTests(TestCase):
     def _crear(self, username, rol, **extra):
         usuario = User.objects.create_user(username, password='x', **extra)
         perfil = PerfilUsuario.objects.create(
-            usuario=usuario, institucion=self.institucion, rol=rol,
+            usuario=usuario, rol=rol,
         )
         return usuario, perfil
 
@@ -36,13 +35,12 @@ class GestionPerfilesTests(TestCase):
             'action': 'add',
             'username': 'nueva.docente', 'password1': 'ClaveLarga123!', 'password2': 'ClaveLarga123!',
             'first_name': 'Ana', 'last_name': 'Vega', 'email': 'ana@uta.edu.ec',
-            'roles': [PerfilUsuario.PROFESOR], 'institucion': self.institucion.pk,
+            'roles': [PerfilUsuario.PROFESOR],
             'identificacion': '1804', 'telefono': '099',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
         self.assertTrue(respuesta.json()['result'], respuesta.json())
         usuario = User.objects.get(username='nueva.docente')
         self.assertEqual(usuario.perfil.rol, PerfilUsuario.PROFESOR)
-        self.assertEqual(usuario.perfil.institucion, self.institucion)
         self.assertEqual(usuario.first_name, 'Ana')
         self.assertTrue(usuario.check_password('ClaveLarga123!'))
 
@@ -50,7 +48,7 @@ class GestionPerfilesTests(TestCase):
         usuario, perfil = self._crear('confundido', PerfilUsuario.ESTUDIANTE)
         respuesta = self.client.post(self.url, {
             'action': 'edit', 'pk': perfil.pk,
-            'roles': [PerfilUsuario.PROFESOR], 'institucion': self.institucion.pk,
+            'roles': [PerfilUsuario.PROFESOR],
             'identificacion': '', 'telefono': '', 'activo': 'on',
             'first_name': 'Luis', 'last_name': 'Paz', 'email': '',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
@@ -65,7 +63,7 @@ class GestionPerfilesTests(TestCase):
         self.assertFalse(hasattr(huerfano, 'perfil'))
         respuesta = self.client.post(self.url, {
             'action': 'asignar', 'usuario': huerfano.pk,
-            'roles': [PerfilUsuario.ADMIN], 'institucion': self.institucion.pk,
+            'roles': [PerfilUsuario.ADMIN],
             'identificacion': '', 'telefono': '',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
         self.assertTrue(respuesta.json()['result'], respuesta.json())
@@ -109,7 +107,7 @@ class GestionPerfilesTests(TestCase):
         """Si no, el ultimo administrador se deja fuera y toca entrar por consola."""
         respuesta = self.client.post(self.url, {
             'action': 'edit', 'pk': self.admin.perfil.pk,
-            'roles': [PerfilUsuario.ESTUDIANTE], 'institucion': self.institucion.pk,
+            'roles': [PerfilUsuario.ESTUDIANTE],
             'identificacion': '', 'telefono': '', 'activo': 'on',
             'first_name': '', 'last_name': '', 'email': '',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
@@ -137,10 +135,9 @@ class VariosPerfilesPorPersonaTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.institucion = Institucion.objects.create(nombre='UTA')
         cls.admin = User.objects.create_user('rectora', password='x')
         PerfilUsuario.objects.create(
-            usuario=cls.admin, institucion=cls.institucion, rol=PerfilUsuario.ADMIN,
+            usuario=cls.admin, rol=PerfilUsuario.ADMIN,
         )
 
     def setUp(self):
@@ -149,7 +146,7 @@ class VariosPerfilesPorPersonaTests(TestCase):
 
     def _perfil(self, username, *roles):
         usuario = User.objects.create_user(username, password='x')
-        perfil = PerfilUsuario.objects.create(usuario=usuario, institucion=self.institucion)
+        perfil = PerfilUsuario.objects.create(usuario=usuario)
         perfil.fijar_roles(roles)
         perfil.save()
         return usuario, perfil
@@ -186,7 +183,6 @@ class VariosPerfilesPorPersonaTests(TestCase):
         respuesta = self.client.post(self.url, {
             'action': 'edit', 'pk': perfil.pk,
             'roles': [PerfilUsuario.ADMIN, PerfilUsuario.PROFESOR],
-            'institucion': self.institucion.pk,
             'identificacion': '', 'telefono': '', 'activo': 'on',
             'first_name': '', 'last_name': '', 'email': '',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
@@ -200,8 +196,7 @@ class VariosPerfilesPorPersonaTests(TestCase):
             'action': 'add',
             'username': 'multi', 'password1': 'ClaveLarga123!', 'password2': 'ClaveLarga123!',
             'first_name': '', 'last_name': '', 'email': '',
-            'roles': [PerfilUsuario.PROFESOR, PerfilUsuario.ESTUDIANTE],
-            'institucion': self.institucion.pk, 'identificacion': '', 'telefono': '',
+            'roles': [PerfilUsuario.PROFESOR, PerfilUsuario.ESTUDIANTE], 'identificacion': '', 'telefono': '',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
         self.assertTrue(respuesta.json()['result'], respuesta.json())
         perfil = User.objects.get(username='multi').perfil

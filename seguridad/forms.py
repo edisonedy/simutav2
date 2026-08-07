@@ -3,7 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
 from core.funciones import conservar_seleccion_actual
-from core.models import Institucion, PerfilUsuario
+from core.models import PerfilUsuario
 
 AYUDA_ROL = (
     'Puedes marcar varios: una misma persona puede ser administradora y ademas '
@@ -22,29 +22,18 @@ def campo_roles(inicial=None):
     )
 
 
-def _instituciones():
-    return Institucion.objects.filter(activo=True)
-
-
 class UsuarioPerfilCreationForm(UserCreationForm):
     """Crea el usuario y su perfil de una sola vez."""
     first_name = forms.CharField(label='Nombres', required=False)
     last_name = forms.CharField(label='Apellidos', required=False)
     email = forms.EmailField(label='Correo', required=False)
     roles = campo_roles()
-    institucion = forms.ModelChoiceField(
-        label='Institucion', queryset=Institucion.objects.none(), required=False,
-    )
     identificacion = forms.CharField(label='Identificacion', required=False)
     telefono = forms.CharField(label='Telefono', required=False)
 
     class Meta(UserCreationForm.Meta):
         model = User
         fields = ['username', 'first_name', 'last_name', 'email', 'password1', 'password2']
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['institucion'].queryset = _instituciones()
 
     def save(self, commit=True, creado_por=None):
         usuario = super().save(commit=False)
@@ -54,7 +43,6 @@ class UsuarioPerfilCreationForm(UserCreationForm):
         usuario.save()
         perfil = PerfilUsuario.objects.create(
             usuario=usuario,
-            institucion=self.cleaned_data['institucion'],
             identificacion=self.cleaned_data['identificacion'],
             telefono=self.cleaned_data['telefono'],
             usuario_creacion=creado_por,
@@ -65,7 +53,7 @@ class UsuarioPerfilCreationForm(UserCreationForm):
 
 
 class PerfilUsuarioForm(forms.ModelForm):
-    """Edita a una persona que ya existe: sus perfiles, institucion y estado."""
+    """Edita a una persona que ya existe: sus perfiles y su estado."""
     first_name = forms.CharField(label='Nombres', required=False)
     last_name = forms.CharField(label='Apellidos', required=False)
     email = forms.EmailField(label='Correo', required=False)
@@ -77,12 +65,10 @@ class PerfilUsuarioForm(forms.ModelForm):
 
     class Meta:
         model = PerfilUsuario
-        fields = ['institucion', 'identificacion', 'telefono']
+        fields = ['identificacion', 'telefono']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['institucion'].queryset = _instituciones()
-        self.fields['institucion'].required = False
         conservar_seleccion_actual(self)
         if self.instance.pk:
             usuario = self.instance.usuario
@@ -92,7 +78,7 @@ class PerfilUsuarioForm(forms.ModelForm):
             self.fields['email'].initial = usuario.email
             self.fields['activo'].initial = usuario.is_active and self.instance.activo
         self.order_fields([
-            'roles', 'institucion', 'first_name', 'last_name', 'email',
+            'roles', 'first_name', 'last_name', 'email',
             'identificacion', 'telefono', 'activo',
         ])
 
@@ -118,15 +104,11 @@ class AsignarPerfilForm(forms.Form):
     creado por consola, que sin esto ni siquiera aparece en el listado."""
     usuario = forms.ModelChoiceField(label='Usuario', queryset=User.objects.none())
     roles = campo_roles()
-    institucion = forms.ModelChoiceField(
-        label='Institucion', queryset=Institucion.objects.none(), required=False,
-    )
     identificacion = forms.CharField(label='Identificacion', required=False)
     telefono = forms.CharField(label='Telefono', required=False)
 
     def __init__(self, *args, usuario_fijo=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['institucion'].queryset = _instituciones()
         campo = self.fields['usuario']
         campo.queryset = User.objects.filter(perfil__isnull=True).order_by('username')
         campo.label_from_instance = (
@@ -138,7 +120,6 @@ class AsignarPerfilForm(forms.Form):
     def save(self, creado_por=None):
         perfil = PerfilUsuario.objects.create(
             usuario=self.cleaned_data['usuario'],
-            institucion=self.cleaned_data['institucion'],
             identificacion=self.cleaned_data['identificacion'],
             telefono=self.cleaned_data['telefono'],
             usuario_creacion=creado_por,

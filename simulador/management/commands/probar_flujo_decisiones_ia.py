@@ -14,6 +14,7 @@ from django.db import transaction
 from django.test import override_settings
 
 from simulador.ia_service import orden_proveedores
+from simulador.generator_service import serializar_configuracion_simulacion
 from simulador.models import IntentoSimulacion, Simulacion
 from simulador.services.core import (
     construir_estado_inicial,
@@ -92,6 +93,7 @@ class Command(BaseCommand):
                     recursos_actuales=construir_recursos_iniciales(simulacion),
                     situacion_actual=simulacion.situacion_inicial or simulacion.contexto,
                     numero_ronda_actual=1,
+                    configuracion_snapshot=serializar_configuracion_simulacion(simulacion),
                 )
                 self._ejecutar_camino(intento, options['camino'])
                 transaction.set_rollback(True)

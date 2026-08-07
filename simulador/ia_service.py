@@ -27,7 +27,10 @@ class IAServiceMock:
         pronostico=None, tradeoff_aceptado='',
     ):
         from simulador.services import validar_respuesta_estudiante
-        respuesta = self.evaluar_paso(intento, decision, justificacion)
+        respuesta = self.evaluar_paso(
+            intento, decision, justificacion,
+            opcion_predefinida=bool(opcion_predefinida),
+        )
         return {
             'evaluacion': respuesta.get('evaluacion', ''),
             'impacto_sugerido': self._filtrar_impacto(intento.simulacion, respuesta.get('impacto', {})),
@@ -36,11 +39,12 @@ class IAServiceMock:
             'finalizar': False,
         }
 
-    def evaluar_paso(self, intento, decision, justificacion):
+    def evaluar_paso(self, intento, decision, justificacion, opcion_predefinida=False):
         from simulador.services import validar_respuesta_estudiante
         situacion = intento.situacion_actual or intento.simulacion.situacion_inicial or intento.simulacion.contexto
         validacion = validar_respuesta_estudiante(
             decision, justificacion, simulacion=intento.simulacion, situacion_actual=situacion,
+            opcion_predefinida=opcion_predefinida,
         )
         if not validacion['valida']:
             return {
@@ -144,6 +148,7 @@ class IAServiceLLM:
 
         validacion = validar_respuesta_estudiante(
             decision, justificacion, simulacion=simulacion, situacion_actual=situacion,
+            opcion_predefinida=bool(opcion_predefinida),
         )
         if not validacion['valida']:
             return {
@@ -168,7 +173,12 @@ class IAServiceLLM:
             simulacion, intento.numero_ronda_actual, intento.configuracion_snapshot,
         )
         if not conceptos_info:
-            return IAServiceMock().evaluar_ronda_dinamica(intento, decision, justificacion)
+            return IAServiceMock().evaluar_ronda_dinamica(
+                intento, decision, justificacion,
+                opcion_predefinida=opcion_predefinida,
+                pronostico=pronostico,
+                tradeoff_aceptado=tradeoff_aceptado,
+            )
 
         indicadores_info = self._indicadores_para_prompt(simulacion, intento.configuracion_snapshot)
         reglas_respuesta = configuracion_respuesta_ronda(

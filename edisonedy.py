@@ -18,26 +18,23 @@ django.setup()
 
 
 
-
-
-from openai import OpenAI
 import os
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
-try:
-    r = client.responses.create(
-        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-        input="Responde solo con la palabra OK"
-    )
+import django
 
-    print("✅ API RESPONDE")
-    print("Respuesta:", r.output_text)
+django.setup()
 
-    if hasattr(r, "usage") and r.usage:
-        print("Uso tokens:", r.usage)
+from django.db import connection, transaction
 
-except Exception as e:
-    print("❌ API NO RESPONDE")
-    print("Tipo error:", type(e).__name__)
-    print("Detalle:", str(e))
+
+
+from django.contrib.auth.models import User
+from core.permisos import es_administrativo
+
+usuario = User.objects.get(username='emoyolema')
+
+print(usuario.is_superuser)
+print(usuario.perfil.rol)
+print(es_administrativo(usuario))

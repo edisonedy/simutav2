@@ -14,7 +14,7 @@ from academico.models import (
     PeriodoAcademico,
     ProfesorMateria,
 )
-from core.models import Institucion, PerfilUsuario
+from core.models import PerfilUsuario
 from simulador.models import (
     ConceptoEsperadoRonda,
     CondicionExitoSimulacion,
@@ -39,20 +39,14 @@ class Command(BaseCommand):
                 first_name='Edison',
             )
 
-        institucion, _ = Institucion.objects.get_or_create(
-            nombre='Universidad Tecnica de Ambato',
-            defaults={'siglas': 'UTA', 'direccion': 'Ambato, Ecuador', 'usuario_creacion': usuario},
-        )
         PerfilUsuario.objects.update_or_create(
             usuario=usuario,
             defaults={
                 'rol': PerfilUsuario.ADMIN,
-                'institucion': institucion,
                 'usuario_creacion': usuario,
             },
         )
         carrera, _ = Carrera.objects.get_or_create(
-            institucion=institucion,
             codigo='ADM-DEMO',
             defaults={
                 'nombre': 'Administracion de Empresas',
@@ -73,7 +67,6 @@ class Command(BaseCommand):
             defaults={'nombre': '3 Periodo', 'usuario_creacion': usuario},
         )
         materia, _ = Materia.objects.get_or_create(
-            institucion=institucion,
             codigo='N3M1_ADMINISTRACION_FINANCI',
             defaults={
                 'nombre': 'Administracion Financiera',
@@ -89,7 +82,6 @@ class Command(BaseCommand):
             defaults={'nivel': nivel, 'orden': 1, 'obligatoria': True, 'usuario_creacion': usuario},
         )
         periodo, _ = PeriodoAcademico.objects.get_or_create(
-            institucion=institucion,
             nombre='Demo 2026',
             defaults={
                 'fecha_inicio': timezone.datetime(2026, 1, 1).date(),

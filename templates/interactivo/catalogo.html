@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker">Interactivo</div>
+        <h1 class="h3">Tipos de actividad <span class="count-pill">{{ motores|length }}</span></h1>
+        <div class="text-muted">Cada tipo es un motor independiente: se instala solo y se
+            configura desde el editor, sin tocar el resto del sistema.</div>
+    </div>
+</div>
+
+<div class="row g-3">
+    {% for motor in motores %}
+    <div class="col-md-6 col-xl-4">
+        <div class="module-card p-3 h-100">
+            <div class="page-kicker">{{ motor.codigo }}</div>
+            <h2 class="h6">{{ motor.nombre }}</h2>
+            <p class="text-muted mb-2">{{ motor.descripcion }}</p>
+            <span class="chip chip-basica">version {{ motor.version }}</span>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="module-card data-card">
+            <div class="empty-state">
+                <span class="empty-ico">&#129513;</span>
+                <div class="empty-title">No hay motores instalados</div>
+                <p class="empty-text">Agrega un modulo en <code>interactivo/plugins/</code>
+                    y se registra solo al arrancar.</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

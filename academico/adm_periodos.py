@@ -54,5 +54,5 @@ def view(request):
             obj = get_object_or_404(PeriodoAcademico, pk=pk)
             return render(request, 'academico/adm_periodos/delete.html', {'object': obj})
         else:
-            data['list'] = PeriodoAcademico.objects.filter(activo=True).select_related('institucion')
+            data['list'] = PeriodoAcademico.objects.filter(activo=True)
             return render(request, 'academico/adm_periodos/view.html', data)

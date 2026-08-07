@@ -89,7 +89,7 @@ def usuarios(request):
     # El listado recorre USUARIOS, no perfiles: asi tambien salen los que no
     # tienen ninguno (el superusuario creado por consola, por ejemplo).
     lista = User.objects.select_related(
-        'perfil', 'perfil__institucion',
+        'perfil',
     ).prefetch_related('perfil__roles_adicionales').order_by(
         'last_name', 'first_name', 'username',
     )

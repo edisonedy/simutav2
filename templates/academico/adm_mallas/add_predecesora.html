@@ -1,0 +1,20 @@
+<form action="{% url 'adm_mallas' %}" method="post" onsubmit="return enviar_formulario(this)">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_predecesora">
+    <input type="hidden" name="materia_malla_id" value="{{ materia_malla.pk }}">
+    <div class="modal-header">
+        <h5 class="modal-title">Requisito para {{ materia_malla.materia.nombre }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+        <p class="text-muted">
+            Nivel {{ materia_malla.nivel.numero }} &middot; {{ materia_malla.malla }}.
+            El estudiante no podra tomar esta materia mientras no apruebe la que elijas.
+        </p>
+        {{ form.as_p }}
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Agregar requisito</button>
+    </div>
+</form>

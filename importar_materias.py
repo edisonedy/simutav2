@@ -9,7 +9,6 @@ django.setup()
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db import transaction
-from core.models import Institucion
 from academico.models import Carrera, Malla, NivelMalla, Materia, MateriaMalla
 from simulador.models import (
     Simulacion, IndicadorSimulacion, RestriccionSimulacion,
@@ -47,7 +46,6 @@ with open(BASE_DIR / "materias_simuta.json", "r", encoding="utf-8") as f:
 
 print(f"Loaded {len(materias_data)} materias from JSON")
 
-institucion = None
 carrera = None
 mallas_cache = {}
 niveles_cache = {}
@@ -56,30 +54,14 @@ materias_malla_cache = {}
 
 @transaction.atomic
 def import_all():
-    global institucion, carrera
+    global carrera
 
-    # --- INSTITUCION ---
     entry = materias_data[0]
-    inst_name = entry["datos_materia"]["institucion"]["texto"]
-    institucion, created = Institucion.objects.get_or_create(
-        nombre=inst_name,
-        defaults={
-            "siglas": "UTA",
-            "ruc": "9999999999999",
-            "direccion": "Ambato, Ecuador",
-            "usuario_creacion": admin_user,
-        }
-    )
-    if created:
-        print(f"Created Institution: {institucion.nombre}")
-    else:
-        print(f"Found Institution: {institucion.nombre}")
 
     # --- CARRERA ---
     carrera_name = entry["datos_malla"]["carrera"]["texto"]
     carrera, created = Carrera.objects.get_or_create(
         nombre=carrera_name,
-        institucion=institucion,
         defaults={
             "codigo": "ADM-UTA",
             "descripcion": f"Carrera de {carrera_name}",
@@ -136,7 +118,6 @@ def import_all():
         materia_key = dm["id"]
         if materia_key not in materias_cache:
             materia_obj, created = Materia.objects.get_or_create(
-                institucion=institucion,
                 codigo=dm["codigo"],
                 defaults={
                     "nombre": dm["nombre"],

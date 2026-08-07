@@ -3,7 +3,8 @@
 <div class="page-head">
     <div>
         <div class="page-kicker">Simulador</div>
-        <h1 class="h3">Mis cursos <span class="count-pill">{{ cursos|length }}</span></h1>
+        <h1 class="h3">Mis cursos <span class="count-pill">{{ total_cursos }}</span></h1>
+        {% if periodo %}<div class="text-muted"><span class="periodo-chip">&#128197; {{ periodo.nombre }}</span></div>{% endif %}
     </div>
     <div class="page-head-actions">
         <button class="btn btn-outline-primary" onclick="abrir_modal('{% url 'pro_cursos' %}?action=add_resultado')">+ Resultado de aprendizaje</button>
@@ -11,33 +12,50 @@
     </div>
 </div>
 
-{% if cursos %}
-<div class="row g-3">
-    {% for c in cursos %}
-    <div class="col-md-6 col-xl-4">
-        <a class="malla-card" href="{% url 'pro_cursos' %}?action=seccion&pk={{ c.seccion.pk }}">
-            <div class="malla-card-top">
-                <span class="malla-ico">&#128218;</span>
-                <div>
-                    <div class="malla-carrera">{{ c.seccion.periodo }} &middot; Paralelo {{ c.seccion.paralelo }}</div>
-                    <div class="malla-nombre">{{ c.seccion.materia_malla.materia.nombre }}</div>
-                </div>
-            </div>
-            <div class="malla-stats">
-                <span class="chip chip-basica">{{ c.estudiantes }} estudiantes</span>
-                <span class="chip chip-media">{{ c.asignaciones }} tareas</span>
-            </div>
-            <div class="malla-go">Abrir curso &rarr;</div>
-        </a>
+{% if grupos %}
+{% for grupo in grupos %}
+<div class="module-card mb-3">
+    <div class="group-head">
+        <div>
+            <div class="page-kicker">{{ grupo.malla.carrera.nombre }}</div>
+            <h2 class="h6 mb-0">{{ grupo.malla.nombre }}</h2>
+        </div>
+        <span class="count-pill">{{ grupo.cursos|length }} cursos</span>
     </div>
-    {% endfor %}
+    <div class="row g-3 p-3">
+        {% for c in grupo.cursos %}
+        <div class="col-md-6 col-xl-4">
+            <a class="malla-card" href="{% url 'pro_cursos' %}?action=seccion&pk={{ c.seccion.pk }}">
+                <div class="malla-card-top">
+                    <span class="malla-ico">&#128218;</span>
+                    <div>
+                        <div class="malla-carrera">Nivel {{ c.seccion.materia_malla.nivel.numero }} &middot; Paralelo {{ c.seccion.paralelo }}</div>
+                        <div class="malla-nombre">{{ c.seccion.materia_malla.materia.nombre }}</div>
+                    </div>
+                </div>
+                <div class="malla-stats">
+                    <span class="chip chip-basica">{{ c.estudiantes }} estudiantes</span>
+                    <span class="chip chip-media">{{ c.asignaciones }} tareas</span>
+                </div>
+                <div class="malla-go">Abrir curso &rarr;</div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
 </div>
+{% endfor %}
 {% else %}
 <div class="module-card data-card">
     <div class="empty-state">
         <span class="empty-ico">&#127979;</span>
-        <div class="empty-title">Aun no tienes cursos</div>
-        <p class="empty-text">Crea un curso (seccion/paralelo), inscribe a tus estudiantes y asignales simulaciones con fecha limite para calificarlas.</p>
+        <div class="empty-title">
+            {% if periodo %}No tienes cursos en {{ periodo.nombre }}{% else %}Aun no tienes cursos{% endif %}
+        </div>
+        <p class="empty-text">
+            Crea un curso (materia de la malla + paralelo), inscribe a tus estudiantes y asignales
+            simulaciones con fecha limite para calificarlas.
+            {% if periodo %}Si tus cursos son de otro periodo, cambialo en la barra de arriba.{% endif %}
+        </p>
         <button class="btn btn-primary" onclick="abrir_modal('{% url 'pro_cursos' %}?action=add_seccion')">+ Crear mi primer curso</button>
     </div>
 </div>

@@ -1,0 +1,23 @@
+<div class="border rounded p-2 mb-2 bg-white">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+        <div>
+            <span class="badge text-bg-light">{{ actividad.get_tipo_display }}</span>
+            <div class="cell-strong mt-1">{{ actividad.titulo }}</div>
+            {% if actividad.descripcion %}<div class="text-muted small">{{ actividad.descripcion }}</div>{% endif %}
+            {% if actividad.archivo %}
+            <a class="small" href="{{ actividad.archivo.url }}" target="_blank" rel="noopener">Ver archivo adjunto &rarr;</a>
+            {% endif %}
+        </div>
+        <div class="text-nowrap">
+            <button class="btn btn-sm btn-outline-secondary btn-action"
+                    onclick="abrir_modal('{% url 'adm_materias' %}?action=edit_actividad&pk={{ actividad.pk }}')">Editar</button>
+            <form class="d-inline" action="{% url 'adm_materias' %}" method="post"
+                  onsubmit="return confirm('Eliminar esta actividad?') &amp;&amp; enviar_formulario(this)">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_actividad">
+                <input type="hidden" name="pk" value="{{ actividad.pk }}">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Eliminar</button>
+            </form>
+        </div>
+    </div>
+</div>

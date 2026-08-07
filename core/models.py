@@ -18,23 +18,6 @@ class ModeloBase(models.Model):
         abstract = True
 
 
-class Institucion(ModeloBase):
-    nombre = models.CharField(max_length=200)
-    siglas = models.CharField(max_length=30, blank=True)
-    ruc = models.CharField(max_length=20, blank=True)
-    direccion = models.CharField(max_length=250, blank=True)
-    telefono = models.CharField(max_length=50, blank=True)
-    email = models.EmailField(blank=True)
-
-    class Meta:
-        verbose_name = 'institucion'
-        verbose_name_plural = 'instituciones'
-        ordering = ['nombre']
-
-    def __str__(self):
-        return self.nombre
-
-
 class PerfilUsuario(ModeloBase):
     ADMIN = 'ADMIN'
     PROFESOR = 'PROFESOR'
@@ -48,18 +31,6 @@ class PerfilUsuario(ModeloBase):
         (COORDINADOR, 'Coordinador'),
     ]
 
-    usuario = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='perfil',
-    )
-    institucion = models.ForeignKey(
-        Institucion,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name='perfiles',
-    )
     # De mayor a menor alcance. Cuando alguien tiene varios perfiles, el primero
     # de esta lista es el principal: manda en el dashboard y en el listado.
     PRECEDENCIA = [ADMIN, COORDINADOR, PROFESOR, ESTUDIANTE]
@@ -68,13 +39,6 @@ class PerfilUsuario(ModeloBase):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='perfil',
-    )
-    institucion = models.ForeignKey(
-        Institucion,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name='perfiles',
     )
     rol = models.CharField(
         'rol principal', max_length=20, choices=ROLES, default=ESTUDIANTE,

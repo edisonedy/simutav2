@@ -50,6 +50,12 @@ JUSTIFICACIONES_GENERICAS = {
 }
 
 
+PALABRAS_FUNCIONALES_CONCEPTO = {
+    'a', 'al', 'con', 'de', 'del', 'e', 'el', 'en', 'la', 'las', 'los',
+    'o', 'para', 'por', 'un', 'una', 'y',
+}
+
+
 SINONIMOS = {
     'control': ['control', 'controles', 'controlar', 'controlado', 'controladora', 'controlador'],
     'corregir': ['corregir', 'corregira', 'correccion', 'correctiva', 'correctivas', 'corrige', 'corrigio'],
@@ -88,6 +94,30 @@ def _expandir_sinonimos(palabra):
             return
 
 
+def _raiz_flexible(token):
+    """Normalizacion morfologica minima para singular/plural en frases."""
+    token = str(token or '')
+    if len(token) > 5 and token.endswith('es'):
+        return token[:-2]
+    if len(token) > 4 and token.endswith('s'):
+        return token[:-1]
+    return token
+
+
+def _contiene_frase_flexible(texto, patron):
+    tokens_patron = _normalizar_texto(patron).split()
+    if len(tokens_patron) < 2:
+        return False
+    tokens_texto = _normalizar_texto(texto).split()
+    raices_patron = [_raiz_flexible(token) for token in tokens_patron]
+    ancho = len(raices_patron)
+    for inicio in range(0, len(tokens_texto) - ancho + 1):
+        ventana = [_raiz_flexible(token) for token in tokens_texto[inicio:inicio + ancho]]
+        if ventana == raices_patron:
+            return True
+    return False
+
+
 def _contiene_patron(texto, palabra):
     palabra = _normalizar_texto(palabra)
     if not palabra:
@@ -99,6 +129,8 @@ def _contiene_patron(texto, palabra):
             continue
         if any(c in variante_norm for c in [' ', '_', '.']):
             if variante_norm in texto:
+                return True
+            if _contiene_frase_flexible(texto, variante_norm):
                 return True
         if variante_norm in tokens:
             return True
@@ -139,6 +171,39 @@ def parsear_regla_concepto(valor):
     return {'any': parsear_palabras_clave(valor)}
 
 
+def _es_regla_estructurada(valor):
+    """Distingue una regla explicita {any/all/none} de la lista historica.
+
+    En una regla explicita, ``any`` significa alternativas equivalentes: basta
+    una para demostrar el concepto. Las listas antiguas separadas por comas
+    conservan su puntuacion proporcional para no cambiar rubricas existentes.
+    """
+    if isinstance(valor, dict):
+        return True
+    try:
+        return isinstance(json.loads(str(valor or '').strip()), dict)
+    except (json.JSONDecodeError, TypeError):
+        return False
+
+
+def _factor_nombre_concepto(texto, nombre):
+    """Da evidencia parcial cuando explica el concepto con su nombre natural.
+
+    No concede cumplimiento completo: evita que repetir un titulo regale la
+    rubrica, pero reconoce expresiones validas no incluidas literalmente en la
+    lista de palabras del docente (p. ej. "hipotesis y objetivos").
+    """
+    tokens = [
+        token for token in _normalizar_texto(nombre).split()
+        if len(token) >= 4 and token not in PALABRAS_FUNCIONALES_CONCEPTO
+    ]
+    if not tokens:
+        return 0.0
+    detectados = sum(1 for token in tokens if _contiene_patron(texto, token))
+    proporcion = detectados / len(tokens)
+    return 0.5 if proporcion >= 0.75 else 0.0
+
+
 def _lista_regla(regla, clave):
     valor = regla.get(clave, [])
     if isinstance(valor, str):
@@ -150,6 +215,7 @@ def _lista_regla(regla, clave):
 
 def evaluar_regla_concepto(texto, palabras_clave):
     regla = parsear_regla_concepto(palabras_clave)
+    estructurada = _es_regla_estructurada(palabras_clave)
     obligatorias = _lista_regla(regla, 'all')
     alternativas = _lista_regla(regla, 'any')
     prohibidas = _lista_regla(regla, 'none')
@@ -162,13 +228,28 @@ def evaluar_regla_concepto(texto, palabras_clave):
     sinonimos_detectados = [p for p in sinonimos if _contiene_patron(texto, p)]
 
     cumple_obligatorias = not obligatorias_faltantes
-    cumple_alternativas = bool(alternativas_detectadas) if alternativas else True
+    alternativas_equivalentes = alternativas_detectadas + sinonimos_detectados
+    cumple_alternativas = bool(alternativas_equivalentes) if alternativas else True
     cumple_prohibidas = not prohibidas_detectadas
     cumple = cumple_obligatorias and cumple_alternativas and cumple_prohibidas
 
-    total_requeridas = len(obligatorias) + len(alternativas)
-    detectadas_requeridas = len(obligatorias_detectadas) + len(alternativas_detectadas) + len(sinonimos_detectados)
-    if total_requeridas > 0:
+    if estructurada:
+        # ``all`` aporta un requisito por elemento; ``any`` es un unico grupo
+        # de alternativas equivalentes, no una lista que haya que recitar.
+        total_requeridas = len(obligatorias) + (1 if alternativas else 0)
+        detectadas_requeridas = len(obligatorias_detectadas) + (
+            1 if alternativas and alternativas_equivalentes else 0
+        )
+    else:
+        total_requeridas = len(obligatorias) + len(alternativas)
+        detectadas_requeridas = (
+            len(obligatorias_detectadas)
+            + len(alternativas_detectadas)
+            + len(sinonimos_detectados)
+        )
+    if prohibidas_detectadas:
+        factor = 0.0
+    elif total_requeridas > 0:
         factor = detectadas_requeridas / total_requeridas
     elif sinonimos_detectados:
         factor = 0.5
@@ -208,6 +289,7 @@ def calcular_puntaje_justificacion(justificacion):
 def validar_respuesta_estudiante(
     decision, justificacion, simulacion=None, situacion_actual=None,
     requerir_justificacion=False, minimo_justificacion=12,
+    opcion_predefinida=False,
 ):
     """Distingue VALIDEZ (cuenta como ronda) de CALIDAD (tope de nota).
 
@@ -241,7 +323,16 @@ def validar_respuesta_estudiante(
             False, 'La respuesta no contiene una decisión con sentido.', 0, TIPO_ERROR_BASURA,
         )
 
-    if simulacion is not None and _es_fuera_de_tema(combinado, simulacion, situacion_actual):
+    # Una alternativa creada por el docente pertenece al caso por definicion.
+    # Su texto no siempre comparte vocabulario con la consigna (p. ej. una
+    # estrategia concreta frente a un briefing general), por lo que aqui solo
+    # se evalua la calidad de la explicacion. Las respuestas completamente
+    # libres si conservan el filtro de fuera de tema.
+    if (
+        not opcion_predefinida
+        and simulacion is not None
+        and _es_fuera_de_tema(combinado, simulacion, situacion_actual)
+    ):
         return _resultado_validacion(
             False,
             'La respuesta no se relaciona con la situación planteada. Responde al caso de la materia.',
@@ -604,6 +695,122 @@ def aplicar_costo_recursos(recursos_actuales, costo):
     return recursos
 
 
+TIPOS_CAMPO_DECISION = ('numero', 'opcion', 'texto')
+
+
+def campos_decision_ronda(simulacion, numero_ronda, configuracion_snapshot=None):
+    """Los campos que el docente pidio en esta ronda.
+
+    Una ronda aceptaba UNA decision, de tipo elegir o escribir. Con campos
+    configurables el docente arma la ronda que necesita: pedir una cantidad
+    ("cuanto producir"), varias decisiones a la vez (precio, publicidad,
+    produccion) o una sola como antes. Sin campos configurados no cambia nada:
+    la ronda se comporta como siempre.
+    """
+    rondas = None
+    if configuracion_snapshot:
+        rondas = (configuracion_snapshot.get('caso') or {}).get('rondas')
+    if rondas is None:
+        rondas = (simulacion.parametros or {}).get('rondas') or []
+    indice = numero_ronda - 1
+    if not (0 <= indice < len(rondas)) or not isinstance(rondas[indice], dict):
+        return []
+
+    campos = []
+    for bruto in rondas[indice].get('campos') or []:
+        if not isinstance(bruto, dict):
+            continue
+        clave = str(bruto.get('clave') or '').strip()
+        tipo = str(bruto.get('tipo') or 'texto').strip().lower()
+        if not clave or tipo not in TIPOS_CAMPO_DECISION:
+            continue
+        campo = {
+            'clave': clave,
+            'etiqueta': str(bruto.get('etiqueta') or clave).strip(),
+            'tipo': tipo,
+            'ayuda': str(bruto.get('ayuda') or '').strip(),
+            'obligatorio': bool(bruto.get('obligatorio', True)),
+            'unidad': str(bruto.get('unidad') or '').strip(),
+        }
+        if tipo == 'numero':
+            for limite in ('minimo', 'maximo', 'objetivo', 'tolerancia'):
+                valor = bruto.get(limite)
+                campo[limite] = float(valor) if isinstance(valor, (int, float)) else None
+        campos.append(campo)
+    return campos
+
+
+def evaluar_campos_numericos(campos, valores):
+    """Puntua los campos numericos SIN IA: es aritmetica, no interpretacion.
+
+    Dentro de la tolerancia del objetivo vale completo; mas lejos baja de forma
+    proporcional hasta cero. Un campo sin objetivo no puntua: el docente solo
+    queria el dato.
+    """
+    evaluables = [c for c in campos if c['tipo'] == 'numero' and c.get('objetivo') is not None]
+    if not evaluables:
+        return None
+
+    detalle = []
+    total = 0.0
+    for campo in evaluables:
+        crudo = (valores or {}).get(campo['clave'])
+        try:
+            valor = float(str(crudo).replace(',', '.'))
+        except (TypeError, ValueError):
+            detalle.append({'clave': campo['clave'], 'etiqueta': campo['etiqueta'],
+                            'valor': None, 'objetivo': campo['objetivo'], 'puntaje': 0.0,
+                            'comentario': 'No respondio con un numero.'})
+            continue
+
+        objetivo = campo['objetivo']
+        tolerancia = campo.get('tolerancia')
+        if not tolerancia or tolerancia <= 0:
+            # Sin tolerancia explicita, el 10% del objetivo es el margen razonable.
+            tolerancia = abs(objetivo) * 0.1 or 1
+        distancia = abs(valor - objetivo)
+        if distancia <= tolerancia:
+            puntaje = 100.0
+            comentario = 'Dentro del margen esperado.'
+        elif distancia <= tolerancia * 3:
+            puntaje = round(100 * (1 - (distancia - tolerancia) / (tolerancia * 2)), 2)
+            comentario = f'Se aleja del valor esperado ({objetivo:g}).'
+        else:
+            puntaje = 0.0
+            comentario = f'Muy lejos del valor esperado ({objetivo:g}).'
+        total += puntaje
+        detalle.append({'clave': campo['clave'], 'etiqueta': campo['etiqueta'],
+                        'valor': valor, 'objetivo': objetivo, 'puntaje': puntaje,
+                        'comentario': comentario})
+
+    return {'puntaje': round(total / len(evaluables), 2), 'detalle': detalle}
+
+
+def validar_campos_decision(campos, valores):
+    """Devuelve los faltantes o fuera de rango, para no dejar avanzar a medias."""
+    problemas = []
+    for campo in campos:
+        crudo = (valores or {}).get(campo['clave'])
+        vacio = crudo is None or str(crudo).strip() == ''
+        if vacio:
+            if campo['obligatorio']:
+                problemas.append(f'Falta "{campo["etiqueta"]}".')
+            continue
+        if campo['tipo'] != 'numero':
+            continue
+        try:
+            valor = float(str(crudo).replace(',', '.'))
+        except (TypeError, ValueError):
+            problemas.append(f'"{campo["etiqueta"]}" debe ser un numero.')
+            continue
+        minimo, maximo = campo.get('minimo'), campo.get('maximo')
+        if minimo is not None and valor < minimo:
+            problemas.append(f'"{campo["etiqueta"]}" no puede ser menor que {minimo:g}.')
+        if maximo is not None and valor > maximo:
+            problemas.append(f'"{campo["etiqueta"]}" no puede ser mayor que {maximo:g}.')
+    return problemas
+
+
 def investigaciones_disponibles(intento):
     """Las averiguaciones que el estudiante puede pagar en la ronda actual, con
     su costo y, si ya las pago, el hallazgo revelado."""
@@ -749,10 +956,29 @@ def detectar_accion_sugerida(simulacion, decision, configuracion_snapshot=None):
     return mejor if mejor_score >= 0.45 else None
 
 
+def maximo_ejecuciones_efectivo(accion, total_rondas):
+    """Limite seguro para configuraciones heredadas.
+
+    Antes de existir el limite por ejecuciones, las acciones globales quedaron
+    guardadas con cero (ilimitadas). En un caso de varias rondas eso permite
+    repetir exactamente la misma jugada. Se interpreta como una sola ejecucion
+    sin alterar las acciones especificas de ronda ni los casos de una ronda.
+    """
+    if isinstance(accion, dict):
+        maximo = int(accion.get('maximo_ejecuciones') or 0)
+        numero_ronda = accion.get('numero_ronda')
+    else:
+        maximo = int(getattr(accion, 'maximo_ejecuciones', 0) or 0)
+        numero_ronda = getattr(accion, 'numero_ronda', None)
+    if maximo == 0 and numero_ronda is None and int(total_rondas or 1) > 1:
+        return 1
+    return maximo
+
+
 def accion_habilitada_por_historial(intento, accion):
     requerida = getattr(accion, 'requiere_accion_previa_id', None)
     bloqueante = getattr(accion, 'bloqueada_por_accion_previa_id', None)
-    maximo = int(getattr(accion, 'maximo_ejecuciones', 0) or 0)
+    maximo = maximo_ejecuciones_efectivo(accion, maximo_decisiones_intento(intento))
     conteos = {}
     for detalle in intento.pasos.filter(es_valido=True).values_list('evaluacion_detalle', flat=True):
         seleccion = (detalle or {}).get('seleccion_registrada') or {}
@@ -986,6 +1212,10 @@ def evaluar_conceptos_esperados(
             cumple = regla['cumple']
             factor = regla['factor']
             fuente_evidencia = 'rubrica_local'
+            factor_nombre = _factor_nombre_concepto(texto, concepto.nombre)
+            if factor_nombre > factor:
+                factor = factor_nombre
+                palabras_detectadas = palabras_detectadas + [f'concepto: {concepto.nombre}']
         cumple_completo = bool(cumple and factor >= 0.75)
         tiene_evidencia = factor > 0
         puntos = round(float(concepto.peso) * factor, 2)
@@ -1543,23 +1773,86 @@ def _calcular_desempeno_indicador(indicador, valor):
 
 
 def calcular_puntaje_final(intento):
-    """La nota final depende principalmente de los puntajes por paso.
+    """La nota final combina COMO decidio y COMO quedo la empresa.
 
-    promedio_pasos = mean(puntaje_paso de pasos validos)
-    final = clamp(0, 100, promedio_pasos)
+    proceso   = mean(puntaje_paso de pasos validos)   -> razonamiento y rubrica
+    resultado = condiciones de exito cumplidas, o salud de los indicadores
+    final     = proceso * (1 - p) + resultado * p + bonificaciones
 
-    Nota: la penalizacion por restricciones ya esta incluida en cada
-    puntaje_paso (ver calcular_puntaje_paso), por lo que NO se vuelve a restar
-    aqui para evitar doble conteo. Los indicadores se usan para estado,
-    retroalimentacion y restricciones, pero NO inflan la nota final.
+    donde p = simulacion.peso_resultado. Con p = 0 la nota vuelve a depender
+    solo del proceso, que era el comportamiento anterior: se podia hundir la
+    empresa y aprobar igual si se usaba el vocabulario correcto. Eso era un
+    examen; el resultado es lo que lo convierte en una decision.
+
+    La penalizacion por restricciones ya esta incluida en cada puntaje_paso
+    (ver calcular_puntaje_paso), asi que NO se vuelve a restar aqui.
     """
     pasos_validos = list(intento.pasos.filter(es_valido=True))
     if not pasos_validos:
         return 0.0
     promedio_pasos = mean(float(p.puntaje_paso) for p in pasos_validos)
     base = max(0, min(100, promedio_pasos))
+
+    peso = max(0, min(100, int(getattr(intento.simulacion, 'peso_resultado', 0) or 0)))
+    resultado = resultado_del_caso(intento) if peso else None
+    if resultado:
+        proporcion = peso / 100.0
+        base = base * (1 - proporcion) + resultado['puntaje'] * proporcion
+
     bonos = calcular_bonificaciones(intento, pasos_validos)
     return round(max(0, min(100, base + bonos['total'])), 2)
+
+
+def resultado_del_caso(intento):
+    """Como quedo la empresa al final, de 0 a 100.
+
+    Esto es lo que separa una simulacion de decisiones de un examen: no basta
+    con razonar bien y nombrar los conceptos, hay que dejar el caso en mejor
+    estado. Se mide primero con las condiciones de exito del docente, que son su
+    definicion explicita de "lo lograste"; si no configuro ninguna, se usa la
+    salud ponderada de los indicadores.
+    """
+    simulacion = intento.simulacion
+    estado = intento.estado_actual or {}
+    condiciones = list(simulacion.condiciones_exito.filter(activo=True))
+
+    if condiciones:
+        cumplidas = []
+        for condicion in condiciones:
+            valor = estado.get(condicion.codigo_indicador)
+            if not isinstance(valor, (int, float)):
+                continue
+            cumplidas.append(cumple_operador(
+                condicion.operador, float(valor), float(condicion.valor_objetivo)))
+        if cumplidas:
+            logradas = sum(1 for c in cumplidas if c)
+            return {
+                'puntaje': round(logradas / len(cumplidas) * 100, 2),
+                'fuente': 'condiciones_exito',
+                'logradas': logradas,
+                'de': len(cumplidas),
+            }
+
+    indicadores = list(simulacion.indicadores.filter(activo=True))
+    total_peso = 0.0
+    acumulado = 0.0
+    for indicador in indicadores:
+        valor = estado.get(indicador.codigo)
+        if not isinstance(valor, (int, float)):
+            continue
+        peso = max(0.0, float(getattr(indicador, 'peso_salud', 1) or 0))
+        if peso <= 0:
+            continue
+        acumulado += desempeno_indicador(indicador, valor) * peso
+        total_peso += peso
+    if total_peso <= 0:
+        return None
+    return {
+        'puntaje': round(acumulado / total_peso, 2),
+        'fuente': 'salud_indicadores',
+        'logradas': None,
+        'de': None,
+    }
 
 
 def calcular_bonificaciones(intento, pasos_validos=None):
@@ -2185,6 +2478,7 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
         justificacion,
         simulacion=intento.simulacion,
         situacion_actual=situacion_actual,
+        opcion_predefinida=accion is not None,
         requerir_justificacion=justificacion_obligatoria(
             intento.simulacion, ronda_actual, intento.configuracion_snapshot,
         ),
@@ -2484,7 +2778,10 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
     return paso
 
 
-def _puntaje_fallback_justo(intento, decision, justificacion, situacion_actual, evaluacion_conceptos):
+def _puntaje_fallback_justo(
+    intento, decision, justificacion, situacion_actual, evaluacion_conceptos,
+    opcion_predefinida=False,
+):
     """Sin IA, el emparejador por palabras es muy literal y castiga respuestas
     buenas que no usan las palabras exactas. Para no tankear injustamente, una
     respuesta VALIDA y en tema recibe un piso honesto basado en su calidad de
@@ -2494,6 +2791,7 @@ def _puntaje_fallback_justo(intento, decision, justificacion, situacion_actual, 
     base = float(evaluacion_conceptos.get('puntaje_sugerido') or 0)
     validacion = validar_respuesta_estudiante(
         decision, justificacion, simulacion=intento.simulacion, situacion_actual=situacion_actual,
+        opcion_predefinida=opcion_predefinida,
     )
     if not validacion['valida']:
         return base
@@ -2532,6 +2830,7 @@ def _fallback_conceptos_o_mock(
     if evaluacion_conceptos['tiene_conceptos']:
         puntaje_justo = _puntaje_fallback_justo(
             intento, decision, justificacion, situacion_actual, evaluacion_conceptos,
+            opcion_predefinida=opcion_predefinida,
         )
         return {
             'evaluacion': evaluacion_conceptos['evaluacion'],
@@ -2562,4 +2861,9 @@ def _fallback_conceptos_o_mock(
         }
     else:
         from simulador.ia_service import IAServiceMock
-        return IAServiceMock().evaluar_ronda_dinamica(intento, decision, justificacion)
+        return IAServiceMock().evaluar_ronda_dinamica(
+            intento, decision, justificacion,
+            opcion_predefinida='opcion configurada' if opcion_predefinida else '',
+            pronostico=pronostico,
+            tradeoff_aceptado=tradeoff_aceptado,
+        )

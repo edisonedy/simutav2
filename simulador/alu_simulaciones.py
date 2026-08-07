@@ -16,6 +16,9 @@ from simulador.forms import PasoSimulacionForm
 from simulador.services import (
     CRITERIOS_DECISION,
     calcular_bonificaciones,
+    campos_decision_ronda,
+    evaluar_campos_numericos,
+    validar_campos_decision,
     comprar_investigacion,
     configuracion_respuesta_ronda,
     construir_estado_inicial,
@@ -24,11 +27,14 @@ from simulador.services import (
     indicador_mejora,
     investigaciones_disponibles,
     justificacion_obligatoria,
+    maximo_decisiones_intento,
+    maximo_ejecuciones_efectivo,
     construir_recursos_iniciales,
     ejecutar_decision_arbol,
     ejecutar_ronda_ia_dinamica,
     obtener_escenario_inicial,
     obtener_conceptos_esperados_ronda,
+    resultado_del_caso,
 )
 from simulador.generator_service import serializar_configuracion_simulacion
 
@@ -50,6 +56,28 @@ def _pronostico_desde_post(request):
         'direccion': request.POST.get('pronostico_direccion', ''),
         'justificacion': request.POST.get('pronostico_justificacion', ''),
     }
+
+
+def _aplicar_campos_al_paso(paso, campos, valores):
+    """Guarda lo que el estudiante entrego en los campos de la ronda y, si el
+    docente puso un valor esperado, promedia esa correccion -que es aritmetica,
+    no interpretacion- con el puntaje de la rubrica.
+    """
+    detalle = dict(paso.evaluacion_detalle or {})
+    detalle['campos_respuesta'] = valores
+    numerico = evaluar_campos_numericos(campos, valores)
+    campos_actualizados = ['evaluacion_detalle']
+
+    if numerico and paso.es_valido:
+        detalle['campos_numericos'] = numerico['detalle']
+        detalle['puntaje_campos'] = numerico['puntaje']
+        detalle['puntaje_rubrica'] = float(paso.puntaje_paso)
+        paso.puntaje_paso = round((float(paso.puntaje_paso) + numerico['puntaje']) / 2, 2)
+        campos_actualizados.append('puntaje_paso')
+
+    paso.evaluacion_detalle = detalle
+    paso.save(update_fields=campos_actualizados)
+    return paso
 
 
 def _tradeoff_desde_post(request):
@@ -354,10 +382,10 @@ def _historial_acciones_seleccionadas(intento):
     return set(conteos), conteos
 
 
-def _accion_habilitada_por_historial(accion, seleccionadas, conteos):
+def _accion_habilitada_por_historial(accion, seleccionadas, conteos, total_rondas=1):
     requerida = getattr(accion, 'requiere_accion_previa_id', None)
     bloqueante = getattr(accion, 'bloqueada_por_accion_previa_id', None)
-    maximo = int(getattr(accion, 'maximo_ejecuciones', 0) or 0)
+    maximo = maximo_ejecuciones_efectivo(accion, total_rondas)
     accion_id = int(getattr(accion, 'pk', 0) or 0)
     if requerida is not None and int(requerida) not in seleccionadas:
         return False
@@ -371,6 +399,7 @@ def _accion_habilitada_por_historial(accion, seleccionadas, conteos):
 def _acciones_del_intento(intento, numero):
     datos = (intento.configuracion_snapshot or {}).get('acciones_sugeridas') or []
     seleccionadas, conteos = _historial_acciones_seleccionadas(intento)
+    total_rondas = maximo_decisiones_intento(intento)
     if not datos or any(item.get('id') is None for item in datos):
         acciones = list(intento.simulacion.acciones_sugeridas.select_related(
             'opcion_caso', 'requiere_accion_previa', 'bloqueada_por_accion_previa',
@@ -379,7 +408,7 @@ def _acciones_del_intento(intento, numero):
         ))
         return [
             a for a in acciones
-            if _accion_habilitada_por_historial(a, seleccionadas, conteos)
+            if _accion_habilitada_por_historial(a, seleccionadas, conteos, total_rondas)
         ]
     opciones = {
         item.get('id'): item for item in (intento.configuracion_snapshot or {}).get('opciones_caso', [])
@@ -394,7 +423,7 @@ def _acciones_del_intento(intento, numero):
         bloqueante = item.get('bloqueada_por_accion_previa_id')
         if bloqueante is not None and int(bloqueante) in seleccionadas:
             continue
-        maximo = int(item.get('maximo_ejecuciones') or 0)
+        maximo = maximo_ejecuciones_efectivo(item, total_rondas)
         if maximo and conteos.get(int(item.get('id')), 0) >= maximo:
             continue
         opcion = opciones.get(item.get('opcion_caso_id')) or {}
@@ -1526,6 +1555,23 @@ def view(request):
             simulacion = intento.simulacion
             pronostico = _pronostico_desde_post(request)
             tradeoff_aceptado = _tradeoff_desde_post(request)
+
+            # Campos que el docente pidio en esta ronda (una cantidad, varias
+            # decisiones a la vez...). Sin campos configurados no cambia nada.
+            campos_ronda = campos_decision_ronda(
+                simulacion, intento.numero_ronda_actual, intento.configuracion_snapshot,
+            )
+            valores_campos = {}
+            if campos_ronda:
+                valores_campos = {c['clave']: (request.POST.get(c['clave']) or '').strip()
+                                  for c in campos_ronda}
+                problemas = validar_campos_decision(campos_ronda, valores_campos)
+                if problemas:
+                    mensaje = ' '.join(problemas)
+                    if _es_ajax(request):
+                        return bad_json(mensaje=mensaje)
+                    messages.error(request, mensaje)
+                    return HttpResponseRedirect(f'?action=simular&intento_id={intento.pk}')
             if simulacion.tipo_simulacion == Simulacion.TIPO_SIN_IA_ARBOL:
                 reglas_respuesta = configuracion_respuesta_ronda(
                     simulacion, intento.numero_ronda_actual, intento.configuracion_snapshot,
@@ -1572,6 +1618,9 @@ def view(request):
                     pronostico=pronostico,
                     tradeoff_aceptado=tradeoff_aceptado,
                 )
+            if campos_ronda and paso is not None:
+                _aplicar_campos_al_paso(paso, campos_ronda, valores_campos)
+
             intento.refresh_from_db()
             if intento.finalizado:
                 return _ok_o_redirect(
@@ -1671,6 +1720,9 @@ def view(request):
                 for accion in acciones_sugeridas:
                     accion.costo_legible = _costo_accion_legible(intento.simulacion, accion.costo_recursos)
                 data['acciones_sugeridas'] = acciones_sugeridas
+                data['campos_ronda'] = campos_decision_ronda(
+                    intento.simulacion, numero, intento.configuracion_snapshot,
+                )
                 data['modo_ronda'] = _modo_ronda(
                     intento.simulacion, numero, bool(acciones_sugeridas), parametros_caso,
                 )
@@ -1707,6 +1759,10 @@ def view(request):
             data['selecciones_registradas'] = _selecciones_registradas(intento)
             data['calidad_metacognitiva'] = _calidad_metacognitiva(intento)
             data['bonificaciones'] = calcular_bonificaciones(intento)
+            data['peso_resultado'] = intento.simulacion.peso_resultado
+            data['resultado_caso'] = (
+                resultado_del_caso(intento) if intento.simulacion.peso_resultado else None
+            )
             data['casos_equivalentes'] = _casos_equivalentes(intento, request.user)
             return render(request, 'simulador/alu_simulaciones/resultado.html', data)
 

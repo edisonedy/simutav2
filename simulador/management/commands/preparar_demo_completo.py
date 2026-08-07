@@ -14,7 +14,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from academico.models import InscripcionMalla, MateriaMalla, Malla, PeriodoAcademico, ProfesorMateria
-from core.models import Institucion, PerfilUsuario
+from core.models import PerfilUsuario
 from simulador.models import (
     AccionSugeridaSimulacion,
     EventoSimulacion,
@@ -41,19 +41,7 @@ def _usuario_base():
     )
 
 
-def _institucion(usuario):
-    institucion = Institucion.objects.first()
-    if institucion:
-        return institucion
-    return Institucion.objects.create(
-        nombre='Universidad Tecnica de Ambato',
-        siglas='UTA',
-        direccion='Ambato, Ecuador',
-        usuario_creacion=usuario,
-    )
-
-
-def _crear_usuario_demo(username, first_name, last_name, rol, institucion, creador, staff=False):
+def _crear_usuario_demo(username, first_name, last_name, rol, creador, staff=False):
     user, _ = User.objects.get_or_create(username=username)
     user.first_name = first_name
     user.last_name = last_name
@@ -68,7 +56,6 @@ def _crear_usuario_demo(username, first_name, last_name, rol, institucion, cread
         usuario=user,
         defaults={
             'rol': rol,
-            'institucion': institucion,
             'usuario_creacion': creador,
         },
     )
@@ -237,12 +224,10 @@ class Command(BaseCommand):
 
         with transaction.atomic():
             creador = _usuario_base()
-            institucion = _institucion(creador)
             profesor = _crear_usuario_demo(
-                'bpalate', 'Byron', 'Palate', PerfilUsuario.PROFESOR, institucion, creador, staff=True,
+                'bpalate', 'Byron', 'Palate', PerfilUsuario.PROFESOR, creador, staff=True,
             )
             periodo, _ = PeriodoAcademico.objects.get_or_create(
-                institucion=institucion,
                 nombre='Periodo Pruebas SimutaV2',
                 defaults={
                     'fecha_inicio': date(2026, 1, 1),
@@ -256,7 +241,7 @@ class Command(BaseCommand):
             periodo.save()
 
             estudiantes = [
-                _crear_usuario_demo(username, first, last, PerfilUsuario.ESTUDIANTE, institucion, creador)
+                _crear_usuario_demo(username, first, last, PerfilUsuario.ESTUDIANTE, creador)
                 for username, first, last in ESTUDIANTES_DEMO
             ]
 

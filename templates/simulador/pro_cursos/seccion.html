@@ -4,7 +4,7 @@
     <div>
         <div class="page-kicker"><a href="{% url 'pro_cursos' %}" class="text-decoration-none">Mis cursos</a> / Curso</div>
         <h1 class="h3">{{ seccion.materia_malla.materia.nombre }}</h1>
-        <div class="text-muted">{{ seccion.periodo }} &middot; Paralelo {{ seccion.paralelo }} &middot; Prof. {{ seccion.profesor.get_full_name|default:seccion.profesor.username }}</div>
+        <div class="text-muted">{{ seccion.periodo }} &middot; Paralelo {{ seccion.paralelo }} &middot; Prof. {{ seccion.nombre_profesor }}</div>
     </div>
     <div class="page-head-actions">
         <a class="btn btn-outline-info" href="{% url 'pro_cursos' %}?action=reporte_pdf&pk={{ seccion.pk }}">&#128196; Reporte PDF</a>
@@ -18,6 +18,26 @@
     <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><span class="metric-ico">&#128221;</span><div><div class="metric-label">Tareas</div><div class="metric-value">{{ analitica.total_asignaciones }}</div></div></div></div>
     <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><span class="metric-ico">&#128202;</span><div><div class="metric-label">Promedio curso</div><div class="metric-value">{{ analitica.promedio_curso|default:"-" }}</div></div></div></div>
     <div class="col-6 col-lg-3"><div class="module-card metric-card p-3"><span class="metric-ico">&#127919;</span><div><div class="metric-label">Resultados RA</div><div class="metric-value">{{ resultados|length }}</div></div></div></div>
+</div>
+
+<h2 class="h5 mb-2">Guias APE de la asignatura <span class="count-pill">{{ guias|length }}</span></h2>
+<div class="module-card data-card mb-4">
+    <p class="text-muted small">
+        Las guias APE son de la asignatura de la malla, no de este paralelo: se escriben una vez y
+        sirven en todos los periodos. Se crean y editan en
+        <a href="{% url 'adm_materias' %}?action=detalle&pk={{ seccion.materia_malla.pk }}">Materias &rsaquo; {{ seccion.materia_malla.materia.nombre }}</a>.
+    </p>
+    <ul class="mb-0">
+    {% for guia in guias %}
+        <li>
+            <span class="cell-strong">{{ guia.titulo }}</span>
+            {% if guia.tema %}<span class="text-muted small">&middot; {{ guia.tema.nombre }}</span>{% endif %}
+            {% if guia.archivo %}<a class="small ms-2" href="{{ guia.archivo.url }}" target="_blank">Abrir archivo</a>{% endif %}
+        </li>
+    {% empty %}
+        <li class="text-muted">Esta asignatura todavia no tiene guias APE.</li>
+    {% endfor %}
+    </ul>
 </div>
 
 <h2 class="h5 mb-2">Tareas asignadas</h2>

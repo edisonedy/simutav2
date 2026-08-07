@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'academico',
     'simulador',
     'seguridad',
+    'interactivo',
 ]
 
 MIDDLEWARE = [
@@ -96,6 +97,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.permisos',
+                'core.context_processors.periodo_barra',
             ],
         },
     },
@@ -162,12 +164,16 @@ STATICFILES_DIRS = [
 # Destino de collectstatic en el servidor (ignorado por git).
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
+
+# El sistema es de UNA sola universidad: el nombre va aqui y no en una tabla que
+# solo iba a tener una fila.
+NOMBRE_INSTITUCION = 'Universidad Tecnica de Ambato'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

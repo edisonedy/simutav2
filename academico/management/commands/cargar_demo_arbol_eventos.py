@@ -2,7 +2,6 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
 from academico.models import Carrera, Malla, Materia, MateriaMalla, NivelMalla
-from core.models import Institucion
 from simulador.models import (
     DecisionConfigurada,
     EscenarioSimulacion,
@@ -16,12 +15,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         usuario = User.objects.filter(is_superuser=True).first()
-        institucion, _ = Institucion.objects.get_or_create(
-            nombre='Universidad Tecnica de Ambato',
-            defaults={'siglas': 'UTA', 'usuario_creacion': usuario},
-        )
         carrera, _ = Carrera.objects.get_or_create(
-            institucion=institucion,
             codigo='SOFT-DEMO',
             defaults={
                 'nombre': 'Ingenieria de Software',
@@ -42,7 +36,6 @@ class Command(BaseCommand):
             defaults={'nombre': '5 Periodo', 'usuario_creacion': usuario},
         )
         materia, _ = Materia.objects.get_or_create(
-            institucion=institucion,
             codigo='WEB-DJANGO',
             defaults={
                 'nombre': 'Programacion Web con Django',

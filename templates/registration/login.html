@@ -14,14 +14,14 @@
         display: flex; flex-direction: column; justify-content: center;
         padding: 3rem 3.4rem;
         background:
-            radial-gradient(130% 130% at 100% 0%, rgba(31,182,207,.34) 0%, rgba(31,182,207,0) 48%),
-            radial-gradient(120% 120% at 0% 100%, rgba(31,182,207,.16) 0%, rgba(31,182,207,0) 50%),
+            radial-gradient(130% 130% at 100% 0%, rgba(53,182,232,.34) 0%, rgba(53,182,232,0) 48%),
+            radial-gradient(120% 120% at 0% 100%, rgba(53,182,232,.16) 0%, rgba(53,182,232,0) 50%),
             linear-gradient(120deg, var(--accent-dark) 0%, var(--accent) 48%, var(--slate) 100%);
     }
     .auth-hero::after {
         content: ""; position: absolute; inset: auto -10% -55% auto;
         width: 460px; height: 460px;
-        background: radial-gradient(circle, rgba(31,182,207,.22) 0%, rgba(31,182,207,0) 70%);
+        background: radial-gradient(circle, rgba(53,182,232,.22) 0%, rgba(53,182,232,0) 70%);
     }
     .auth-hero-inner { position: relative; z-index: 1; max-width: 460px; }
     .auth-brand { display: inline-flex; align-items: center; gap: .7rem; margin-bottom: 2rem; }
@@ -29,7 +29,7 @@
     .auth-brand-name { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; font-size: 1.15rem; line-height: 1; }
     .auth-brand-name small { display: block; font-size: .62rem; letter-spacing: .16em; color: var(--cyan); margin-top: .2rem; }
     .auth-kicker { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .74rem; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.72); }
-    .auth-title { font-family: "Source Serif 4", Georgia, serif; font-weight: 700; font-size: 2.5rem; line-height: 1.08; margin: .6rem 0 1rem; }
+    .auth-title { font-family: "Fredoka", "Nunito", system-ui, sans-serif; font-weight: 700; font-size: 2.5rem; line-height: 1.08; margin: .6rem 0 1rem; }
     .auth-lead { font-size: 1.02rem; line-height: 1.6; color: rgba(255,255,255,.86); margin-bottom: 1.8rem; }
     .auth-features { display: grid; gap: .7rem; }
     .auth-feature { display: flex; align-items: flex-start; gap: .7rem; }
@@ -46,7 +46,7 @@
         border: 1px solid var(--line); border-radius: .9rem; padding: 2.2rem 2.1rem;
         box-shadow: 0 18px 48px rgba(22,32,42,.12);
     }
-    .auth-card h1 { font-family: "Source Serif 4", Georgia, serif; font-size: 1.6rem; margin-bottom: .25rem; }
+    .auth-card h1 { font-family: "Fredoka", "Nunito", system-ui, sans-serif; font-size: 1.6rem; margin-bottom: .25rem; }
     .auth-card .auth-sub { color: var(--muted); font-size: .9rem; margin-bottom: 1.5rem; }
     .auth-field { margin-bottom: 1.1rem; }
     .auth-field label { display: block; font-weight: 600; font-size: .82rem; margin-bottom: .35rem; color: var(--ink); }
@@ -68,7 +68,7 @@
     <section class="auth-hero">
         <div class="auth-hero-inner">
             <div class="auth-brand">
-                <img src="{% static 'img/uta-logo.png' %}" alt="Universidad Tecnica de Ambato">
+                <img src="{% static 'img/uta-logo-2026.png' %}" alt="Universidad Tecnica de Ambato">
                 <span class="auth-brand-name">SimutaV2<small>UNIVERSIDAD TECNICA DE AMBATO</small></span>
             </div>
             <div class="auth-kicker">Simulador academico</div>

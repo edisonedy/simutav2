@@ -7,6 +7,12 @@ from core.models import PerfilUsuario
 from core.permisos import usuarios_con_rol
 
 
+def etiqueta_materia_malla(materia_malla):
+    """Un unico nombre para la materia curricular en todos los desplegables del
+    sistema: MALLA / Nivel N - CODIGO Nombre."""
+    return materia_malla.etiqueta
+
+
 def _ayuda_por_rol(quienes):
     """Explica por que la lista sale corta y donde se arregla, en vez de dejar
     al usuario adivinando por que falta alguien."""
@@ -22,6 +28,8 @@ from .models import (
     Malla,
     Materia,
     MateriaMalla,
+    MateriaMallaPredecesora,
+    MateriaPeriodo,
     NivelMalla,
     PeriodoAcademico,
     ProfesorMateria,
@@ -56,7 +64,6 @@ class CarreraForm(ActiveQuerysetsMixin, forms.ModelForm):
     class Meta:
         model = Carrera
         fields = [
-            'institucion',
             'nombre',
             'codigo',
             'titulo_otorga',
@@ -88,19 +95,18 @@ class NivelMallaForm(forms.ModelForm):
 class MateriaForm(ActiveQuerysetsMixin, forms.ModelForm):
     class Meta:
         model = Materia
-        fields = ['institucion', 'codigo', 'nombre', 'descripcion', 'creditos', 'horas', 'activo']
+        fields = ['codigo', 'nombre', 'descripcion', 'creditos', 'horas', 'activo']
 
 
 class MateriaMallaForm(ActiveQuerysetsMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.malla = kwargs.pop('malla', None)
         super().__init__(*args, **kwargs)
+        self.fields['materia'].label = 'Asignatura del catalogo'
+        self.fields['nivel'].label = 'Nivel de la malla'
         if self.malla:
             self.fields['nivel'].queryset = NivelMalla.objects.filter(malla=self.malla, activo=True)
-            self.fields['materia'].queryset = Materia.objects.filter(
-                institucion=self.malla.carrera.institucion,
-                activo=True,
-            )
+            self.fields['materia'].queryset = Materia.objects.filter(activo=True)
             conservar_seleccion_actual(self)
 
     class Meta:
@@ -110,18 +116,100 @@ class MateriaMallaForm(ActiveQuerysetsMixin, forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         nivel = cleaned.get('nivel')
-        materia = cleaned.get('materia')
         if self.malla and nivel and nivel.malla_id != self.malla.id:
             raise forms.ValidationError('El nivel seleccionado no pertenece a esta malla.')
-        if self.malla and materia and materia.institucion_id != self.malla.carrera.institucion_id:
-            raise forms.ValidationError('La materia seleccionada no pertenece a la institucion de la carrera.')
         return cleaned
+
+
+class MateriaMallaPredecesoraForm(forms.ModelForm):
+    """Alta de un requisito. Solo ofrece materias de la misma malla que esten en
+    un nivel anterior, que es la unica combinacion que el modelo acepta."""
+
+    class Meta:
+        model = MateriaMallaPredecesora
+        fields = ['predecesora']
+
+    def __init__(self, *args, **kwargs):
+        self.materia_malla = kwargs.pop('materia_malla', None)
+        super().__init__(*args, **kwargs)
+        campo = self.fields['predecesora']
+        campo.label = 'Requisito'
+        if self.materia_malla is None:
+            campo.queryset = MateriaMalla.objects.none()
+            return
+        self.instance.materia_malla = self.materia_malla
+        ya_puestas = self.materia_malla.predecesoras.filter(activo=True).values_list(
+            'predecesora_id', flat=True,
+        )
+        campo.queryset = MateriaMalla.objects.filter(
+            malla_id=self.materia_malla.malla_id,
+            nivel__numero__lt=self.materia_malla.nivel.numero,
+            activo=True,
+        ).exclude(pk__in=list(ya_puestas)).select_related('materia', 'nivel')
+        campo.label_from_instance = lambda mm: f'Nivel {mm.nivel.numero} - {mm.materia}'
+        campo.help_text = 'Solo materias de niveles anteriores de esta misma malla.'
+
+    def clean_predecesora(self):
+        predecesora = self.cleaned_data['predecesora']
+        # El unique_together no lo revisa el formulario porque materia_malla no
+        # es un campo suyo; hay que comprobarlo a mano.
+        if self.materia_malla and MateriaMallaPredecesora.objects.filter(
+            materia_malla=self.materia_malla, predecesora=predecesora, activo=True,
+        ).exists():
+            raise forms.ValidationError('Ese requisito ya esta registrado.')
+        return predecesora
+
+
+class MateriaPeriodoForm(forms.ModelForm):
+    """Crea UNA materia dentro de una malla abierta en el periodo.
+
+    Solo ofrece asignaturas de esa misma malla y que no tengan materia todavia,
+    que son las dos reglas que el modelo valida."""
+
+    class Meta:
+        model = MateriaPeriodo
+        fields = ['materia_malla']
+
+    def __init__(self, *args, malla_periodo=None, nivel=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.malla_periodo = malla_periodo
+        self.nivel = nivel
+        campo = self.fields['materia_malla']
+        campo.label = 'Asignatura de la malla'
+        if malla_periodo is None:
+            campo.queryset = MateriaMalla.objects.none()
+            return
+        self.instance.malla_periodo = malla_periodo
+        campo.queryset = malla_periodo.asignaturas_disponibles()
+        campo.help_text = (
+            'Solo las asignaturas de esta malla que aun no tienen materia en el periodo.'
+        )
+        if nivel is not None:
+            # Se entro desde un nivel concreto: no tiene sentido ofrecer los otros.
+            campo.queryset = campo.queryset.filter(nivel=nivel)
+            campo.label_from_instance = lambda mm: str(mm.materia)
+            campo.help_text = (
+                f'Solo las asignaturas del nivel {nivel.numero} que aun no tienen '
+                'materia en el periodo.'
+            )
+        else:
+            campo.label_from_instance = lambda mm: f'Nivel {mm.nivel.numero} - {mm.materia}'
+
+    def clean_materia_malla(self):
+        materia_malla = self.cleaned_data['materia_malla']
+        # El unique_together lleva malla_periodo, que no es campo del
+        # formulario, asi que Django se lo salta y hay que mirarlo a mano.
+        if self.malla_periodo and MateriaPeriodo.objects.filter(
+            malla_periodo=self.malla_periodo, materia_malla=materia_malla, activo=True,
+        ).exists():
+            raise forms.ValidationError('Esa asignatura ya tiene materia en este periodo.')
+        return materia_malla
 
 
 class PeriodoAcademicoForm(ActiveQuerysetsMixin, forms.ModelForm):
     class Meta:
         model = PeriodoAcademico
-        fields = ['institucion', 'nombre', 'fecha_inicio', 'fecha_fin', 'activo_matricula', 'activo']
+        fields = ['nombre', 'fecha_inicio', 'fecha_fin', 'activo_matricula', 'activo']
         widgets = {'fecha_inicio': DateInput(), 'fecha_fin': DateInput()}
 
     def clean(self):
@@ -151,14 +239,6 @@ class InscripcionMallaForm(ActiveQuerysetsMixin, forms.ModelForm):
         identificacion = getattr(getattr(usuario, 'perfil', None), 'identificacion', '')
         return f'{nombre} ({identificacion})' if identificacion else nombre
 
-    def clean(self):
-        cleaned = super().clean()
-        malla = cleaned.get('malla')
-        periodo = cleaned.get('periodo')
-        if malla and periodo and malla.carrera.institucion_id != periodo.institucion_id:
-            raise forms.ValidationError('La malla y el periodo deben pertenecer a la misma institucion.')
-        return cleaned
-
 
 class ProfesorMateriaForm(ActiveQuerysetsMixin, forms.ModelForm):
     ROLES_DOCENTES = [PerfilUsuario.PROFESOR, PerfilUsuario.COORDINADOR, PerfilUsuario.ADMIN]
@@ -169,6 +249,10 @@ class ProfesorMateriaForm(ActiveQuerysetsMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        materia = self.fields['materia_malla']
+        materia.label = 'Materia de la malla'
+        materia.queryset = materia.queryset.select_related('malla', 'nivel', 'materia')
+        materia.label_from_instance = etiqueta_materia_malla
         profesor = self.fields['profesor']
         profesor.queryset = usuarios_con_rol(*self.ROLES_DOCENTES).order_by(
             'last_name', 'first_name', 'username',
@@ -176,15 +260,3 @@ class ProfesorMateriaForm(ActiveQuerysetsMixin, forms.ModelForm):
         profesor.label_from_instance = lambda u: u.get_full_name() or u.username
         profesor.help_text = _ayuda_por_rol('Profesor, Coordinador o Administrador')
         conservar_seleccion_actual(self)
-
-    def clean(self):
-        cleaned = super().clean()
-        materia_malla = cleaned.get('materia_malla')
-        periodo = cleaned.get('periodo')
-        if (
-            materia_malla
-            and periodo
-            and materia_malla.malla.carrera.institucion_id != periodo.institucion_id
-        ):
-            raise forms.ValidationError('La materia y el periodo deben pertenecer a la misma institucion.')
-        return cleaned

@@ -1,43 +1,90 @@
 {% extends "base.html" %}
+
 {% block content %}
 <div class="page-head">
     <div>
         <div class="page-kicker">Academico</div>
-        <h1 class="h3">Materias <span class="count-pill">{{ list|length }}</span></h1>
-    </div>
-    <div class="page-head-actions">
-        <input type="search" class="table-search" placeholder="Buscar materia..." oninput="filtrar_tabla(this, 'tabla-materias')">
-        <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_materias' %}?action=add')">+ Nueva materia</button>
+        <h1 class="h3 mb-1">{{ title }} <span class="count-pill">{{ list|length }}</span></h1>
+        <div class="text-muted">
+            Elige la malla y despues entra a sus materias.
+            {% if periodo %}
+                <span class="periodo-chip">&#128197; {{ periodo }}</span>
+            {% else %}
+                Todavia no hay un periodo seleccionado: el plan se ve igual, pero no
+                se pueden crear materias.
+            {% endif %}
+        </div>
     </div>
 </div>
-<div class="module-card data-card table-responsive">
-    <table class="table table-hover align-middle" id="tabla-materias">
-        <thead><tr><th>Codigo</th><th>Nombre</th><th>Institucion</th><th>Creditos</th><th>Horas</th><th class="text-end">Acciones</th></tr></thead>
+
+{% if list %}
+<div class="module-card p-3 table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead>
+            <tr>
+                <th>Carrera</th>
+                <th>Malla</th>
+                <th style="width: 100px; text-align: center;">Niveles</th>
+                <th style="width: 150px; text-align: center;">Materias del periodo</th>
+                <th style="width: 300px; text-align: center;">Acciones</th>
+            </tr>
+        </thead>
         <tbody>
-        {% for item in list %}
-            <tr data-row>
-                <td class="cell-code">{{ item.codigo }}</td>
-                <td class="cell-strong">{{ item.nombre }}</td>
-                <td>{{ item.institucion }}</td>
-                <td><span class="chip chip-basica">{{ item.creditos }} cr</span></td>
-                <td class="cell-num">{{ item.horas }} <span class="text-muted">h</span></td>
-                <td class="text-end">
-                    <button class="btn btn-sm btn-outline-primary btn-action" onclick="abrir_modal('{% url 'adm_materias' %}?action=edit&pk={{ item.pk }}')">Editar</button>
-                    <button class="btn btn-sm btn-outline-danger btn-action" onclick="abrir_modal('{% url 'adm_materias' %}?action=delete&pk={{ item.pk }}')">Eliminar</button>
+        {% for fila in list %}
+            <tr>
+                <td class="text-muted">{{ fila.malla.carrera }}</td>
+                <td>
+                    <strong>{{ fila.malla.nombre }}</strong>
+                    <br><small class="text-muted">{{ fila.malla.codigo }}</small>
+                    {% if fila.malla_periodo %}
+                        <br><span class="chip chip-media">Abierta: {{ fila.malla_periodo.nombre_visible }}</span>
+                    {% else %}
+                        <br><span class="chip">Sin abrir en el periodo</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">{{ fila.total_niveles }}</td>
+                <td class="text-center">
+                    <strong>{{ fila.total_materias }}</strong>
+                    <span class="text-muted">de {{ fila.total_asignaturas }}</span>
+                </td>
+                <td class="text-center">
+                    <a class="btn btn-primary btn-sm"
+                       href="{% url 'adm_materias' %}?action=malla&pk={{ fila.malla.pk }}">
+                        Administrar materias
+                    </a>
+                    {% if puede_editar and periodo %}
+                        {% if fila.malla_periodo %}
+                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                    onclick="abrir_modal('{% url 'adm_materias' %}?action=edit_malla_periodo&pk={{ fila.malla_periodo.pk }}')">
+                                Editar nombre
+                            </button>
+                            <form method="post" action="{% url 'adm_materias' %}" class="d-inline"
+                                  onsubmit="return confirm('Quitar esta apertura del periodo?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_malla_periodo">
+                                <input type="hidden" name="pk" value="{{ fila.malla_periodo.pk }}">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Quitar</button>
+                            </form>
+                        {% else %}
+                            <button type="button" class="btn btn-outline-primary btn-sm"
+                                    onclick="abrir_modal('{% url 'adm_materias' %}?action=add_malla_periodo&malla={{ fila.malla.pk }}')">
+                                Abrir en el periodo
+                            </button>
+                        {% endif %}
+                    {% endif %}
                 </td>
             </tr>
-        {% empty %}
-            <tr><td colspan="6">
-                <div class="empty-state">
-                    <span class="empty-ico">&#128218;</span>
-                    <div class="empty-title">Aun no hay materias</div>
-                    <p class="empty-text">Crea materias para luego asignarlas a los niveles de cada malla.</p>
-                    <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_materias' %}?action=add')">+ Crear materia</button>
-                </div>
-            </td></tr>
         {% endfor %}
-            <tr class="no-match row-hidden"><td colspan="6"><div class="empty-state"><span class="empty-ico">&#128269;</span><div class="empty-title">Sin coincidencias</div><p class="empty-text">Ninguna materia coincide con tu busqueda.</p></div></td></tr>
         </tbody>
     </table>
 </div>
+{% else %}
+<div class="module-card data-card">
+    <div class="empty-state">
+        <span class="empty-ico">&#128218;</span>
+        <div class="empty-title">No hay mallas activas</div>
+        <p class="empty-text">Crea una malla desde Academico &gt; Mallas y vuelve aqui.</p>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

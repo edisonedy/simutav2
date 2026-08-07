@@ -3,18 +3,26 @@ limite), libro de notas, exportacion CSV, analitica de cohorte, logro de
 resultados de aprendizaje y tabla de posiciones (competencia)."""
 
 import csv
+from collections import OrderedDict
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import Prefetch
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from core.funciones import bad_json, errores_formulario, ok_json
+from core.funciones import bad_json, errores_formulario, ok_json, periodo_de_sesion
 from simulador import cursos_service
-from simulador.forms import AsignacionForm, EquipoForm, ResultadoAprendizajeForm, SeccionForm
+from simulador.forms import (
+    AsignacionForm,
+    EquipoForm,
+    ResultadoAprendizajeForm,
+    SeccionForm,
+)
 from simulador.models import (
+    ActividadMateria,
     Asignacion,
     ConceptoEsperadoRonda,
     Equipo,
@@ -65,10 +73,14 @@ def view(request):
     if action == 'export':
         return _exportar_csv(request)
     if action == 'add_seccion':
-        return render(request, 'simulador/pro_cursos/add_seccion.html', {'form': SeccionForm()})
+        return render(request, 'simulador/pro_cursos/add_seccion.html', {
+            'form': SeccionForm(periodo=periodo_de_sesion(request)),
+        })
     if action == 'add_asignacion':
         seccion = _get_seccion(request.user, request.GET.get('seccion'))
-        form = AsignacionForm(simulaciones=_simulaciones_permitidas(request.user))
+        form = AsignacionForm(
+            simulaciones=_simulaciones_permitidas(request.user), seccion=seccion,
+        )
         return render(request, 'simulador/pro_cursos/add_asignacion.html', {'form': form, 'seccion': seccion})
     if action == 'add_resultado':
         return render(request, 'simulador/pro_cursos/add_resultado.html', {'form': ResultadoAprendizajeForm()})
@@ -83,24 +95,55 @@ def view(request):
         form = EquipoForm(estudiantes=asignacion.seccion.estudiantes.filter(is_active=True))
         return render(request, 'simulador/pro_cursos/add_equipo.html', {'form': form, 'asignacion': asignacion})
 
-    secciones = _secciones_permitidas(request.user)
-    data = []
-    for seccion in secciones:
-        data.append({
+    # El listado se limita al periodo elegido arriba (el mismo criterio del SGA).
+    # El scope de permisos NO se toca: entrar a un curso de otro periodo por su
+    # enlace sigue funcionando.
+    periodo = periodo_de_sesion(request)
+    secciones = _secciones_permitidas(request.user).select_related(
+        'materia_malla__malla__carrera', 'materia_malla__nivel',
+    )
+    secciones = secciones.filter(periodo=periodo) if periodo else secciones.none()
+    # Agrupados por malla: el profesor necesita saber de que plan de estudios es
+    # cada curso, sobre todo cuando dicta la misma materia en dos mallas.
+    grupos = OrderedDict()
+    total = 0
+    for seccion in secciones.order_by(
+        'materia_malla__malla__nombre',
+        'materia_malla__nivel__numero',
+        'materia_malla__materia__nombre',
+    ):
+        malla = seccion.materia_malla.malla
+        grupo = grupos.setdefault(malla.pk, {'malla': malla, 'cursos': []})
+        grupo['cursos'].append({
             'seccion': seccion,
             'estudiantes': seccion.estudiantes.count(),
             'asignaciones': seccion.asignaciones.filter(activo=True).count(),
         })
-    return render(request, 'simulador/pro_cursos/cursos.html', {'title': 'Mis cursos', 'cursos': data})
+        total += 1
+    return render(request, 'simulador/pro_cursos/cursos.html', {
+        'title': 'Mis cursos',
+        'grupos': list(grupos.values()),
+        'total_cursos': total,
+        'periodo': periodo,
+    })
 
 
 def _detalle_seccion(request):
     seccion = _get_seccion(request.user, request.GET.get('pk'))
+    asignaciones = seccion.asignaciones.filter(activo=True).select_related('simulacion')
     contexto = {
         'seccion': seccion,
         'analitica': cursos_service.analitica_seccion(seccion),
         'resultados': cursos_service.logro_resultados_aprendizaje(seccion),
-        'asignaciones': seccion.asignaciones.filter(activo=True).select_related('simulacion'),
+        'asignaciones': asignaciones,
+        # Las guias APE son de la asignatura de la malla, no del paralelo: se
+        # escriben una vez en Materias y sirven en todos los periodos. Aqui solo
+        # se muestran, con enlace a donde se editan.
+        'guias': ActividadMateria.objects.filter(
+            materia_malla=seccion.materia_malla,
+            tipo=ActividadMateria.GUIA_APE,
+            activo=True,
+        ).select_related('tema').order_by('tema__orden', 'orden', 'titulo'),
     }
     return render(request, 'simulador/pro_cursos/seccion.html', contexto)
 
@@ -231,7 +274,9 @@ def _post(request):
 
     if action == 'add_asignacion':
         seccion = _get_seccion(request.user, request.POST.get('seccion'))
-        form = AsignacionForm(request.POST, simulaciones=_simulaciones_permitidas(request.user))
+        form = AsignacionForm(
+            request.POST, simulaciones=_simulaciones_permitidas(request.user), seccion=seccion,
+        )
         if form.is_valid():
             asignacion = form.save(commit=False)
             asignacion.seccion = seccion

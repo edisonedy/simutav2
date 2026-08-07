@@ -23,7 +23,7 @@ def _perfil_activo(user):
 
 
 def es_administrativo(user):
-    """Puede administrar el catalogo academico, los usuarios y las instituciones.
+    """Puede administrar el catalogo academico y los usuarios.
 
     A proposito NO basta con is_staff: los profesores lo tienen y no deben crear
     carreras, inscribir estudiantes ni dar de alta usuarios.

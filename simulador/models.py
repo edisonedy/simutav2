@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -30,6 +31,26 @@ class PerfilMateriaIA(ModeloBase):
 
     def __str__(self):
         return f'Perfil IA - {self.materia_malla}'
+
+
+class TemaMateria(ModeloBase):
+    """Unidad de contenido dentro de una asignatura concreta de la malla."""
+
+    materia_malla = models.ForeignKey(
+        MateriaMalla, on_delete=models.CASCADE, related_name='temas',
+    )
+    nombre = models.CharField(max_length=200)
+    descripcion = models.TextField(blank=True, default='')
+    orden = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        verbose_name = 'tema de materia'
+        verbose_name_plural = 'temas de materia'
+        ordering = ['materia_malla', 'orden', 'nombre']
+        unique_together = [('materia_malla', 'nombre')]
+
+    def __str__(self):
+        return f'{self.materia_malla.materia} / {self.nombre}'
 
 
 class PlantillaSimulacion(ModeloBase):
@@ -174,6 +195,14 @@ class Simulacion(ModeloBase):
     ]
 
     materia_malla = models.ForeignKey(MateriaMalla, on_delete=models.PROTECT, related_name='simulaciones')
+    tema_materia = models.ForeignKey(
+        TemaMateria,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='simulaciones',
+        help_text='Tema concreto de la materia. Vacio significa actividad general.',
+    )
     plantilla_origen = models.ForeignKey(
         PlantillaSimulacion,
         on_delete=models.SET_NULL,
@@ -206,6 +235,14 @@ class Simulacion(ModeloBase):
         help_text='Cantidad exacta de rondas que necesita el caso.',
     )
     tiempo_estimado = models.IntegerField(default=30, help_text='Tiempo estimado en minutos')
+    peso_resultado = models.PositiveSmallIntegerField(
+        'peso del resultado del caso (%)',
+        default=30,
+        help_text='Cuanto de la nota final depende de COMO QUEDO la empresa: si cumplio las '
+                  'condiciones de exito y como quedaron sus indicadores. Es lo que separa una '
+                  'simulacion de decisiones de un examen: con 0, el estudiante puede hundir el '
+                  'caso y aprobar igual si uso el vocabulario correcto.',
+    )
     peso_rubrica_decision = models.PositiveSmallIntegerField(
         'peso de la calidad de la decision (%)',
         default=30,
@@ -264,6 +301,90 @@ class Simulacion(ModeloBase):
 
     def __str__(self):
         return self.titulo
+
+    def clean(self):
+        super().clean()
+        if (
+            self.tema_materia_id
+            and self.materia_malla_id
+            and self.tema_materia.materia_malla_id != self.materia_malla_id
+        ):
+            raise ValidationError('El tema debe pertenecer a la misma materia de la malla.')
+
+
+class ActividadMateria(ModeloBase):
+    """Actividad de aprendizaje general o asociada a un tema.
+
+    Las simulaciones conservan su motor especializado y se muestran junto a
+    las actividades de evaluacion. Este modelo cubre refuerzos, pruebas,
+    proyectos y guias APE que pueden ser instrucciones o archivos.
+    """
+
+    REFUERZO = 'REFUERZO'
+    EVALUACION = 'EVALUACION'
+    CATEGORIAS = [
+        (REFUERZO, 'Practicar y reforzar'),
+        (EVALUACION, 'Evaluar y aplicar'),
+    ]
+
+    SOPA_LETRAS = 'SOPA_LETRAS'
+    MEMORIA = 'MEMORIA'
+    RELACIONAR = 'RELACIONAR'
+    ORDENAR = 'ORDENAR'
+    CUESTIONARIO = 'CUESTIONARIO'
+    CRUCIGRAMA = 'CRUCIGRAMA'
+    PRUEBA = 'PRUEBA'
+    EXAMEN_CORTO = 'EXAMEN_CORTO'
+    CASO_PRACTICO = 'CASO_PRACTICO'
+    GUIA_APE = 'GUIA_APE'
+    PROYECTO = 'PROYECTO'
+    OTRO = 'OTRO'
+    TIPOS = [
+        (SOPA_LETRAS, 'Sopa de letras'),
+        (MEMORIA, 'Memoria'),
+        (RELACIONAR, 'Relacionar conceptos'),
+        (ORDENAR, 'Ordenar procesos'),
+        (CUESTIONARIO, 'Cuestionario de practica'),
+        (CRUCIGRAMA, 'Crucigrama'),
+        (PRUEBA, 'Prueba'),
+        (EXAMEN_CORTO, 'Examen corto'),
+        (CASO_PRACTICO, 'Caso practico'),
+        (GUIA_APE, 'Guia APE'),
+        (PROYECTO, 'Proyecto integrador'),
+        (OTRO, 'Otra actividad'),
+    ]
+
+    materia_malla = models.ForeignKey(
+        MateriaMalla, on_delete=models.CASCADE, related_name='actividades',
+    )
+    tema = models.ForeignKey(
+        TemaMateria, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='actividades',
+        help_text='Vacio cuando la actividad abarca varios temas o toda la materia.',
+    )
+    categoria = models.CharField(max_length=20, choices=CATEGORIAS)
+    tipo = models.CharField(max_length=30, choices=TIPOS)
+    titulo = models.CharField(max_length=250)
+    descripcion = models.TextField(blank=True, default='')
+    archivo = models.FileField(upload_to='actividades_materia/%Y/%m/', blank=True)
+    orden = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        verbose_name = 'actividad de materia'
+        verbose_name_plural = 'actividades de materia'
+        ordering = ['materia_malla', 'tema__orden', 'categoria', 'orden', 'titulo']
+
+    def __str__(self):
+        return self.titulo
+
+    def clean(self):
+        super().clean()
+        if (
+            self.tema_id
+            and self.materia_malla_id
+            and self.tema.materia_malla_id != self.materia_malla_id
+        ):
+            raise ValidationError('El tema debe pertenecer a la misma materia de la malla.')
 
 
 class IndicadorSimulacion(ModeloBase):
@@ -868,8 +989,12 @@ class ResultadoAprendizaje(ModeloBase):
 
 
 class Seccion(ModeloBase):
-    """Grupo/paralelo de estudiantes de una materia en un periodo, a cargo de un
-    profesor. Es la 'capa de curso' sobre la que se asignan simulaciones."""
+    """El curso: un paralelo de una asignatura de la malla en un periodo.
+
+    Es la capa operativa (quien la dicta y quienes la reciben) sobre la que se
+    asignan las simulaciones. El contenido de la asignatura -temas, actividades
+    y guias APE- NO vive aqui sino en la asignatura de la malla, para que se
+    reutilice en todos los periodos."""
     materia_malla = models.ForeignKey(
         MateriaMalla, on_delete=models.PROTECT, related_name='secciones',
     )
@@ -877,7 +1002,8 @@ class Seccion(ModeloBase):
         'academico.PeriodoAcademico', on_delete=models.PROTECT, related_name='secciones',
     )
     profesor = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='secciones_dictadas',
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='secciones_dictadas',
     )
     paralelo = models.CharField(max_length=20, default='A')
     estudiantes = models.ManyToManyField(
@@ -885,11 +1011,19 @@ class Seccion(ModeloBase):
     )
 
     class Meta:
+        verbose_name = 'materia del periodo'
+        verbose_name_plural = 'materias del periodo'
         ordering = ['periodo', 'materia_malla__materia__nombre', 'paralelo']
         unique_together = [('materia_malla', 'periodo', 'paralelo')]
 
     def __str__(self):
         return f'{self.materia_malla.materia} - {self.paralelo} ({self.periodo})'
+
+    @property
+    def nombre_profesor(self):
+        if not self.profesor_id:
+            return 'Sin profesor asignado'
+        return self.profesor.get_full_name() or self.profesor.username
 
 
 class Asignacion(ModeloBase):

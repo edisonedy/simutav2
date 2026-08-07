@@ -397,6 +397,28 @@
                             <input id="tradeoff_dinamico" type="text" name="tradeoff_aceptado" maxlength="180" class="form-control form-control-sm" placeholder="Ej.: acepto una semana de retraso" {% if tradeoff_obligatorio %}required minlength="8"{% endif %}>
                         </div>
                         {% endif %}
+                        {% if campos_ronda %}
+                        <div class="mb-3">
+                            {% for campo in campos_ronda %}
+                            <div class="mb-2">
+                                <label class="play-label" for="{{ campo.clave }}">
+                                    {{ campo.etiqueta }}{% if campo.unidad %} <span class="text-muted">({{ campo.unidad }})</span>{% endif %}
+                                </label>
+                                {% if campo.tipo == 'numero' %}
+                                    <input class="form-control" type="text" inputmode="decimal"
+                                           id="{{ campo.clave }}" name="{{ campo.clave }}"
+                                           {% if campo.obligatorio %}required{% endif %}
+                                           placeholder="{% if campo.minimo is not None and campo.maximo is not None %}entre {{ campo.minimo|floatformat:'-2' }} y {{ campo.maximo|floatformat:'-2' }}{% else %}Escribe el numero{% endif %}">
+                                {% else %}
+                                    <textarea class="form-control" rows="2" id="{{ campo.clave }}"
+                                              name="{{ campo.clave }}"
+                                              {% if campo.obligatorio %}required{% endif %}></textarea>
+                                {% endif %}
+                                {% if campo.ayuda %}<div class="form-text">{{ campo.ayuda }}</div>{% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                         {% if modo_ronda == 'escribir' %}
                             {# Solo escribir: texto libre + justificacion #}
                             <div class="mb-3">

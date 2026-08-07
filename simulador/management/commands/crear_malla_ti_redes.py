@@ -17,7 +17,6 @@ from django.utils import timezone
 from academico.models import (
     Carrera, Malla, NivelMalla, Materia, MateriaMalla, PeriodoAcademico, ProfesorMateria,
 )
-from core.models import Institucion
 from simulador.models import (
     AccionSugeridaSimulacion, ConceptoEsperadoRonda, CondicionExitoSimulacion,
     CriterioEvaluacion, IndicadorSimulacion, RestriccionSimulacion, Simulacion,
@@ -159,12 +158,8 @@ class Command(BaseCommand):
             self.stderr.write(self.style.ERROR('No hay usuarios activos.'))
             return
 
-        institucion = Institucion.objects.first()
-        if not institucion:
-            institucion = Institucion.objects.create(nombre='Universidad Tecnica de Ambato', usuario_creacion=profesor)
-
         carrera, _ = Carrera.objects.get_or_create(
-            institucion=institucion, codigo='TI-UTA',
+            codigo='TI-UTA',
             defaults={'nombre': 'Tecnologias de la Informacion', 'modalidad': 'Presencial',
                       'duracion_periodos': 8, 'titulo_otorga': 'Ingeniero en Tecnologias de la Informacion',
                       'usuario_creacion': profesor},
@@ -182,7 +177,7 @@ class Command(BaseCommand):
                 defaults={'nombre': f'Nivel {nivel_num}', 'usuario_creacion': profesor},
             )
             materia, _ = Materia.objects.get_or_create(
-                institucion=institucion, codigo=codigo,
+                codigo=codigo,
                 defaults={'nombre': nombre, 'creditos': 4, 'horas': 64, 'usuario_creacion': profesor},
             )
             mm, _ = MateriaMalla.objects.get_or_create(
@@ -194,7 +189,7 @@ class Command(BaseCommand):
 
         # Periodo + inscripcion + asignacion para que el usuario de prueba pueda jugar.
         periodo, _ = PeriodoAcademico.objects.get_or_create(
-            institucion=institucion, nombre='Periodo Pruebas SimutaV2',
+            nombre='Periodo Pruebas SimutaV2',
             defaults={'fecha_inicio': date(2026, 1, 1), 'fecha_fin': date(2026, 12, 31),
                       'activo_matricula': True, 'usuario_creacion': profesor},
         )

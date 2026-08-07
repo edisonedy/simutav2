@@ -7,25 +7,29 @@
     <title>{% block title %}SimutaV2{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32.png' %}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'img/uta-icono-192.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'img/uta-icono-192.png' %}">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <style>
         :root {
-            /* Paleta UTA (guinda institucional) + acentos frios "futuristas" */
-            --ink: #161d2b;
+            /* Paleta UTA: el azul marino del logo institucional (uta.edu.ec) */
+            --ink: #16202b;
             --muted: #5d6675;
-            --paper: #f6f7fb;
-            --field: #eef1f6;
-            --line: #d7dce6;
-            --accent: #9e1b34;      /* guinda UTA */
-            --accent-2: #c4283f;    /* guinda brillante para degradados */
-            --accent-dark: #6f1124; /* hover */
-            --forest: #0e6e7a;      /* teal de apoyo */
-            --cyan: #1fb6cf;        /* glow futurista */
+            --paper: #f6f8fb;
+            --field: #eef2f7;
+            --line: #d5dde8;
+            --accent: #00345E;      /* azul UTA, el del logo */
+            --accent-2: #0a6fb8;    /* azul brillante para degradados */
+            --accent-dark: #002440; /* hover */
+            --accent-rgb: 0, 52, 94;
+            --forest: #0e7a6e;      /* verde de apoyo */
+            --cyan: #35b6e8;        /* celeste de realce */
             --gold: #b8862a;
             --red: #a33b32;
-            --slate: #1b2435;
+            --slate: #0e1b2b;
             --card: #ffffff;
         }
         html { min-height: 100%; }
@@ -33,7 +37,7 @@
             min-height: 100%;
             background: var(--field);
             color: var(--ink);
-            font-family: "IBM Plex Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-family: "Nunito", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             letter-spacing: 0;
         }
         .navbar {
@@ -45,8 +49,9 @@
             display: inline-flex;
             align-items: center;
             gap: .6rem;
-            font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-family: "Fredoka", "Nunito", system-ui, sans-serif;
             font-weight: 600;
+            font-size: 1.25rem;
             letter-spacing: 0;
             color: #fff;
         }
@@ -54,17 +59,17 @@
             height: 2.1rem;
             padding: .2rem .4rem;
             background: #fff;
-            border-radius: .4rem;
+            border-radius: .7rem;
             box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
         }
         .brand-text { line-height: 1; }
         .brand-text small { display: block; font-size: .6rem; color: var(--cyan); letter-spacing: .12em; }
-        .navbar-dark .navbar-nav .nav-link { color: rgba(251, 252, 248, .78); font-weight: 500; }
+        .navbar-dark .navbar-nav .nav-link { color: rgba(255, 255, 255, .82); font-weight: 500; }
         .navbar-dark .navbar-nav .nav-link:hover,
         .navbar-dark .navbar-nav .nav-link:focus { color: #fff; }
         .dropdown-menu {
             border: 1px solid var(--line);
-            border-radius: .35rem;
+            border-radius: .7rem;
             box-shadow: 0 16px 36px rgba(24, 32, 30, .16);
         }
         main { padding-top: 1.35rem; padding-bottom: 2.5rem; }
@@ -73,13 +78,13 @@
             font-weight: 700;
             letter-spacing: 0;
         }
-        h1, .h3 { font-family: "Source Serif 4", Georgia, serif; }
+        h1, .h3 { font-family: "Fredoka", "Nunito", system-ui, sans-serif; }
         .text-muted { color: var(--muted) !important; }
         .module-card {
             position: relative;
             overflow: hidden;
             border: 1px solid var(--line);
-            border-radius: .45rem;
+            border-radius: .9rem;
             background: var(--card);
             box-shadow: 0 7px 20px rgba(22, 32, 42, .06);
         }
@@ -95,7 +100,7 @@
         .metric-ico {
             flex: 0 0 auto; display: grid; place-items: center;
             width: 2.8rem; height: 2.8rem; border-radius: .65rem; font-size: 1.3rem;
-            background: rgba(31,182,207,.12); border: 1px solid rgba(31,182,207,.2);
+            background: rgba(53,182,232,.12); border: 1px solid rgba(53,182,232,.2);
         }
         .metric-label { font-size: .76rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; line-height: 1.1; }
         .metric-value {
@@ -129,8 +134,8 @@
             gap: .9rem;
             padding: .85rem;
             border: 1px solid var(--line);
-            border-radius: .4rem;
-            background: #faf9f2;
+            border-radius: .7rem;
+            background: var(--paper);
         }
         .exam-title { font-weight: 700; line-height: 1.2; }
         .exam-meta {
@@ -140,8 +145,8 @@
         .state-tile,
         .exam-prompt {
             border: 1px solid var(--line);
-            border-radius: .4rem;
-            background: #f7f7f2;
+            border-radius: .7rem;
+            background: var(--paper);
         }
         .state-tile { padding: .7rem; }
         .exam-prompt { padding: 1rem; }
@@ -151,14 +156,14 @@
             font-weight: 600;
             line-height: 1.1;
         }
-        .btn { border-radius: .35rem; font-weight: 600; }
+        .btn { border-radius: .6rem; font-weight: 600; }
         .btn-primary {
             --bs-btn-bg: var(--accent);
             --bs-btn-border-color: var(--accent);
             --bs-btn-hover-bg: var(--accent-dark);
             --bs-btn-hover-border-color: var(--accent-dark);
-            --bs-btn-active-bg: #4f1020;
-            --bs-btn-active-border-color: #4f1020;
+            --bs-btn-active-bg: #001a2e;
+            --bs-btn-active-border-color: #001a2e;
         }
         .btn-outline-primary {
             --bs-btn-color: var(--accent);
@@ -200,7 +205,7 @@
             width: 100%;
             padding: .48rem .7rem;
             border: 1px solid var(--line);
-            border-radius: .35rem;
+            border-radius: .7rem;
             background: #fff;
         }
         form input:focus, form select:focus, form textarea:focus,
@@ -224,7 +229,7 @@
             color: #fff;
             background: linear-gradient(100deg, var(--accent-dark) 0%, var(--accent) 60%, var(--slate) 130%);
         }
-        .modal-header .modal-title { font-family: "Source Serif 4", Georgia, serif; font-weight: 700; }
+        .modal-header .modal-title { font-family: "Fredoka", "Nunito", system-ui, sans-serif; font-weight: 700; }
         .modal-header .btn-close { filter: invert(1) grayscale(1) brightness(2); opacity: .85; }
         .modal-footer { border-top-color: var(--line); background: var(--paper); padding: .85rem 1.4rem; }
         .modal-body { max-height: 70vh; overflow-y: auto; padding: 1.35rem 1.4rem; }
@@ -240,10 +245,10 @@
         .modal-body ul.errorlist {
             list-style: none; margin: .3rem 0 0; padding: .4rem .65rem;
             background: rgba(163,59,50,.1); border: 1px solid rgba(163,59,50,.32);
-            border-radius: .4rem; color: var(--accent); font-size: .8rem; font-weight: 600;
+            border-radius: .7rem; color: var(--accent); font-size: .8rem; font-weight: 600;
         }
         .modal-body form input:focus, .modal-body form select:focus, .modal-body form textarea:focus {
-            box-shadow: 0 0 0 3px rgba(31,182,207,.16);
+            box-shadow: 0 0 0 3px rgba(53,182,232,.16);
         }
         code, pre { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
         /* ===== Dashboard estudiante: look UTA + futurista ===== */
@@ -264,7 +269,7 @@
             position: absolute;
             inset: auto -10% -60% auto;
             width: 360px; height: 360px;
-            background: radial-gradient(circle, rgba(31,182,207,.25) 0%, rgba(31,182,207,0) 70%);
+            background: radial-gradient(circle, rgba(53,182,232,.25) 0%, rgba(53,182,232,0) 70%);
         }
         .hero-panel .section-title { color: rgba(255,255,255,.75); }
         .hero-sub { color: rgba(255,255,255,.82); }
@@ -293,7 +298,7 @@
             font-family: "IBM Plex Mono", ui-monospace, monospace;
             font-weight: 600; font-size: 1.1rem; color: #fff;
             background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-            box-shadow: 0 6px 16px rgba(158, 27, 52, .35), inset 0 0 0 1px rgba(255,255,255,.18);
+            box-shadow: 0 6px 16px rgba(var(--accent-rgb), .35), inset 0 0 0 1px rgba(255,255,255,.18);
         }
         .level-name { font-weight: 700; font-size: 1.05rem; color: var(--ink); }
         .level-meta { font-size: .8rem; color: var(--muted); }
@@ -326,14 +331,14 @@
         .chip-soft { background: var(--field); color: var(--muted); }
         .chip-basica { background: rgba(14,110,122,.14); color: var(--forest); }
         .chip-media { background: rgba(184,134,42,.16); color: var(--gold); }
-        .chip-avanzada { background: rgba(158,27,52,.14); color: var(--accent); }
+        .chip-avanzada { background: rgba(var(--accent-rgb), .12); color: var(--accent); }
         .chip-up { background: rgba(14,110,122,.16); color: var(--forest); }
-        .chip-down { background: rgba(158,27,52,.14); color: var(--accent); }
+        .chip-down { background: rgba(var(--accent-rgb), .12); color: var(--accent); }
 
         /* Configurador profesor: efecto por indicador (sin JSON) */
         .impacto-row {
             display: flex; align-items: center; justify-content: space-between; gap: .75rem;
-            padding: .45rem .6rem; border: 1px solid var(--line); border-radius: .45rem;
+            padding: .45rem .6rem; border: 1px solid var(--line); border-radius: .9rem;
             background: var(--paper); margin-bottom: .4rem;
         }
         .impacto-label { line-height: 1.15; }
@@ -375,7 +380,7 @@
         }
         .sim-stage-name { font-weight: 600; font-size: .85rem; color: var(--muted); }
         .sim-stage-line { flex: 1 1 16px; height: 2px; min-width: 16px; background: var(--line); }
-        .sim-stage-actual .sim-stage-dot { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); color: #fff; border-color: transparent; box-shadow: 0 0 0 4px rgba(158,27,52,.15); }
+        .sim-stage-actual .sim-stage-dot { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); color: #fff; border-color: transparent; box-shadow: 0 0 0 4px rgba(var(--accent-rgb), .15); }
         .sim-stage-actual .sim-stage-name { color: var(--ink); }
         .sim-stage-hecho .sim-stage-dot { background: var(--forest); color: #fff; border-color: transparent; }
 
@@ -397,7 +402,7 @@
             display: flex; flex-wrap: wrap; gap: 1.2rem; align-items: center;
             padding: 1.2rem 1.4rem; border-radius: .85rem; color: #fff;
             background:
-                radial-gradient(120% 140% at 0% 0%, rgba(31,182,207,.30) 0%, rgba(31,182,207,0) 45%),
+                radial-gradient(120% 140% at 0% 0%, rgba(53,182,232,.30) 0%, rgba(53,182,232,0) 45%),
                 linear-gradient(115deg, var(--accent-dark) 0%, var(--accent) 50%, var(--slate) 100%);
             box-shadow: 0 18px 40px rgba(22,18,30,.28);
         }
@@ -408,7 +413,7 @@
             animation: gamePop .6s cubic-bezier(.2,1.4,.4,1) both;
         }
         @keyframes gamePop { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .game-rank-name { font-family: "Source Serif 4", Georgia, serif; font-weight: 700; font-size: 1.6rem; line-height: 1.1; }
+        .game-rank-name { font-family: "Fredoka", "Nunito", system-ui, sans-serif; font-weight: 700; font-size: 1.6rem; line-height: 1.1; }
         .game-xp { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .8rem; color: rgba(255,255,255,.8); }
         .game-progress-wrap { flex: 1 1 260px; min-width: 240px; }
         .game-progress { height: 12px; border-radius: 999px; background: rgba(255,255,255,.18); overflow: hidden; margin: .25rem 0 .6rem; }
@@ -425,18 +430,18 @@
         }
 
         /* ===== Consola de simulacion tipo videojuego ===== */
-        .game-screen { --gborder: rgba(31,182,207,.35); }
+        .game-screen { --gborder: rgba(53,182,232,.35); }
         .hud {
             display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;
             padding: 1rem 1.25rem; border-radius: .85rem; color: #fff; margin-bottom: 1rem;
             background:
-                radial-gradient(120% 160% at 100% 0%, rgba(31,182,207,.30) 0%, rgba(31,182,207,0) 50%),
+                radial-gradient(120% 160% at 100% 0%, rgba(53,182,232,.30) 0%, rgba(53,182,232,0) 50%),
                 linear-gradient(115deg, var(--accent-dark) 0%, var(--accent) 45%, var(--slate) 100%);
             border: 1px solid rgba(255,255,255,.12);
             box-shadow: 0 16px 38px rgba(22,18,30,.30);
         }
         .hud-label { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.7); }
-        .hud-title { font-family: "Source Serif 4", Georgia, serif; font-weight: 700; font-size: 1.35rem; line-height: 1.1; }
+        .hud-title { font-family: "Fredoka", "Nunito", system-ui, sans-serif; font-weight: 700; font-size: 1.35rem; line-height: 1.1; }
         .hud-role { font-size: .8rem; color: var(--cyan); font-weight: 600; }
         .hud-stats { display: flex; gap: .7rem; align-items: stretch; }
         .hud-stat {
@@ -469,7 +474,7 @@
         .consequence-bad { border-left: 4px solid var(--accent); }
         .game-delta { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .74rem; font-weight: 700; padding: .2rem .55rem; border-radius: 999px; }
         .game-delta.up { background: rgba(14,110,122,.16); color: var(--forest); }
-        .game-delta.down { background: rgba(158,27,52,.14); color: var(--accent); }
+        .game-delta.down { background: rgba(var(--accent-rgb), .12); color: var(--accent); }
         .game-crit { font-size: .62rem; background: var(--ink); color: #fff; padding: .05rem .4rem; border-radius: 999px; }
         .evento-banner {
             margin: .3rem 0 .6rem; padding: .6rem .85rem; border-radius: .5rem; font-weight: 600; font-size: .9rem;
@@ -490,9 +495,9 @@
             white-space: nowrap; pointer-events: none;
         }
         .play-option:hover, .play-option:focus-within { border-color: var(--cyan); }
-        .play-option:focus-within { box-shadow: 0 0 0 3px rgba(31,182,207,.16); }
+        .play-option:focus-within { box-shadow: 0 0 0 3px rgba(53,182,232,.16); }
         .play-option:has(input:checked), .play-option.is-selected {
-            border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(31,182,207,.18); background: #fff;
+            border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(53,182,232,.18); background: #fff;
         }
         .hud-ind-compact { margin-bottom: .7rem !important; }
         .hud-ind-compact .progress { height: 7px !important; }
@@ -501,7 +506,7 @@
         .play-hint { font-size: .9rem; color: var(--muted); background: var(--field); border-radius: .5rem; padding: .6rem .8rem; }
         .btn-play { font-family: "IBM Plex Mono", ui-monospace, monospace; letter-spacing: .03em; padding: .55rem 1.3rem; }
         @media (prefers-reduced-motion: no-preference) {
-            .btn-play:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(158,27,52,.3); }
+            .btn-play:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(var(--accent-rgb), .3); }
         }
 
         /* Portada de inicio de mision */
@@ -509,32 +514,32 @@
             position: relative; overflow: hidden; border-radius: .9rem; color: #fff;
             padding: 2rem 1.8rem;
             background:
-                radial-gradient(130% 150% at 100% 0%, rgba(31,182,207,.35) 0%, rgba(31,182,207,0) 50%),
+                radial-gradient(130% 150% at 100% 0%, rgba(53,182,232,.35) 0%, rgba(53,182,232,0) 50%),
                 linear-gradient(120deg, var(--accent-dark) 0%, var(--accent) 48%, var(--slate) 100%);
             border: 1px solid rgba(255,255,255,.12);
             box-shadow: 0 20px 46px rgba(22,18,30,.32);
         }
         .mission-hero::after {
             content: ""; position: absolute; inset: auto -8% -70% auto; width: 380px; height: 380px;
-            background: radial-gradient(circle, rgba(31,182,207,.22) 0%, rgba(31,182,207,0) 70%);
+            background: radial-gradient(circle, rgba(53,182,232,.22) 0%, rgba(53,182,232,0) 70%);
         }
         .mission-hero-inner { position: relative; z-index: 1; }
-        .mission-title { font-family: "Source Serif 4", Georgia, serif; font-weight: 700; font-size: 2rem; line-height: 1.1; margin: .3rem 0 .8rem; }
+        .mission-title { font-family: "Fredoka", "Nunito", system-ui, sans-serif; font-weight: 700; font-size: 2rem; line-height: 1.1; margin: .3rem 0 .8rem; }
         .mission-tags { display: flex; flex-wrap: wrap; gap: .4rem; }
         .mission-tag {
             font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .74rem; font-weight: 600;
             padding: .25rem .6rem; border-radius: 999px;
             background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22);
         }
-        .mission-ind { padding: .45rem .6rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--paper); }
+        .mission-ind { padding: .45rem .6rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--paper); }
         .mission-ind-val { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 700; }
         .mission-start { border-top: 3px solid var(--cyan); }
         .case-mini-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .45rem; }
-        .case-mini { padding: .55rem .65rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--field); }
+        .case-mini { padding: .55rem .65rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--field); }
         .case-table { font-size: .82rem; }
         .case-table th { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .68rem; color: var(--muted); }
         .resource-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem; }
-        .resource-pill { padding: .55rem .6rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--field); }
+        .resource-pill { padding: .55rem .6rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--field); }
         .resource-name { color: var(--muted); font-size: .72rem; line-height: 1.15; min-height: 1.7rem; }
         .resource-value { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .95rem; font-weight: 700; color: var(--ink); }
         .resource-value span { font-size: .68rem; color: var(--muted); }
@@ -546,13 +551,13 @@
         }
         .badge-card.badge-locked { opacity: .5; filter: grayscale(1); }
         .badge-ico { font-size: 1.1rem; }
-        .hist-row, .rank-row { display: flex; align-items: center; gap: .6rem; padding: .5rem .7rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--paper); text-decoration: none; color: var(--ink); }
+        .hist-row, .rank-row { display: flex; align-items: center; gap: .6rem; padding: .5rem .7rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--paper); text-decoration: none; color: var(--ink); }
         .hist-row:hover { border-color: var(--cyan); }
         .hist-mat { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .68rem; color: var(--accent); text-transform: uppercase; flex: 0 0 auto; }
         .hist-sim { flex: 1 1 auto; min-width: 0; font-weight: 600; font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .hist-nota { flex: 0 0 auto; }
         .rank-row { gap: .7rem; }
-        .rank-me { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(158,27,52,.15); }
+        .rank-me { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(var(--accent-rgb), .15); }
         .rank-pos { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: .8rem; flex: 0 0 auto; }
         .rank-name { flex: 1 1 auto; font-weight: 600; }
         .rank-xp { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .76rem; color: var(--muted); }
@@ -587,7 +592,7 @@
         .sim-go { white-space: nowrap; }
         .accion-decision.active {
             background: var(--accent); color: #fff;
-            box-shadow: 0 0 0 3px rgba(31,182,207,.25);
+            box-shadow: 0 0 0 3px rgba(53,182,232,.25);
         }
 
         @media (prefers-reduced-motion: no-preference) {
@@ -607,17 +612,17 @@
         .page-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-bottom: 1.15rem; }
         .page-head h1 { display: flex; align-items: center; gap: .55rem; margin: 0; }
         .page-kicker { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .72rem; font-weight: 600; color: var(--forest); text-transform: uppercase; letter-spacing: .04em; margin-bottom: .15rem; }
-        .count-pill { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .78rem; font-weight: 600; color: var(--accent); background: rgba(158,27,52,.1); border: 1px solid rgba(158,27,52,.22); padding: .08rem .55rem; border-radius: 999px; }
+        .count-pill { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .78rem; font-weight: 600; color: var(--accent); background: rgba(var(--accent-rgb), .1); border: 1px solid rgba(var(--accent-rgb), .22); padding: .08rem .55rem; border-radius: 999px; }
         .page-head-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
-        .table-search { width: 230px; max-width: 62vw; padding: .48rem .7rem .48rem 2.1rem; border: 1px solid var(--line); border-radius: .4rem;
+        .table-search { width: 230px; max-width: 62vw; padding: .48rem .7rem .48rem 2.1rem; border: 1px solid var(--line); border-radius: .7rem;
             background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%235d6675' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat .65rem center; }
-        .table-search:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(31,182,207,.16); }
+        .table-search:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(53,182,232,.16); }
         .data-card { padding: 0 !important; }
         .data-card .table { margin: 0; }
         .data-card .table thead th { background: var(--paper); padding: .75rem 1.05rem; border-bottom: 1px solid var(--line); white-space: nowrap; }
         .data-card .table tbody td { padding: .72rem 1.05rem; }
         .data-card .table tbody tr { transition: background-color .12s ease; }
-        .data-card .table tbody tr:hover { background: rgba(31,182,207,.06); }
+        .data-card .table tbody tr:hover { background: rgba(53,182,232,.06); }
         .cell-code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .82rem; color: var(--accent); font-weight: 600; }
         .cell-strong { font-weight: 600; color: var(--ink); }
         .cell-num { font-family: "IBM Plex Mono", ui-monospace, monospace; }
@@ -628,7 +633,36 @@
         .row-hidden { display: none !important; }
         .group-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem;
             flex-wrap: wrap; padding: .85rem 1rem; border-bottom: 1px solid var(--line); }
-        .group-head h2 { font-family: "Source Serif 4", Georgia, serif; font-weight: 700; }
+        .group-head h2 { font-family: "Fredoka", "Nunito", system-ui, sans-serif; font-weight: 700; }
+        /* Selector de periodo de la barra superior: se elige una vez y manda en
+           las pantallas academicas. */
+        .periodo-barra { display: flex; align-items: center; gap: .4rem; }
+        .periodo-barra label { color: rgba(255,255,255,.6); font-size: .72rem; text-transform: uppercase;
+            letter-spacing: .06em; margin: 0; }
+        .periodo-barra select { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.25);
+            border-radius: 8px; padding: .25rem 1.6rem .25rem .55rem; font-size: .85rem; font-weight: 600;
+            appearance: none; cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23ffffff'%3E%3Cpath d='M8 11 3.5 6h9z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right .45rem center; background-size: 12px; }
+        .periodo-barra select:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 .15rem rgba(53,182,232,.25); }
+        .periodo-barra option { color: #1d2430; }
+        /* Las tres caras de una malla: estructura (el plan), oferta (lo que se
+           dicta este periodo) y simulaciones (los casos). */
+        .pestanas-malla { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+        .pestanas-malla .pestana { display: flex; align-items: center; gap: .6rem; flex: 1 1 220px;
+            padding: .6rem .9rem; border: 1px solid var(--line); border-radius: 12px;
+            background: var(--card); color: var(--ink); text-decoration: none; }
+        .pestanas-malla .pestana strong { display: block; font-size: .95rem; line-height: 1.2; }
+        .pestanas-malla .pestana small { display: block; color: var(--muted); font-size: .76rem; }
+        .pestanas-malla .pestana-ico { font-size: 1.35rem; }
+        .pestanas-malla .pestana.activa { border-color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); }
+        .pestanas-malla .pestana.activa strong { color: var(--accent); }
+        @media (hover: hover) {
+            .pestanas-malla .pestana:hover { border-color: var(--cyan); }
+        }
+        .periodo-chip { display: inline-flex; align-items: center; gap: .35rem; background: rgba(53,182,232,.12);
+            border: 1px solid rgba(53,182,232,.35); color: var(--slate); border-radius: 999px;
+            padding: .15rem .6rem; font-size: .8rem; font-weight: 600; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -636,8 +670,8 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="{% url 'dashboard' %}">
-            <img src="{% static 'img/uta-logo.png' %}" class="brand-logo" alt="Universidad Tecnica de Ambato">
-            <span class="brand-text">SimutaV2<small>UTA</small></span>
+            <img src="{% static 'img/uta-logo-2026.png' %}" class="brand-logo" alt="Universidad Tecnica de Ambato">
+            <span class="brand-text">Simuta<small>CASOS REALES UTA</small></span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
             <span class="navbar-toggler-icon"></span>
@@ -658,15 +692,14 @@
                             <li><a class="dropdown-item" href="{% url 'adm_inscripciones' %}">Inscripciones</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{% url 'seguridad:usuarios' %}">Usuarios y perfiles</a></li>
-                            <li><a class="dropdown-item" href="{% url 'core:instituciones' %}">Instituciones</a></li>
                         </ul>
                     </li>
                     {% endif %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Simulador</a>
                         <ul class="dropdown-menu">
-                            {% if puede_administrar %}<li><a class="dropdown-item" href="{% url 'adm_simulaciones' %}">Admin simulaciones</a></li>{% endif %}
                             {% if puede_ensenar %}
+                            {% if not puede_administrar %}<li><a class="dropdown-item" href="{% url 'adm_materias' %}">Materias y actividades</a></li>{% endif %}
                             <li><a class="dropdown-item" href="{% url 'pro_simulaciones' %}">Panel profesor</a></li>
                             <li><a class="dropdown-item" href="{% url 'pro_cursos' %}">Mis cursos</a></li>
                             {% endif %}
@@ -674,6 +707,18 @@
                         </ul>
                     </li>
                 </ul>
+                {% if periodos_barra %}
+                <form method="post" action="{% url 'core:cambiar_periodo' %}" class="periodo-barra me-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <label for="selector-periodo">Periodo</label>
+                    <select name="periodo" id="selector-periodo" onchange="this.form.submit()">
+                        {% for p in periodos_barra %}
+                        <option value="{{ p.pk }}" {% if periodo_barra and periodo_barra.pk == p.pk %}selected{% endif %}>{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+                {% endif %}
                 <form method="post" action="{% url 'logout' %}" class="d-flex">
                     {% csrf_token %}
                     <button class="btn btn-outline-light btn-sm" type="submit">Salir</button>
@@ -713,7 +758,9 @@ function filtrar_tabla(input, tablaId) {
     const q = input.value.toLowerCase().trim();
     const tabla = document.getElementById(tablaId);
     if (!tabla) return;
-    const filas = tabla.querySelectorAll("tbody tr[data-row]");
+    // [data-row] y no "tbody tr": asi el mismo buscador sirve para las tablas y
+    // para las rejillas de tarjetas.
+    const filas = tabla.querySelectorAll("[data-row]");
     let visibles = 0;
     filas.forEach(function(fila) {
         const coincide = fila.textContent.toLowerCase().indexOf(q) !== -1;
@@ -748,7 +795,14 @@ function filtrar_grupos(input, contenedorId) {
 function enviar_formulario(formulario) {
     const form = formulario && formulario.jquery ? formulario[0] : formulario;
     const url = form.getAttribute("action") || window.location.href;
-    const data = new URLSearchParams(new FormData(form));
+    const formData = new FormData(form);
+    const tieneArchivo = Array.from(form.querySelectorAll('input[type="file"]'))
+        .some(input => input.files && input.files.length > 0);
+    const data = tieneArchivo ? formData : new URLSearchParams(formData);
+    const headers = { "X-Requested-With": "XMLHttpRequest" };
+    if (!tieneArchivo) {
+        headers["Content-Type"] = "application/x-www-form-urlencoded;charset=UTF-8";
+    }
     const submitButton = form.querySelector('button[type="submit"], button:not([type])');
     const originalText = submitButton ? submitButton.textContent : "";
     if (submitButton) {
@@ -758,10 +812,7 @@ function enviar_formulario(formulario) {
     fetch(url, {
         method: "POST",
         body: data,
-        headers: {
-            "X-Requested-With": "XMLHttpRequest",
-            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
-        }
+        headers: headers
     })
         .then(async function(response) {
             const contentType = response.headers.get("content-type") || "";

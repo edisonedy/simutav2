@@ -1,0 +1,19 @@
+{% comment %}Area de trabajo de Materias: niveles/contenido y simulaciones.{% endcomment %}
+<div class="pestanas-malla">
+    <a class="pestana {% if pestana == 'estructura' %}activa{% endif %}"
+       href="{% url 'adm_materias' %}?action=malla&pk={{ malla.pk }}">
+        <span class="pestana-ico">&#127959;</span>
+        <span>
+            <strong>Materias</strong>
+            <small>Las materias de la malla, en orden de nivel, con su contenido</small>
+        </span>
+    </a>
+    <a class="pestana {% if pestana == 'simulaciones' %}activa{% endif %}"
+       href="{% url 'adm_simulaciones' %}?malla={{ malla.pk }}">
+        <span class="pestana-ico">&#127918;</span>
+        <span>
+            <strong>Simulaciones</strong>
+            <small>Los casos de cada materia</small>
+        </span>
+    </a>
+</div>

@@ -1,0 +1,24 @@
+{% comment %}
+Panel lateral con las materias que el profesor tiene asignadas. Se comparte
+entre la pantalla de mallas y la de una malla concreta para que el atajo de
+"generar con IA" este siempre a mano.
+{% endcomment %}
+<div class="module-card p-3">
+    <div class="section-title mb-2">Docencia</div>
+    <h2 class="h5">Materias asignadas</h2>
+    {% for a in asignaciones %}
+        <div class="border-top py-2">
+            <div class="fw-semibold">{{ a.materia_malla.materia.nombre }}</div>
+            <div class="text-muted small">{{ a.materia_malla.malla.codigo }} &middot; Nivel {{ a.materia_malla.nivel.numero }}</div>
+            <div class="text-muted small">{{ a.periodo }}</div>
+            <form method="post" action="{% url 'pro_simulaciones' %}" class="mt-2" onsubmit="return enviar_formulario(this)">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="generar_desde_plantilla">
+                <input type="hidden" name="materia_malla_id" value="{{ a.materia_malla.pk }}">
+                <button class="btn btn-sm btn-outline-primary w-100">&#10024; Generar simulacion IA</button>
+            </form>
+        </div>
+    {% empty %}
+        <p class="text-muted mb-0">Sin materias asignadas.</p>
+    {% endfor %}
+</div>

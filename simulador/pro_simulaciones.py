@@ -15,8 +15,8 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
 from core.funciones import ok_json, bad_json, conservar_seleccion_actual
 from core.permisos import es_administrativo, es_docente
-from academico.models import MateriaMalla, ProfesorMateria
-from simulador import cursos_service
+from academico.models import Malla, MateriaMalla, ProfesorMateria
+from simulador import catalogo_malla, cursos_service
 from simulador.models import (
     Simulacion, IndicadorSimulacion, RestriccionSimulacion,
     ConceptoEsperadoRonda, CriterioEvaluacion, AccionSugeridaSimulacion, CondicionExitoSimulacion,
@@ -40,12 +40,13 @@ def _request_id(request):
 
 def _materias_qs(profesor):
     if _tiene_acceso_global(profesor):
-        return MateriaMalla.objects.filter(activo=True)
+        return MateriaMalla.objects.filter(activo=True, malla__activo=True, materia__activo=True)
     return MateriaMalla.objects.filter(
-        pk__in=ProfesorMateria.objects.filter(
-            profesor=profesor, activo=True
-        ).values_list('materia_malla_id', flat=True)
-    )
+        activo=True, malla__activo=True, materia__activo=True,
+    ).filter(
+        models.Q(profesores__profesor=profesor, profesores__activo=True)
+        | models.Q(secciones__profesor=profesor, secciones__activo=True),
+    ).distinct()
 
 
 def _limit_form_materia(form, profesor):
@@ -142,6 +143,43 @@ def _entero_acotado(valor, predeterminado, minimo=0, maximo=500):
     return max(minimo, min(maximo, numero))
 
 
+MAX_CAMPOS_RONDA = 4
+TIPOS_CAMPO = [
+    ('numero', 'Un numero', 'Cuanto producir, que tasa aplicar, cuanto invertir. Se corrige solo.'),
+    ('texto', 'Texto libre', 'Una respuesta escrita que evalua la rubrica.'),
+    ('opcion', 'Elegir una opcion', 'Usa las decisiones configuradas del caso.'),
+]
+CLAVES_TIPO_CAMPO = {clave for clave, _, _ in TIPOS_CAMPO}
+
+
+def _campos_desde_post(post, numero):
+    """Los campos que el docente definio para esta ronda. Sin campos, la ronda
+    se comporta como siempre: una sola decision."""
+    campos = []
+    for i in range(1, MAX_CAMPOS_RONDA + 1):
+        etiqueta = (post.get(f'campo_etiqueta_{numero}_{i}') or '').strip()
+        tipo = (post.get(f'campo_tipo_{numero}_{i}') or '').strip().lower()
+        if not etiqueta or tipo not in CLAVES_TIPO_CAMPO:
+            continue
+        campo = {
+            'clave': f'campo_{numero}_{i}',
+            'etiqueta': etiqueta[:120],
+            'tipo': tipo,
+            'ayuda': (post.get(f'campo_ayuda_{numero}_{i}') or '').strip()[:200],
+            'unidad': (post.get(f'campo_unidad_{numero}_{i}') or '').strip()[:30],
+            'obligatorio': bool(post.get(f'campo_obligatorio_{numero}_{i}')),
+        }
+        if tipo == 'numero':
+            for limite in ('minimo', 'maximo', 'objetivo', 'tolerancia'):
+                crudo = (post.get(f'campo_{limite}_{numero}_{i}') or '').strip().replace(',', '.')
+                try:
+                    campo[limite] = float(crudo) if crudo else None
+                except ValueError:
+                    campo[limite] = None
+        campos.append(campo)
+    return campos
+
+
 def _rondas_configurables(simulacion):
     """Lo que el profesor puede ajustar en cada ronda. Los defaults son los
     mismos que usa la consola del alumno, para que vea lo que va a salir."""
@@ -179,6 +217,10 @@ def _rondas_configurables(simulacion):
             'degradado': modo_efectivo != configurado,
             'etiqueta_decision': etiqueta_decision,
             'etiqueta_justificacion': etiqueta_justificacion,
+            # Siempre MAX_CAMPOS_RONDA ranuras: las llenas traen su definicion y
+            # las vacias quedan listas para que el docente agregue una mas.
+            'campos': (list(ronda.get('campos') or [])
+                       + [{}] * MAX_CAMPOS_RONDA)[:MAX_CAMPOS_RONDA],
             'justificacion_obligatoria': bool(
                 ronda.get('justificacion_obligatoria', configurado != 'elegir')
             ),
@@ -639,6 +681,19 @@ def _errores_publicacion_pedagogica(simulacion):
     """Evita publicar un examen disfrazado o un caso que no puede reaccionar."""
     errors = []
     rondas = _rondas_configurables(simulacion)
+    acciones_activas = simulacion.acciones_sugeridas.filter(activo=True)
+    acciones_globales = acciones_activas.filter(numero_ronda__isnull=True)
+    if simulacion.maximo_decisiones > 1 and acciones_globales.exists():
+        if not acciones_activas.exclude(numero_ronda__isnull=True).exists():
+            errors.append(
+                'No se puede publicar: todas las decisiones aparecen en todas las rondas. '
+                'Asigna alternativas especificas a cada ronda.'
+            )
+        if acciones_globales.filter(maximo_ejecuciones=0).exists():
+            errors.append(
+                'Las decisiones globales no pueden tener repeticiones ilimitadas en una '
+                'simulacion de varias rondas. Asigna una ronda o limita sus ejecuciones.'
+            )
     for ronda in rondas:
         numero = ronda['numero']
         fuentes_activas = [
@@ -934,6 +989,7 @@ def _simulaciones_permitidas(user):
         models.Q(profesor=user)
         | models.Q(usuario_creacion=user)
         | models.Q(materia_malla__profesores__profesor=user, materia_malla__profesores__activo=True)
+        | models.Q(materia_malla__secciones__profesor=user, materia_malla__secciones__activo=True)
     ).distinct()
 
 
@@ -1330,6 +1386,7 @@ def view(request):
                         codigo for codigo in request.POST.getlist(f'indicadores_modificables_{numero}')
                         if codigo in codigos_validos
                     ]
+                actual['campos'] = _campos_desde_post(request.POST, numero)
                 rondas[indice] = actual
             parametros['rondas'] = rondas[:simulacion.maximo_decisiones]
             simulacion.parametros = parametros
@@ -1679,7 +1736,14 @@ def view(request):
     if action == 'add':
         if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
             return redirect('pro_simulaciones')
-        form = SimulacionForm()
+        initial = {}
+        materia_malla = request.GET.get('materia_malla')
+        if materia_malla and _materias_qs(request.user).filter(pk=materia_malla).exists():
+            initial['materia_malla'] = materia_malla
+        tema_materia = request.GET.get('tema_materia')
+        if tema_materia:
+            initial['tema_materia'] = tema_materia
+        form = SimulacionForm(initial=initial)
         _limit_form_materia(form, request.user)
         _simplificar_form_creacion(form)
         data['form'] = form
@@ -1751,6 +1815,7 @@ def view(request):
         data['simulacion'] = simulacion
         data['rondas'] = _rondas_configurables(simulacion)
         data['modos'] = MODOS_RONDA
+        data['tipos_campo'] = TIPOS_CAMPO
         data['hay_opciones'] = simulacion.acciones_sugeridas.filter(activo=True).exists()
         return render(request, 'simulador/pro_simulaciones/rondas.html', data)
 
@@ -1979,17 +2044,26 @@ def view(request):
     elif action == 'auditoria_export':
         return _exportar_auditoria_casos(request)
 
-    if _tiene_acceso_global(request.user):
-        data['list'] = _auditar_lista_simulaciones(list(_simulaciones_permitidas(request.user).select_related(
-            'materia_malla__materia', 'materia_malla__nivel'
-        ).all()))
-        data['asignaciones'] = []
-    else:
-        data['list'] = _auditar_lista_simulaciones(list(_simulaciones_permitidas(request.user).select_related(
-            'materia_malla__materia', 'materia_malla__nivel'
-        ).distinct()))
-        data['asignaciones'] = ProfesorMateria.objects.filter(
-            profesor=request.user,
-            activo=True,
-        ).select_related('materia_malla__materia', 'materia_malla__nivel', 'periodo')
+    # Mismo recorrido que el panel del estudiante y que la oferta academica:
+    # primero la malla, despues sus materias por nivel con las simulaciones.
+    permitidas = _simulaciones_permitidas(request.user).filter(activo=True)
+    data['asignaciones'] = [] if _tiene_acceso_global(request.user) else ProfesorMateria.objects.filter(
+        profesor=request.user, activo=True,
+    ).select_related('materia_malla__materia', 'materia_malla__nivel', 'periodo')
+
+    malla_id = request.GET.get('malla')
+    if not malla_id:
+        data['mallas'] = catalogo_malla.mallas_con_simulaciones(permitidas)
+        return render(request, 'simulador/pro_simulaciones/mallas.html', data)
+
+    malla = get_object_or_404(Malla, pk=malla_id)
+    niveles, total = catalogo_malla.niveles_de_la_malla(malla, permitidas)
+    for nivel in niveles:
+        for materia_malla in nivel['materias']:
+            _auditar_lista_simulaciones(materia_malla.simulaciones_visibles)
+    data.update({
+        'malla': malla,
+        'niveles': niveles,
+        'total_simulaciones': total,
+    })
     return render(request, 'simulador/pro_simulaciones/view.html', data)

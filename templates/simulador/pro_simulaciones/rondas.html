@@ -102,6 +102,83 @@
                            placeholder="Ej. Explica tu razonamiento con evidencia">
                 </div>
 
+                <details class="mt-3">
+                    <summary class="play-label" style="cursor:pointer">
+                        Qué debe entregar en esta ronda
+                        <span class="text-muted">(opcional — sin esto pide una sola decisión)</span>
+                    </summary>
+                    <p class="empty-text mt-2 mb-2">
+                        Agrega los campos que necesites: una cantidad ("cuánto producir"), varias
+                        decisiones a la vez (precio, publicidad, producción) o texto. Los campos
+                        numéricos con valor esperado <strong>se corrigen solos</strong>, sin IA.
+                    </p>
+                    {% for campo in ronda.campos %}
+                    <div class="border-top pt-2 mb-2">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input class="form-control form-control-sm" type="text"
+                                       name="campo_etiqueta_{{ ronda.numero }}_{{ forloop.counter }}"
+                                       value="{{ campo.etiqueta|default:'' }}"
+                                       placeholder="Qué se le pide. Ej. Tasa CIF a aplicar">
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select form-select-sm"
+                                        name="campo_tipo_{{ ronda.numero }}_{{ forloop.counter }}">
+                                    <option value="">— sin usar —</option>
+                                    {% for clave, titulo, ayuda in tipos_campo %}
+                                    <option value="{{ clave }}" title="{{ ayuda }}"
+                                        {% if campo.tipo == clave %}selected{% endif %}>{{ titulo }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input class="form-control form-control-sm" type="text"
+                                       name="campo_unidad_{{ ronda.numero }}_{{ forloop.counter }}"
+                                       value="{{ campo.unidad|default:'' }}" placeholder="unidad">
+                            </div>
+                            <div class="col-md-3">
+                                <input class="form-control form-control-sm" type="text" inputmode="decimal"
+                                       name="campo_minimo_{{ ronda.numero }}_{{ forloop.counter }}"
+                                       value="{{ campo.minimo|default_if_none:'' }}" placeholder="mínimo">
+                            </div>
+                            <div class="col-md-3">
+                                <input class="form-control form-control-sm" type="text" inputmode="decimal"
+                                       name="campo_maximo_{{ ronda.numero }}_{{ forloop.counter }}"
+                                       value="{{ campo.maximo|default_if_none:'' }}" placeholder="máximo">
+                            </div>
+                            <div class="col-md-3">
+                                <input class="form-control form-control-sm" type="text" inputmode="decimal"
+                                       name="campo_objetivo_{{ ronda.numero }}_{{ forloop.counter }}"
+                                       value="{{ campo.objetivo|default_if_none:'' }}" placeholder="esperado">
+                            </div>
+                            <div class="col-md-3">
+                                <input class="form-control form-control-sm" type="text" inputmode="decimal"
+                                       name="campo_tolerancia_{{ ronda.numero }}_{{ forloop.counter }}"
+                                       value="{{ campo.tolerancia|default_if_none:'' }}" placeholder="± margen">
+                            </div>
+                            <div class="col-12">
+                                <input class="form-control form-control-sm" type="text"
+                                       name="campo_ayuda_{{ ronda.numero }}_{{ forloop.counter }}"
+                                       value="{{ campo.ayuda|default:'' }}"
+                                       placeholder="Ayuda breve para el estudiante (opcional)">
+                            </div>
+                            <div class="col-12">
+                                <label class="small">
+                                    <input type="checkbox"
+                                           name="campo_obligatorio_{{ ronda.numero }}_{{ forloop.counter }}"
+                                           {% if campo.obligatorio %}checked{% endif %}>
+                                    <span class="ms-1">Obligatorio</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="small text-muted">
+                        "Esperado" y "± margen" solo aplican a los campos numéricos: dentro del margen
+                        vale completo y se aleja de forma proporcional. Déjalos vacíos si solo quieres el dato.
+                    </div>
+                </details>
+
                 <label class="d-block mt-3">
                     <input type="checkbox" name="justificacion_obligatoria_{{ ronda.numero }}"
                            {% if ronda.justificacion_obligatoria %}checked{% endif %}>

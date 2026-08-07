@@ -6,7 +6,7 @@
         <h1 class="h3">Usuarios y perfiles <span class="count-pill">{{ total }}</span></h1>
     </div>
     <div class="page-head-actions">
-        <input type="search" class="table-search" placeholder="Buscar nombre, usuario o institucion..." oninput="filtrar_grupos(this, 'lista-usuarios')">
+        <input type="search" class="table-search" placeholder="Buscar nombre, usuario o correo..." oninput="filtrar_grupos(this, 'lista-usuarios')">
         <button class="btn btn-primary" onclick="abrir_modal('{% url 'seguridad:usuarios' %}?action=add')">+ Nuevo usuario</button>
     </div>
 </div>
@@ -25,7 +25,7 @@
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead><tr><th>Usuario</th><th>Nombre</th><th>Institucion</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+                <thead><tr><th>Usuario</th><th>Nombre</th><th>Correo</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
                 <tbody>
                 {% for item in grupo.usuarios %}
                     <tr data-row>
@@ -36,7 +36,7 @@
                                 <span class="badge text-bg-light border ms-1">tambien {{ extra }}</span>
                             {% endfor %}
                         </td>
-                        <td>{{ item.perfil.institucion|default:"-" }}</td>
+                        <td>{{ item.email|default:"-" }}</td>
                         <td>
                             {% if not item.is_active %}<span class="badge text-bg-secondary">Inactivo</span>
                             {% elif item.is_superuser %}<span class="badge text-bg-dark">Superusuario</span>

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker">
+            <a href="{% url 'adm_materias' %}" class="text-decoration-none">Materias</a> /
+            <a href="{% url 'adm_materias' %}?action=malla&pk={{ malla.pk }}" class="text-decoration-none">{% if malla_periodo %}{{ malla_periodo.nombre_visible }}{% else %}{{ malla.nombre }}{% endif %}</a> /
+Nivel {{ nivel.numero }} &middot; {{ nivel.nombre }}
+        </div>
+        <h1 class="h3">{{ materia_malla.materia.nombre }}</h1>
+        <div class="text-muted"><span class="cell-code">{{ materia_malla.materia.codigo }}</span> &middot; {{ malla.carrera }}</div>
+    </div>
+    <div class="page-head-actions">
+        <a class="btn btn-outline-secondary" href="{% url 'adm_materias' %}?action=malla&pk={{ malla.pk }}">Volver a la malla</a>
+        <a class="btn btn-outline-primary" href="{% url 'interactivo:lista' materia_malla.pk %}">&#127918; Juegos</a>
+        <button class="btn btn-outline-primary"
+                onclick="abrir_modal('{% url 'adm_materias' %}?action=add_tema&materia_malla={{ materia_malla.pk }}')">+ Tema</button>
+        <button class="btn btn-outline-primary"
+                onclick="abrir_modal('{% url 'adm_materias' %}?action=add_actividad&materia_malla={{ materia_malla.pk }}')">+ Actividad general</button>
+        <button class="btn btn-primary"
+                onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=add&materia_malla={{ materia_malla.pk }}')">+ Caso real</button>
+    </div>
+</div>
+
+<div class="alert alert-light border">
+    Una actividad de un contenido concreto va dentro de su tema. Si abarca varios temas o toda
+    la asignatura, se crea como <strong>Actividad general</strong>.
+</div>
+
+{% if generales.refuerzo or generales.evaluacion or generales.simulaciones %}
+<section class="module-card data-card mb-3">
+    <div class="p-3 border-bottom">
+        <h2 class="h5 mb-0">Actividades generales</h2>
+        <div class="text-muted small">Diagnostico, repaso global o evaluacion final.</div>
+    </div>
+    <div class="row g-3 p-3">
+        {% if generales.refuerzo %}<div class="col-lg-6">
+            <h3 class="h6">Practicar y reforzar</h3>
+            {% for actividad in generales.refuerzo %}{% include "academico/adm_materias/_actividad.html" %}{% endfor %}
+        </div>{% endif %}
+        {% if generales.evaluacion or generales.simulaciones %}<div class="col-lg-6">
+            <h3 class="h6">Evaluar y aplicar</h3>
+            {% for actividad in generales.evaluacion %}{% include "academico/adm_materias/_actividad.html" %}{% endfor %}
+            {% for simulacion in generales.simulaciones %}{% include "academico/adm_materias/_simulacion.html" %}{% endfor %}
+        </div>{% endif %}
+    </div>
+</section>
+{% endif %}
+
+{% for bloque in temas %}
+<section class="module-card data-card mb-3">
+    <div class="p-3 border-bottom d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+            <div class="page-kicker">Tema {{ bloque.tema.orden }}</div>
+            <h2 class="h5 mb-1">{{ bloque.tema.nombre }}</h2>
+            {% if bloque.tema.descripcion %}<div class="text-muted small">{{ bloque.tema.descripcion }}</div>{% endif %}
+        </div>
+        <div class="text-nowrap">
+            <button class="btn btn-sm btn-outline-secondary"
+                    onclick="abrir_modal('{% url 'adm_materias' %}?action=edit_tema&pk={{ bloque.tema.pk }}')">Editar tema</button>
+            <form class="d-inline" action="{% url 'adm_materias' %}" method="post"
+                  onsubmit="return confirm('Eliminar este tema?') &amp;&amp; enviar_formulario(this)">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_tema">
+                <input type="hidden" name="pk" value="{{ bloque.tema.pk }}">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Eliminar</button>
+            </form>
+        </div>
+    </div>
+    <div class="row g-3 p-3">
+        <div class="col-lg-6">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h3 class="h6 mb-0">Practicar y reforzar</h3>
+                <button class="btn btn-sm btn-outline-primary"
+                        onclick="abrir_modal('{% url 'adm_materias' %}?action=add_actividad&materia_malla={{ materia_malla.pk }}&tema={{ bloque.tema.pk }}&categoria=REFUERZO')">+ Actividad</button>
+            </div>
+            {% for actividad in bloque.refuerzo %}
+                {% include "academico/adm_materias/_actividad.html" %}
+            {% empty %}<div class="text-muted small">Sin actividades de refuerzo.</div>{% endfor %}
+        </div>
+        <div class="col-lg-6">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h3 class="h6 mb-0">Evaluar y aplicar</h3>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-primary"
+                            onclick="abrir_modal('{% url 'adm_materias' %}?action=add_actividad&materia_malla={{ materia_malla.pk }}&tema={{ bloque.tema.pk }}&categoria=EVALUACION')">+ Actividad</button>
+                    <button class="btn btn-sm btn-outline-dark"
+                            onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=add&materia_malla={{ materia_malla.pk }}&tema_materia={{ bloque.tema.pk }}')">+ Simulacion</button>
+                </div>
+            </div>
+            {% for actividad in bloque.evaluacion %}{% include "academico/adm_materias/_actividad.html" %}{% endfor %}
+            {% for simulacion in bloque.simulaciones %}{% include "academico/adm_materias/_simulacion.html" %}{% endfor %}
+            {% if not bloque.evaluacion and not bloque.simulaciones %}<div class="text-muted small">Sin actividades de evaluacion.</div>{% endif %}
+        </div>
+    </div>
+</section>
+{% empty %}
+    {% if not generales.refuerzo and not generales.evaluacion and not generales.simulaciones %}
+    <div class="module-card data-card">
+        <div class="empty-state">
+            <span class="empty-ico">&#128218;</span>
+            <div class="empty-title">La materia todavia no tiene contenido</div>
+            <p class="empty-text">Crea el primer tema o agrega una actividad general.</p>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+{% endblock %}

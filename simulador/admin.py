@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import (
     AccionSugeridaSimulacion,
+    ActividadMateria,
     Asignacion,
     CondicionExitoSimulacion,
     ConceptoEsperadoRonda,
@@ -27,9 +28,12 @@ from .models import (
     RestriccionSimulacion,
     Seccion,
     Simulacion,
+    TemaMateria,
 )
 
 admin.site.register(Simulacion)
+admin.site.register(TemaMateria)
+admin.site.register(ActividadMateria)
 admin.site.register(PerfilMateriaIA)
 admin.site.register(PlantillaSimulacion)
 admin.site.register(PlantillaRonda)

@@ -1,13 +1,14 @@
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from academico.models import Carrera, InscripcionMalla, Malla, Materia, PeriodoAcademico, ProfesorMateria
-from core.forms import InstitucionForm
+from core.funciones import CLAVE_PERIODO_SESION
 from core.permisos import solo_administrativos, usuarios_con_rol
 from core.models import PerfilUsuario
-from core.models import Institucion
 from simulador.models import EscenarioSimulacion, IntentoSimulacion, PasoSimulacion, Simulacion
 
 
@@ -51,6 +52,26 @@ def dashboard(request):
     return render(request, 'dashboard.html', contexto)
 
 
+@login_required
+def cambiar_periodo(request):
+    """Guarda en sesion el periodo elegido en la barra superior y devuelve al
+    usuario a la pantalla donde estaba."""
+    if request.method != 'POST':
+        return redirect('dashboard')
+    elegido = request.POST.get('periodo') or ''
+    if elegido.isdigit() and PeriodoAcademico.objects.filter(pk=elegido, activo=True).exists():
+        request.session[CLAVE_PERIODO_SESION] = int(elegido)
+    else:
+        request.session.pop(CLAVE_PERIODO_SESION, None)
+
+    destino = request.POST.get('next') or ''
+    if not url_has_allowed_host_and_scheme(
+        destino, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
+    ):
+        destino = reverse('dashboard')
+    return redirect(destino)
+
+
 @solo_administrativos
 def estado_ia(request):
     """Estado real de los proveedores, visible solo para administradores."""
@@ -63,30 +84,3 @@ def estado_ia(request):
         resultado = comprobar_estado_ia()
         cache.set(clave_cache, resultado, 60)
     return JsonResponse({**resultado, 'desde_cache': desde_cache})
-
-
-@solo_administrativos
-def instituciones(request):
-    instituciones_qs = Institucion.objects.all()
-    return render(request, 'core/instituciones/view.html', {'instituciones': instituciones_qs})
-
-
-@solo_administrativos
-def institucion_add(request):
-    form = InstitucionForm(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        institucion = form.save(commit=False)
-        institucion.usuario_creacion = request.user
-        institucion.save()
-        return redirect('core:instituciones')
-    return render(request, 'core/instituciones/add.html', {'form': form})
-
-
-@solo_administrativos
-def institucion_edit(request, pk):
-    institucion = get_object_or_404(Institucion, pk=pk)
-    form = InstitucionForm(request.POST or None, instance=institucion)
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        return redirect('core:instituciones')
-    return render(request, 'core/instituciones/edit.html', {'form': form, 'institucion': institucion})

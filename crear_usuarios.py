@@ -8,12 +8,8 @@ django.setup()
 
 from django.contrib.auth.models import User
 from django.db import transaction
-from core.models import Institucion, PerfilUsuario
+from core.models import PerfilUsuario
 
-try:
-    institucion = Institucion.objects.first()
-except:
-    institucion = None
 
 @transaction.atomic
 def crear_usuarios():
@@ -97,7 +93,6 @@ def crear_usuarios():
         PerfilUsuario.objects.get_or_create(
             usuario=user,
             defaults={
-                "institucion": institucion,
                 "rol": data["rol"],
                 "identificacion": data["identificacion"],
                 "telefono": data["telefono"],

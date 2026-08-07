@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker">Interactivo &middot; {{ intento.actividad.motor }}</div>
+        <h1 class="h3">{{ intento.actividad.titulo }}</h1>
+        <div class="text-muted">
+            {{ intento.estudiante.get_full_name|default:intento.estudiante.username }}
+            &middot; intento {{ intento.numero_intento }}
+        </div>
+    </div>
+    <div class="page-head-actions">
+        <a class="btn btn-outline-secondary" href="{% url 'interactivo:lista' intento.actividad.materia_malla_id %}">Volver</a>
+        <a class="btn btn-primary" href="{% url 'interactivo:jugar' intento.actividad.pk %}">Intentar de nuevo</a>
+    </div>
+</div>
+
+<div class="module-card p-4 mb-3">
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        {% if intento.aprobado %}
+            <span class="chip chip-media">Aprobado</span>
+        {% else %}
+            <span class="chip chip-alta">No aprobado</span>
+        {% endif %}
+        <div>
+            <div class="metric-label">Resultado</div>
+            <div class="h3 mb-0 game-points">{{ intento.porcentaje }}%</div>
+        </div>
+        <div>
+            <div class="metric-label">Minimo para aprobar</div>
+            <div class="mission-ind-val">{{ intento.actividad.puntaje_minimo }}%</div>
+        </div>
+    </div>
+    <div class="progress mt-3" style="height: 10px;">
+        <div class="progress-bar" role="progressbar" style="width: {{ intento.porcentaje }}%"></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="module-card p-3 metric-card">
+            <span class="metric-ico">&#9989;</span>
+            <div><div class="metric-label">Aciertos</div><div class="mission-ind-val">{{ intento.aciertos }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="module-card p-3 metric-card">
+            <span class="metric-ico">&#10060;</span>
+            <div><div class="metric-label">Errores</div><div class="mission-ind-val">{{ intento.errores }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="module-card p-3 metric-card">
+            <span class="metric-ico">&#128290;</span>
+            <div><div class="metric-label">Elementos</div><div class="mission-ind-val">{{ intento.total_elementos }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="module-card p-3 metric-card">
+            <span class="metric-ico">&#9201;</span>
+            <div><div class="metric-label">Tiempo</div><div class="mission-ind-val">{{ intento.tiempo_segundos }}s</div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

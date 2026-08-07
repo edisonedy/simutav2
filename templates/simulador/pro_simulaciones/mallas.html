@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker">Panel profesor</div>
+        <h1 class="h3">Simulaciones <span class="count-pill">{{ mallas|length }}</span></h1>
+        <div class="text-muted">Elige la malla. Adentro estan sus materias por nivel con las simulaciones de cada una.</div>
+    </div>
+    <div class="page-head-actions">
+        <input type="search" class="table-search" placeholder="Buscar malla..." oninput="filtrar_tabla(this, 'grid-mallas-pro')">
+        <a class="btn btn-outline-secondary" href="{% url 'pro_simulaciones' %}?action=auditoria_export">Exportar auditoria</a>
+        <button class="btn btn-primary" onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=add')">+ Nueva simulacion</button>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-8">
+        {% if mallas %}
+        <div class="row g-3" id="grid-mallas-pro">
+            {% for item in mallas %}
+            <div class="col-md-6" data-row>
+                <a class="malla-card" href="{% url 'pro_simulaciones' %}?malla={{ item.malla.pk }}">
+                    <div class="malla-card-top">
+                        <span class="malla-ico">&#127891;</span>
+                        <div>
+                            <div class="malla-carrera">{{ item.malla.carrera.nombre }}</div>
+                            <div class="malla-nombre">{{ item.malla.nombre }}</div>
+                        </div>
+                    </div>
+                    <div class="malla-stats">
+                        <span class="chip chip-soft">{{ item.materias }} materias</span>
+                        <span class="chip chip-media">{{ item.simulaciones }} simulaciones</span>
+                        <span class="chip chip-basica">{{ item.publicadas }} publicadas</span>
+                    </div>
+                    <div class="malla-go">Entrar &rarr;</div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="module-card data-card">
+            <div class="empty-state">
+                <span class="empty-ico">&#127918;</span>
+                <div class="empty-title">Aun no tienes simulaciones</div>
+                <p class="empty-text">Crea una simulacion desde cero o generala con IA a partir de una de tus materias asignadas.</p>
+                <button class="btn btn-primary" onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=add')">+ Crear simulacion</button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="col-xl-4">
+        {% include "simulador/pro_simulaciones/_materias_asignadas.html" %}
+    </div>
+</div>
+{% endblock %}

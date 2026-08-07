@@ -5,7 +5,6 @@ from datetime import date
 from types import SimpleNamespace
 
 from academico.models import Carrera, Malla, Materia, MateriaMalla, NivelMalla, PeriodoAcademico, ProfesorMateria
-from core.models import Institucion
 from simulador.models import (
     AccionSugeridaSimulacion,
     ConceptoEsperadoRonda,
@@ -26,6 +25,7 @@ from simulador.generator_service import generar_simulacion_desde_plantilla, seri
 from simulador.services import (
     TIPO_ERROR_BASURA,
     TIPO_ERROR_GENERICA,
+    TIPO_ERROR_OFFTOPIC,
     TIPO_ERROR_OK,
     TIPO_ERROR_VACIA,
     _normalizar_texto,
@@ -91,11 +91,8 @@ class EstructuraGenericaPorFasesTests(TestCase):
     def setUp(self):
         self.profesor = User.objects.create_user(username='prof_fases')
         self.estudiante = User.objects.create_user(username='alu_fases')
-        institucion = Institucion.objects.create(
-            nombre='Institucion fases', usuario_creacion=self.profesor,
-        )
         carrera = Carrera.objects.create(
-            institucion=institucion, nombre='Carrera fases', usuario_creacion=self.profesor,
+            nombre='Carrera fases', usuario_creacion=self.profesor,
         )
         malla = Malla.objects.create(
             carrera=carrera, nombre='Malla fases', usuario_creacion=self.profesor,
@@ -104,7 +101,7 @@ class EstructuraGenericaPorFasesTests(TestCase):
             malla=malla, numero=1, nombre='Primero', usuario_creacion=self.profesor,
         )
         materia = Materia.objects.create(
-            institucion=institucion, nombre='Materia fases', usuario_creacion=self.profesor,
+            nombre='Materia fases', usuario_creacion=self.profesor,
         )
         mm = MateriaMalla.objects.create(
             malla=malla, materia=materia, nivel=nivel, usuario_creacion=self.profesor,
@@ -217,6 +214,64 @@ class EstructuraGenericaPorFasesTests(TestCase):
         errores = _errores_publicacion_pedagogica(self.sim)
         self.assertTrue(any('deben vincularse con una alternativa visible' in e for e in errores))
         self.assertTrue(any('exactamente las mismas alternativas' in e for e in errores))
+
+    def test_no_se_publica_con_todas_las_decisiones_globales_e_ilimitadas(self):
+        from simulador.pro_simulaciones import _errores_publicacion_pedagogica
+        for texto in ('Continuar el plan', 'Cambiar el plan'):
+            AccionSugeridaSimulacion.objects.create(
+                simulacion=self.sim, numero_ronda=None, texto=texto,
+                impacto_base={'informacion': 5}, maximo_ejecuciones=0,
+                usuario_creacion=self.profesor,
+            )
+
+        errores = _errores_publicacion_pedagogica(self.sim)
+
+        self.assertTrue(any('todas las decisiones aparecen en todas las rondas' in e for e in errores))
+        self.assertTrue(any('repeticiones ilimitadas' in e for e in errores))
+
+    def test_una_opcion_del_docente_no_se_invalida_como_fuera_de_tema(self):
+        decision = 'Desarrollo por etapas con dos pilotos y contratacion gradual'
+        justificacion = 'Justifico la decision con datos, indicadores y restricciones del caso.'
+
+        libre = validar_respuesta_estudiante(
+            decision, justificacion, simulacion=self.sim,
+            situacion_actual='Elige la intervencion financiera.',
+        )
+        predefinida = validar_respuesta_estudiante(
+            decision, justificacion, simulacion=self.sim,
+            situacion_actual='Elige la intervencion financiera.',
+            opcion_predefinida=True,
+        )
+
+        self.assertEqual(libre['tipo_error'], TIPO_ERROR_OFFTOPIC)
+        self.assertTrue(predefinida['valida'])
+        self.assertNotEqual(predefinida['tipo_error'], TIPO_ERROR_OFFTOPIC)
+
+    def test_una_opcion_oficial_avanza_tambien_con_el_motor_local(self):
+        from unittest.mock import patch
+        from simulador.services.core import ejecutar_ronda_ia_dinamica
+        accion = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=1,
+            texto='Desarrollo por etapas con dos pilotos y contratacion gradual',
+            impacto_base={'informacion': 10}, usuario_creacion=self.profesor,
+        )
+        intento = IntentoSimulacion.objects.create(
+            simulacion=self.sim, estudiante=self.estudiante,
+            estado_actual={'informacion': 50, 'resultado': 20},
+            configuracion_snapshot=serializar_configuracion_simulacion(self.sim),
+            situacion_actual='Elige la intervencion financiera.', numero_ronda_actual=1,
+        )
+
+        with patch('simulador.ia_service.orden_proveedores', return_value=[]):
+            paso = ejecutar_ronda_ia_dinamica(
+                intento, '',
+                'Justifico la decision con datos, indicadores y restricciones del caso.',
+                accion=accion,
+            )
+
+        self.assertTrue(paso.es_valido)
+        self.assertEqual(paso.evaluacion_detalle['tipo'], 'mock')
+        self.assertEqual(paso.estado_despues['informacion'], 60)
 
     def test_contradiccion_explicita_no_avanza_ni_aplica_impacto(self):
         from simulador.services.core import ejecutar_ronda_ia_dinamica
@@ -407,6 +462,29 @@ class EstructuraGenericaPorFasesTests(TestCase):
         )
         self.assertNotIn(accion.pk, [a.pk for a in _acciones_del_intento(intento, 2)])
 
+    def test_opcion_global_heredada_ilimitada_tampoco_se_repite(self):
+        from simulador.alu_simulaciones import _acciones_del_intento
+        from simulador.services.core import accion_habilitada_por_historial
+        accion = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, numero_ronda=None, texto='Repetir la misma estrategia',
+            impacto_base={'resultado': 20}, maximo_ejecuciones=0,
+            usuario_creacion=self.profesor,
+        )
+        intento = IntentoSimulacion.objects.create(
+            simulacion=self.sim, estudiante=self.estudiante,
+            estado_actual={'informacion': 50, 'resultado': 20},
+            configuracion_snapshot=serializar_configuracion_simulacion(self.sim),
+            numero_ronda_actual=2,
+        )
+        PasoSimulacion.objects.create(
+            intento=intento, numero=1, es_valido=True, tipo_paso='VALIDO',
+            situacion_presentada='Primera fase', decision_estudiante=accion.texto,
+            evaluacion_detalle={'seleccion_registrada': {'accion_id': accion.pk}},
+        )
+
+        self.assertNotIn(accion.pk, [a.pk for a in _acciones_del_intento(intento, 2)])
+        self.assertFalse(accion_habilitada_por_historial(intento, accion))
+
     def test_campos_obligatorios_impiden_ejecutar_sin_responderlos(self):
         from simulador.services.core import ejecutar_ronda_ia_dinamica
         parametros = dict(self.sim.parametros)
@@ -450,9 +528,7 @@ class EstructuraGenericaPorFasesTests(TestCase):
 class EvaluacionRubricaTests(TestCase):
     def setUp(self):
         usuario = User.objects.create_user(username='profesor')
-        institucion = Institucion.objects.create(nombre='Demo', usuario_creacion=usuario)
         carrera = Carrera.objects.create(
-            institucion=institucion,
             nombre='Software',
             codigo='SW',
             usuario_creacion=usuario,
@@ -470,7 +546,6 @@ class EvaluacionRubricaTests(TestCase):
             usuario_creacion=usuario,
         )
         materia = Materia.objects.create(
-            institucion=institucion,
             codigo='DJ',
             nombre='Django',
             usuario_creacion=usuario,
@@ -553,6 +628,53 @@ class EvaluacionRubricaTests(TestCase):
         self.assertEqual(detalle_dd['puntos_obtenidos'], 30)
         self.assertGreater(detalle_dd['factor_coincidencia'], 0)
         self.assertLess(detalle_dd['factor_coincidencia'], 1)
+
+    def test_any_explicito_acepta_una_alternativa_completa(self):
+        from simulador.services.core import evaluar_regla_concepto
+
+        explicita = evaluar_regla_concepto(
+            'Aplicare un analisis por intencion de tratar.',
+            {'any': [
+                'prueba estadistica', 'analisis por intencion de tratar',
+                'analisis por protocolo', 'subgrupos',
+            ]},
+        )
+        historica = evaluar_regla_concepto(
+            'Aplicare un analisis por intencion de tratar.',
+            'prueba estadistica, analisis por intencion de tratar, analisis por protocolo, subgrupos',
+        )
+
+        self.assertTrue(explicita['cumple'])
+        self.assertEqual(explicita['factor'], 1)
+        self.assertEqual(historica['factor'], 0.25)
+
+        plural = evaluar_regla_concepto(
+            'Reportare intervalos de confianza para el efecto.',
+            {'any': ['intervalo de confianza']},
+        )
+        self.assertTrue(plural['cumple'])
+        self.assertEqual(plural['factor'], 1)
+
+    def test_nombre_del_concepto_da_credito_parcial_sin_regalarlo(self):
+        concepto = self.simulacion.conceptos_esperados.get(nombre='Concurrencia')
+        concepto.nombre = 'Consistencia transaccional'
+        concepto.palabras_clave = {'any': ['serializacion estricta', 'bloqueo pesimista']}
+        concepto.save(update_fields=['nombre', 'palabras_clave'])
+
+        resultado = evaluar_conceptos_esperados(
+            self.simulacion, 1,
+            'Garantizar consistencia transaccional en las inscripciones.',
+            'La operación se ejecutará de manera atómica para evitar estados parciales.',
+            'Proponga una solución.',
+        )
+        detalle = next(
+            item for item in resultado['detalle_conceptos']
+            if item['nombre'] == 'Consistencia transaccional'
+        )
+
+        self.assertTrue(detalle['parcial'])
+        self.assertFalse(detalle['cumple'])
+        self.assertEqual(detalle['factor_coincidencia'], 0.5)
 
     def test_no_otorga_puntos_por_conceptos_no_detectados(self):
         resultado = evaluar_conceptos_esperados(
@@ -668,15 +790,14 @@ class ValidacionIntentoTests(TestCase):
 class CalculoNotaFinalTests(TestCase):
     def setUp(self):
         usuario = User.objects.create_user(username='prof2')
-        institucion = Institucion.objects.create(nombre='Demo', usuario_creacion=usuario)
         carrera = Carrera.objects.create(
-            institucion=institucion, nombre='Software', codigo='SW2', usuario_creacion=usuario)
+            nombre='Software', codigo='SW2', usuario_creacion=usuario)
         malla = Malla.objects.create(
             carrera=carrera, nombre='Malla', codigo='M2', usuario_creacion=usuario)
         nivel = NivelMalla.objects.create(
             malla=malla, numero=1, nombre='Nivel 1', usuario_creacion=usuario)
         materia = Materia.objects.create(
-            institucion=institucion, codigo='FIN', nombre='Finanzas', usuario_creacion=usuario)
+            codigo='FIN', nombre='Finanzas', usuario_creacion=usuario)
         materia_malla = MateriaMalla.objects.create(
             malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
         self.simulacion = Simulacion.objects.create(
@@ -725,24 +846,22 @@ class PermisosPanelProfesorTests(TestCase):
         self.profesor1 = User.objects.create_user(username='profesor_panel_1', is_staff=True)
         self.profesor2 = User.objects.create_user(username='profesor_panel_2', is_staff=True)
         self.estudiante = User.objects.create_user(username='estudiante_panel')
-        institucion = Institucion.objects.create(nombre='Institucion panel', usuario_creacion=self.profesor1)
         carrera = Carrera.objects.create(
-            institucion=institucion, nombre='Carrera panel', codigo='CP', usuario_creacion=self.profesor1)
+            nombre='Carrera panel', codigo='CP', usuario_creacion=self.profesor1)
         malla = Malla.objects.create(
             carrera=carrera, nombre='Malla panel', codigo='MP', usuario_creacion=self.profesor1)
         nivel = NivelMalla.objects.create(
             malla=malla, numero=1, nombre='Nivel 1', usuario_creacion=self.profesor1)
         periodo = PeriodoAcademico.objects.create(
-            institucion=institucion,
             nombre='Periodo panel',
             fecha_inicio=date(2026, 1, 1),
             fecha_fin=date(2026, 6, 30),
             usuario_creacion=self.profesor1,
         )
         materia1 = Materia.objects.create(
-            institucion=institucion, codigo='P1', nombre='Materia 1', usuario_creacion=self.profesor1)
+            codigo='P1', nombre='Materia 1', usuario_creacion=self.profesor1)
         materia2 = Materia.objects.create(
-            institucion=institucion, codigo='P2', nombre='Materia 2', usuario_creacion=self.profesor1)
+            codigo='P2', nombre='Materia 2', usuario_creacion=self.profesor1)
         self.mm1 = MateriaMalla.objects.create(
             malla=malla, nivel=nivel, materia=materia1, usuario_creacion=self.profesor1)
         self.mm2 = MateriaMalla.objects.create(
@@ -786,11 +905,23 @@ class PermisosPanelProfesorTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
 
-    def test_listado_muestra_auditoria_calidad(self):
+    def test_el_panel_arranca_por_malla(self):
+        """El recorrido es el mismo en todos los paneles: malla y despues sus
+        materias por nivel."""
         client = Client()
         client.force_login(self.profesor1)
 
         response = client.get('/simulador/pro_simulaciones')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Malla panel')
+        self.assertContains(response, f'?malla={self.mm1.malla_id}')
+
+    def test_listado_muestra_auditoria_calidad(self):
+        client = Client()
+        client.force_login(self.profesor1)
+
+        response = client.get(f'/simulador/pro_simulaciones?malla={self.mm1.malla_id}')
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Calidad')
@@ -911,9 +1042,7 @@ class PermisosPanelProfesorTests(TestCase):
 class EventosDinamicosTests(TestCase):
     def setUp(self):
         self.profesor = User.objects.create_user(username='prof_eventos', is_staff=True)
-        institucion = Institucion.objects.create(nombre='Eventos Demo', usuario_creacion=self.profesor)
         carrera = Carrera.objects.create(
-            institucion=institucion,
             nombre='TI',
             codigo='TI-EVT',
             usuario_creacion=self.profesor,
@@ -931,7 +1060,6 @@ class EventosDinamicosTests(TestCase):
             usuario_creacion=self.profesor,
         )
         materia = Materia.objects.create(
-            institucion=institucion,
             codigo='RED-EVT',
             nombre='Redes',
             usuario_creacion=self.profesor,
@@ -1009,9 +1137,7 @@ class EventosDinamicosTests(TestCase):
 class RecursosTradeOffTests(TestCase):
     def setUp(self):
         self.profesor = User.objects.create_user(username='prof_recursos', is_staff=True)
-        institucion = Institucion.objects.create(nombre='Recursos Demo', usuario_creacion=self.profesor)
         carrera = Carrera.objects.create(
-            institucion=institucion,
             nombre='Software',
             codigo='SW-REC',
             usuario_creacion=self.profesor,
@@ -1029,7 +1155,6 @@ class RecursosTradeOffTests(TestCase):
             usuario_creacion=self.profesor,
         )
         materia = Materia.objects.create(
-            institucion=institucion,
             codigo='ARQ-REC',
             nombre='Arquitectura',
             usuario_creacion=self.profesor,
@@ -1096,15 +1221,14 @@ class CapaCursoTests(TestCase):
         cls.e1 = User.objects.create_user(username="e1", password="x", first_name="Ana", last_name="Gomez")
         cls.e2 = User.objects.create_user(username="e2", password="x", first_name="Luis", last_name="Martinez")
         cls.e3 = User.objects.create_user(username="e3", password="x", first_name="Sin", last_name="Entrega")
-        inst = Institucion.objects.create(nombre="UTA")
         for u in (cls.e1, cls.e2, cls.e3):
-            PerfilUsuario.objects.create(usuario=u, institucion=inst, rol=PerfilUsuario.ESTUDIANTE)
-        carrera = Carrera.objects.create(institucion=inst, nombre="Sis", codigo="S")
+            PerfilUsuario.objects.create(usuario=u, rol=PerfilUsuario.ESTUDIANTE)
+        carrera = Carrera.objects.create(nombre="Sis", codigo="S")
         malla = Malla.objects.create(carrera=carrera, nombre="M", codigo="M1")
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre="N1")
-        materia = Materia.objects.create(institucion=inst, codigo="DJ", nombre="Django")
+        materia = Materia.objects.create(codigo="DJ", nombre="Django")
         cls.mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
-        cls.periodo = PeriodoAcademico.objects.create(institucion=inst, nombre="2026-1", fecha_inicio=date(2026,1,1), fecha_fin=date(2026,6,30))
+        cls.periodo = PeriodoAcademico.objects.create(nombre="2026-1", fecha_inicio=date(2026,1,1), fecha_fin=date(2026,6,30))
         cls.sim = Simulacion.objects.create(materia_malla=cls.mm, profesor=cls.prof, titulo="Caso 1", maximo_decisiones=1)
         cls.seccion = Seccion.objects.create(materia_malla=cls.mm, periodo=cls.periodo, profesor=cls.prof, paralelo="A")
         cls.seccion.estudiantes.add(cls.e1, cls.e2, cls.e3)
@@ -1211,15 +1335,14 @@ class CandadoTareaTests(TestCase):
         from core.models import PerfilUsuario
         from simulador.models import Seccion, Asignacion, Equipo
         cls.est = User.objects.create_user('al1', password='x')
-        inst = Institucion.objects.create(nombre='UTA')
-        PerfilUsuario.objects.create(usuario=cls.est, institucion=inst, rol=PerfilUsuario.ESTUDIANTE)
+        PerfilUsuario.objects.create(usuario=cls.est, rol=PerfilUsuario.ESTUDIANTE)
         prof = User.objects.create_user('pr1', password='x', is_staff=True)
-        carrera = Carrera.objects.create(institucion=inst, nombre='S', codigo='S')
+        carrera = Carrera.objects.create(nombre='S', codigo='S')
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M')
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
-        materia = Materia.objects.create(institucion=inst, codigo='C', nombre='Caso')
+        materia = Materia.objects.create(codigo='C', nombre='Caso')
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
-        cls.periodo = PeriodoAcademico.objects.create(institucion=inst, nombre='P', fecha_inicio=date(2026,1,1), fecha_fin=date(2026,12,31), activo_matricula=True)
+        cls.periodo = PeriodoAcademico.objects.create(nombre='P', fecha_inicio=date(2026,1,1), fecha_fin=date(2026,12,31), activo_matricula=True)
         cls.sim = Simulacion.objects.create(materia_malla=mm, profesor=prof, titulo='Asignada', estado=Simulacion.PUBLICADA, maximo_decisiones=1)
         cls.sim_libre = Simulacion.objects.create(materia_malla=mm, profesor=prof, titulo='Libre', estado=Simulacion.PUBLICADA, maximo_decisiones=1)
         cls.sec = Seccion.objects.create(materia_malla=mm, periodo=cls.periodo, profesor=prof, paralelo='A')
@@ -1259,15 +1382,14 @@ class EquiposYMapeoTests(TestCase):
         cls.prof = User.objects.create_user('pm', password='x', is_staff=True)
         cls.e1 = User.objects.create_user('m1', password='x', first_name='A', last_name='A')
         cls.e2 = User.objects.create_user('m2', password='x', first_name='B', last_name='B')
-        inst = Institucion.objects.create(nombre='UTA')
         for u in (cls.e1, cls.e2):
-            PerfilUsuario.objects.create(usuario=u, institucion=inst, rol=PerfilUsuario.ESTUDIANTE)
-        carrera = Carrera.objects.create(institucion=inst, nombre='S', codigo='S')
+            PerfilUsuario.objects.create(usuario=u, rol=PerfilUsuario.ESTUDIANTE)
+        carrera = Carrera.objects.create(nombre='S', codigo='S')
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M')
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
-        materia = Materia.objects.create(institucion=inst, codigo='C', nombre='Caso')
+        materia = Materia.objects.create(codigo='C', nombre='Caso')
         cls.mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
-        periodo = PeriodoAcademico.objects.create(institucion=inst, nombre='P', fecha_inicio=date(2026,1,1), fecha_fin=date(2026,12,31))
+        periodo = PeriodoAcademico.objects.create(nombre='P', fecha_inicio=date(2026,1,1), fecha_fin=date(2026,12,31))
         cls.sim = Simulacion.objects.create(materia_malla=cls.mm, profesor=cls.prof, titulo='S1', maximo_decisiones=1)
         cls.sec = Seccion.objects.create(materia_malla=cls.mm, periodo=periodo, profesor=cls.prof, paralelo='A')
         cls.sec.estudiantes.add(cls.e1, cls.e2)
@@ -1316,14 +1438,13 @@ class ReporteAcreditacionTests(TestCase):
         from simulador.models import Seccion, Asignacion, ResultadoAprendizaje
         cls.prof = User.objects.create_user('pr2', password='x', is_staff=True)
         cls.est = User.objects.create_user('es2', password='x', first_name='Ana', last_name='Gomez')
-        inst = Institucion.objects.create(nombre='Universidad Tecnica de Ambato')
-        PerfilUsuario.objects.create(usuario=cls.est, institucion=inst, rol=PerfilUsuario.ESTUDIANTE)
-        carrera = Carrera.objects.create(institucion=inst, nombre='Sis', codigo='S')
+        PerfilUsuario.objects.create(usuario=cls.est, rol=PerfilUsuario.ESTUDIANTE)
+        carrera = Carrera.objects.create(nombre='Sis', codigo='S')
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M')
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
-        materia = Materia.objects.create(institucion=inst, codigo='CC', nombre='Caso')
+        materia = Materia.objects.create(codigo='CC', nombre='Caso')
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
-        periodo = PeriodoAcademico.objects.create(institucion=inst, nombre='2026-1', fecha_inicio=date(2026,1,1), fecha_fin=date(2026,12,31))
+        periodo = PeriodoAcademico.objects.create(nombre='2026-1', fecha_inicio=date(2026,1,1), fecha_fin=date(2026,12,31))
         cls.sim = Simulacion.objects.create(materia_malla=mm, profesor=cls.prof, titulo='Caso 1', maximo_decisiones=1)
         cls.sec = Seccion.objects.create(materia_malla=mm, periodo=periodo, profesor=cls.prof, paralelo='A')
         cls.sec.estudiantes.add(cls.est)
@@ -1384,11 +1505,10 @@ class ReflexionKolbTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.est = User.objects.create_user('refl', password='x')
-        inst = Institucion.objects.create(nombre='UTA')
-        carrera = Carrera.objects.create(institucion=inst, nombre='S', codigo='S')
+        carrera = Carrera.objects.create(nombre='S', codigo='S')
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M')
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
-        materia = Materia.objects.create(institucion=inst, codigo='C', nombre='Caso')
+        materia = Materia.objects.create(codigo='C', nombre='Caso')
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
         cls.sim = Simulacion.objects.create(materia_malla=mm, profesor=cls.est, titulo='S1', maximo_decisiones=2)
         cls.it = IntentoSimulacion.objects.create(estudiante=cls.est, simulacion=cls.sim, numero_ronda_actual=2)
@@ -1429,11 +1549,10 @@ class PronosticoPrevioTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.est = User.objects.create_user('pron', password='x')
-        inst = Institucion.objects.create(nombre='UTA')
-        carrera = Carrera.objects.create(institucion=inst, nombre='S', codigo='S')
+        carrera = Carrera.objects.create(nombre='S', codigo='S')
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M')
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
-        materia = Materia.objects.create(institucion=inst, codigo='C2', nombre='Caso 2')
+        materia = Materia.objects.create(codigo='C2', nombre='Caso 2')
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
         cls.sim = Simulacion.objects.create(
             materia_malla=mm,
@@ -1508,11 +1627,10 @@ class TradeoffExplicitoTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.est = User.objects.create_user('trade', password='x')
-        inst = Institucion.objects.create(nombre='UTA')
-        carrera = Carrera.objects.create(institucion=inst, nombre='S', codigo='S')
+        carrera = Carrera.objects.create(nombre='S', codigo='S')
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M')
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
-        materia = Materia.objects.create(institucion=inst, codigo='C3', nombre='Caso 3')
+        materia = Materia.objects.create(codigo='C3', nombre='Caso 3')
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
         cls.sim = Simulacion.objects.create(
             materia_malla=mm,
@@ -1588,11 +1706,10 @@ class AndamiajeAdaptativoTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.est = User.objects.create_user('anda', password='x')
-        inst = Institucion.objects.create(nombre='UTA')
-        carrera = Carrera.objects.create(institucion=inst, nombre='S', codigo='S')
+        carrera = Carrera.objects.create(nombre='S', codigo='S')
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M')
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
-        materia = Materia.objects.create(institucion=inst, codigo='C4', nombre='Caso 4')
+        materia = Materia.objects.create(codigo='C4', nombre='Caso 4')
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
         cls.sim = Simulacion.objects.create(materia_malla=mm, profesor=cls.est, titulo='S4', maximo_decisiones=3)
 
@@ -1717,11 +1834,10 @@ class ComparacionReintentoTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.est = User.objects.create_user('reint', password='x')
-        inst = Institucion.objects.create(nombre='UTA')
-        carrera = Carrera.objects.create(institucion=inst, nombre='S', codigo='S')
+        carrera = Carrera.objects.create(nombre='S', codigo='S')
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M')
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
-        materia = Materia.objects.create(institucion=inst, codigo='C5', nombre='Caso 5')
+        materia = Materia.objects.create(codigo='C5', nombre='Caso 5')
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
         cls.sim = Simulacion.objects.create(materia_malla=mm, profesor=cls.est, titulo='S5', estado=Simulacion.PUBLICADA, maximo_decisiones=1)
         IndicadorSimulacion.objects.create(
@@ -1784,11 +1900,10 @@ class RetosRefuerzoTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.est = User.objects.create_user('reto', password='x')
-        inst = Institucion.objects.create(nombre='UTA')
-        carrera = Carrera.objects.create(institucion=inst, nombre='S', codigo='S')
+        carrera = Carrera.objects.create(nombre='S', codigo='S')
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M')
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
-        materia = Materia.objects.create(institucion=inst, codigo='C6', nombre='Caso 6')
+        materia = Materia.objects.create(codigo='C6', nombre='Caso 6')
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
         cls.sim = Simulacion.objects.create(materia_malla=mm, profesor=cls.est, titulo='S6', maximo_decisiones=1)
 
@@ -1835,11 +1950,10 @@ class CasosEquivalentesTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.est = User.objects.create_user('transfer', password='x')
-        inst = Institucion.objects.create(nombre='UTA')
-        carrera = Carrera.objects.create(institucion=inst, nombre='S', codigo='S')
+        carrera = Carrera.objects.create(nombre='S', codigo='S')
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M')
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
-        materia = Materia.objects.create(institucion=inst, codigo='C7', nombre='Caso 7')
+        materia = Materia.objects.create(codigo='C7', nombre='Caso 7')
         cls.mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
         cls.ra = ResultadoAprendizaje.objects.create(materia_malla=cls.mm, codigo='RA1', descripcion='Transferir decisiones')
         cls.sim = Simulacion.objects.create(materia_malla=cls.mm, profesor=cls.est, titulo='Caso base', estado=Simulacion.PUBLICADA)
@@ -1875,11 +1989,10 @@ class GuardrailsIATests(TestCase):
     def test_limite_ia_bloquea_evaluacion(self):
         from simulador.ia_service import evaluar_ronda_con_proveedores
         est = User.objects.create_user('guard', password='x')
-        inst = Institucion.objects.create(nombre='UTA')
-        carrera = Carrera.objects.create(institucion=inst, nombre='S', codigo='S')
+        carrera = Carrera.objects.create(nombre='S', codigo='S')
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M')
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
-        materia = Materia.objects.create(institucion=inst, codigo='C8', nombre='Caso 8')
+        materia = Materia.objects.create(codigo='C8', nombre='Caso 8')
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
         sim = Simulacion.objects.create(materia_malla=mm, profesor=est, titulo='S8')
         intento = IntentoSimulacion.objects.create(estudiante=est, simulacion=sim)
@@ -1904,11 +2017,10 @@ class ReaccionNarradaTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.u = User.objects.create_user('narr', password='x')
-        inst = Institucion.objects.create(nombre='UTA')
-        carrera = Carrera.objects.create(institucion=inst, nombre='S', codigo='S')
+        carrera = Carrera.objects.create(nombre='S', codigo='S')
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M')
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
-        materia = Materia.objects.create(institucion=inst, codigo='C', nombre='Caso')
+        materia = Materia.objects.create(codigo='C', nombre='Caso')
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
         cls.sim = Simulacion.objects.create(materia_malla=mm, profesor=cls.u, titulo='S', maximo_decisiones=2)
         IndicadorSimulacion.objects.create(simulacion=cls.sim, codigo='defectos', nombre='Defectos', valor_inicial=15, valor_minimo=0, valor_maximo=100, direccion_optima='BAJO')
@@ -1948,24 +2060,22 @@ class EdicionMateriaSimulacionTests(TestCase):
 
     def setUp(self):
         self.profesor = User.objects.create_user(username='profesor_edicion', is_staff=True)
-        institucion = Institucion.objects.create(nombre='Institucion edicion', usuario_creacion=self.profesor)
         carrera = Carrera.objects.create(
-            institucion=institucion, nombre='Carrera edicion', codigo='CE', usuario_creacion=self.profesor)
+            nombre='Carrera edicion', codigo='CE', usuario_creacion=self.profesor)
         malla = Malla.objects.create(
             carrera=carrera, nombre='Malla edicion', codigo='ME', usuario_creacion=self.profesor)
         nivel = NivelMalla.objects.create(
             malla=malla, numero=1, nombre='Nivel 1', usuario_creacion=self.profesor)
         periodo = PeriodoAcademico.objects.create(
-            institucion=institucion,
             nombre='Periodo edicion',
             fecha_inicio=date(2026, 1, 1),
             fecha_fin=date(2026, 6, 30),
             usuario_creacion=self.profesor,
         )
         asignada = Materia.objects.create(
-            institucion=institucion, codigo='E1', nombre='Materia asignada', usuario_creacion=self.profesor)
+            codigo='E1', nombre='Materia asignada', usuario_creacion=self.profesor)
         suelta = Materia.objects.create(
-            institucion=institucion, codigo='E2', nombre='Materia suelta', usuario_creacion=self.profesor)
+            codigo='E2', nombre='Materia suelta', usuario_creacion=self.profesor)
         self.mm_asignada = MateriaMalla.objects.create(
             malla=malla, nivel=nivel, materia=asignada, usuario_creacion=self.profesor)
         self.mm_suelta = MateriaMalla.objects.create(
@@ -2009,6 +2119,7 @@ class EdicionMateriaSimulacionTests(TestCase):
             'nivel_dificultad': self.simulacion.nivel_dificultad,
             'maximo_decisiones': self.simulacion.maximo_decisiones,
             'tiempo_estimado': self.simulacion.tiempo_estimado,
+            'peso_resultado': self.simulacion.peso_resultado,
             'peso_rubrica_decision': self.simulacion.peso_rubrica_decision,
             'bonus_pronostico': self.simulacion.bonus_pronostico,
             'bonus_reflexion': self.simulacion.bonus_reflexion,
@@ -2034,11 +2145,10 @@ class RubricaDecisionTests(TestCase):
         from simulador.services import CRITERIOS_DECISION
         self.claves = [c['clave'] for c in CRITERIOS_DECISION]
         usuario = User.objects.create_user(username='profesor_rubrica')
-        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=usuario)
-        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='C1', usuario_creacion=usuario)
+        carrera = Carrera.objects.create(nombre='C', codigo='C1', usuario_creacion=usuario)
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='M1', usuario_creacion=usuario)
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N1', usuario_creacion=usuario)
-        materia = Materia.objects.create(institucion=institucion, codigo='X1', nombre='X', usuario_creacion=usuario)
+        materia = Materia.objects.create(codigo='X1', nombre='X', usuario_creacion=usuario)
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
         self.sim = Simulacion.objects.create(
             materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
@@ -2109,11 +2219,10 @@ class BonificacionesProcesoTests(TestCase):
 
     def setUp(self):
         usuario = User.objects.create_user(username='alumno_bonos')
-        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=usuario)
-        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='CB', usuario_creacion=usuario)
+        carrera = Carrera.objects.create(nombre='C', codigo='CB', usuario_creacion=usuario)
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MB', usuario_creacion=usuario)
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=usuario)
-        materia = Materia.objects.create(institucion=institucion, codigo='B1', nombre='B', usuario_creacion=usuario)
+        materia = Materia.objects.create(codigo='B1', nombre='B', usuario_creacion=usuario)
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
         self.sim = Simulacion.objects.create(
             materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
@@ -2181,11 +2290,10 @@ class InvestigacionConPresupuestoTests(TestCase):
         from simulador.models import InvestigacionSimulacion, RecursoSimulacion
         usuario = User.objects.create_user(username='prof_inv')
         self.alumno = User.objects.create_user(username='alu_inv')
-        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=usuario)
-        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='CI', usuario_creacion=usuario)
+        carrera = Carrera.objects.create(nombre='C', codigo='CI', usuario_creacion=usuario)
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MI', usuario_creacion=usuario)
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=usuario)
-        materia = Materia.objects.create(institucion=institucion, codigo='I1', nombre='I', usuario_creacion=usuario)
+        materia = Materia.objects.create(codigo='I1', nombre='I', usuario_creacion=usuario)
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
         self.sim = Simulacion.objects.create(
             materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
@@ -2278,11 +2386,10 @@ class GeneracionInvestigacionesTests(TestCase):
 
     def setUp(self):
         usuario = User.objects.create_user(username='prof_gen')
-        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=usuario)
-        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='CG', usuario_creacion=usuario)
+        carrera = Carrera.objects.create(nombre='C', codigo='CG', usuario_creacion=usuario)
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MG', usuario_creacion=usuario)
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=usuario)
-        materia = Materia.objects.create(institucion=institucion, codigo='G1', nombre='G', usuario_creacion=usuario)
+        materia = Materia.objects.create(codigo='G1', nombre='G', usuario_creacion=usuario)
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
         self.sim = Simulacion.objects.create(
             materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
@@ -2338,11 +2445,10 @@ class EditorDeRondasTests(TestCase):
 
     def setUp(self):
         self.profesor = User.objects.create_user(username='prof_rondas', is_staff=True)
-        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=self.profesor)
-        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='CR', usuario_creacion=self.profesor)
+        carrera = Carrera.objects.create(nombre='C', codigo='CR', usuario_creacion=self.profesor)
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MR', usuario_creacion=self.profesor)
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=self.profesor)
-        materia = Materia.objects.create(institucion=institucion, codigo='R1', nombre='R', usuario_creacion=self.profesor)
+        materia = Materia.objects.create(codigo='R1', nombre='R', usuario_creacion=self.profesor)
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=self.profesor)
         self.sim = Simulacion.objects.create(
             materia_malla=mm, profesor=self.profesor, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
@@ -2556,11 +2662,10 @@ class CalidadDeLosPromptsTests(TestCase):
 
     def setUp(self):
         usuario = User.objects.create_user(username='prof_prompts')
-        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=usuario)
-        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='CP2', usuario_creacion=usuario)
+        carrera = Carrera.objects.create(nombre='C', codigo='CP2', usuario_creacion=usuario)
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MP2', usuario_creacion=usuario)
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=usuario)
-        materia = Materia.objects.create(institucion=institucion, codigo='P2', nombre='Costos', usuario_creacion=usuario)
+        materia = Materia.objects.create(codigo='P2', nombre='Costos', usuario_creacion=usuario)
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
         self.sim = Simulacion.objects.create(
             materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
@@ -2634,11 +2739,10 @@ class VisibilidadDeInvestigacionesTests(TestCase):
     def setUp(self):
         from simulador.models import InvestigacionSimulacion
         usuario = User.objects.create_user(username='prof_vis')
-        institucion = Institucion.objects.create(nombre='UTA', usuario_creacion=usuario)
-        carrera = Carrera.objects.create(institucion=institucion, nombre='C', codigo='CV', usuario_creacion=usuario)
+        carrera = Carrera.objects.create(nombre='C', codigo='CV', usuario_creacion=usuario)
         malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MV', usuario_creacion=usuario)
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=usuario)
-        materia = Materia.objects.create(institucion=institucion, codigo='V1', nombre='V', usuario_creacion=usuario)
+        materia = Materia.objects.create(codigo='V1', nombre='V', usuario_creacion=usuario)
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
         self.sim = Simulacion.objects.create(
             materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
@@ -2686,3 +2790,492 @@ class VisibilidadDeInvestigacionesTests(TestCase):
         self.sim.save(update_fields=['parametros'])
         self._reparar()
         self.assertFalse((self.sim.parametros or {}).get('rondas'))
+
+
+class AuditoriaDeCoherenciaTests(TestCase):
+    """Un caso puede estar completo y aun asi no ensenar nada: si la alternativa
+    dice 'VAN 92.000' y el indicador vive en 0-10, el alumno elige bien y el
+    tablero le dice que no creo valor."""
+
+    def setUp(self):
+        from simulador.models import IndicadorSimulacion
+        usuario = User.objects.create_user(username='prof_aud')
+        carrera = Carrera.objects.create(nombre='C', codigo='CA2', usuario_creacion=usuario)
+        malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MA2', usuario_creacion=usuario)
+        nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=usuario)
+        materia = Materia.objects.create(codigo='A2', nombre='A', usuario_creacion=usuario)
+        mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
+        self.sim = Simulacion.objects.create(
+            materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Caso auditado', contexto='c', objetivo='o', resultado_aprendizaje='r',
+            situacion_inicial='s', instrucciones_ia='i', estado=Simulacion.PUBLICADA,
+            maximo_decisiones=3, usuario_creacion=usuario,
+        )
+        self.usuario = usuario
+        self.indicador = IndicadorSimulacion.objects.create(
+            simulacion=self.sim, codigo='van', nombre='VAN', valor_inicial=0,
+            valor_minimo=0, valor_maximo=50, direccion_optima='ALTO', usuario_creacion=usuario)
+
+    def _auditar(self):
+        from simulador.management.commands.auditar_coherencia import Command
+        return Command().revisar(self.sim)
+
+    def _mensajes(self):
+        return ' | '.join(m for _, m in self._auditar())
+
+    def test_detecta_indicador_sin_margen_de_mejora(self):
+        self.indicador.valor_inicial = 50  # ya esta en su maximo y lo optimo es ALTO
+        self.indicador.save(update_fields=['valor_inicial'])
+        self.assertIn('no hay nada que mejorar', self._mensajes())
+
+    def test_detecta_que_el_alumno_lee_una_escala_y_el_tablero_mide_otra(self):
+        from simulador.models import OpcionCasoSimulacion
+        OpcionCasoSimulacion.objects.create(
+            simulacion=self.sim, nombre='Proyecto A', valor_referencia='VAN $92.000',
+            fortaleza='f', riesgo='r', orden=1, usuario_creacion=self.usuario)
+        self.assertIn('el alumno lee una escala y el tablero mide otra', self._mensajes())
+
+    def test_detecta_alternativas_sin_consecuencia(self):
+        from simulador.models import AccionSugeridaSimulacion, OpcionCasoSimulacion
+        OpcionCasoSimulacion.objects.create(
+            simulacion=self.sim, nombre='Proyecto A', valor_referencia='alto',
+            fortaleza='f', riesgo='r', orden=1, usuario_creacion=self.usuario)
+        AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, texto='Elegir A', descripcion='d',
+            impacto_base={'van': 10}, usuario_creacion=self.usuario)
+        self.assertIn('no sabe que consecuencia aplicar', self._mensajes())
+
+    def test_detecta_un_caso_donde_no_se_decide_nada(self):
+        self.assertIn('solo puede redactar', self._mensajes())
+
+    def test_un_caso_coherente_no_reporta_nada(self):
+        from simulador.models import AccionSugeridaSimulacion, OpcionCasoSimulacion
+        alternativa = OpcionCasoSimulacion.objects.create(
+            simulacion=self.sim, nombre='Proyecto A', valor_referencia='VAN 30',
+            fortaleza='f', riesgo='r', orden=1, usuario_creacion=self.usuario)
+        AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, texto='Elegir A', descripcion='d', numero_ronda=1,
+            impacto_base={'van': 12}, opcion_caso=alternativa, usuario_creacion=self.usuario)
+        self.assertEqual(self._auditar(), [])
+
+    def test_el_arreglo_automatico_devuelve_margen_al_indicador(self):
+        from django.core.management import call_command
+        self.indicador.valor_inicial = 50
+        self.indicador.save(update_fields=['valor_inicial'])
+        call_command('auditar_coherencia', simulacion=self.sim.pk, arreglar=True, verbosity=0)
+        self.indicador.refresh_from_db()
+        self.assertLess(float(self.indicador.valor_inicial), 50)
+        self.assertGreaterEqual(float(self.indicador.valor_inicial), 0)
+
+    def test_el_arreglo_no_inventa_contenido(self):
+        """Vincular una alternativa con su consecuencia es decision del docente:
+        el comando no debe adivinarla."""
+        from django.core.management import call_command
+        from simulador.models import AccionSugeridaSimulacion, OpcionCasoSimulacion
+        OpcionCasoSimulacion.objects.create(
+            simulacion=self.sim, nombre='Proyecto A', valor_referencia='VAN 30',
+            fortaleza='f', riesgo='r', orden=1, usuario_creacion=self.usuario)
+        AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, texto='Elegir A', descripcion='d',
+            impacto_base={'van': 10}, usuario_creacion=self.usuario)
+        call_command('auditar_coherencia', simulacion=self.sim.pk, arreglar=True, verbosity=0)
+        self.assertIn('no sabe que consecuencia aplicar', self._mensajes())
+
+
+class EscalaDeNumerosDelCasoTests(TestCase):
+    """El error mas silencioso: un evento o una meta escritos en otra escala que
+    su indicador. Nadie lo ve hasta que un evento tumba a cero un indicador que
+    vivia entre 0 y 1, o una meta se cumple sola."""
+
+    def setUp(self):
+        from simulador.models import IndicadorSimulacion
+        usuario = User.objects.create_user(username='prof_esc')
+        carrera = Carrera.objects.create(nombre='C', codigo='CE2', usuario_creacion=usuario)
+        malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='ME2', usuario_creacion=usuario)
+        nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=usuario)
+        materia = Materia.objects.create(codigo='E2', nombre='E', usuario_creacion=usuario)
+        mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=usuario)
+        self.usuario = usuario
+        self.sim = Simulacion.objects.create(
+            materia_malla=mm, profesor=usuario, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Caso escala', contexto='c', objetivo='o', resultado_aprendizaje='r',
+            situacion_inicial='s', instrucciones_ia='i', estado=Simulacion.PUBLICADA,
+            usuario_creacion=usuario)
+        IndicadorSimulacion.objects.create(
+            simulacion=self.sim, codigo='eficiencia', nombre='Eficiencia', valor_inicial=0.8,
+            valor_minimo=0, valor_maximo=1, direccion_optima='ALTO', usuario_creacion=usuario)
+
+    def _mensajes(self):
+        from simulador.management.commands.auditar_coherencia import Command
+        return ' | '.join(m for _, m in Command().revisar(self.sim))
+
+    def test_detecta_un_evento_que_mueve_mas_que_todo_el_rango(self):
+        from simulador.models import EventoSimulacion
+        EventoSimulacion.objects.create(
+            simulacion=self.sim, nombre='Sube la tarifa', mensaje='m', ronda=2,
+            efecto={'eficiencia': -4}, usuario_creacion=self.usuario)
+        self.assertIn('mas que todo su rango', self._mensajes())
+
+    def test_un_evento_proporcionado_no_se_reporta(self):
+        from simulador.models import EventoSimulacion
+        EventoSimulacion.objects.create(
+            simulacion=self.sim, nombre='Sube la tarifa', mensaje='m', ronda=2,
+            efecto={'eficiencia': -0.08}, usuario_creacion=self.usuario)
+        self.assertNotIn('mas que todo su rango', self._mensajes())
+
+    def test_detecta_una_meta_fuera_del_rango_del_indicador(self):
+        from simulador.models import CondicionExitoSimulacion
+        CondicionExitoSimulacion.objects.create(
+            simulacion=self.sim, descripcion='Meta imposible', codigo_indicador='eficiencia',
+            operador='>=', valor_objetivo=90000, bonificacion=5, usuario_creacion=self.usuario)
+        self.assertIn('se cumple sola o es imposible', self._mensajes())
+
+    def test_una_meta_dentro_del_rango_no_se_reporta(self):
+        from simulador.models import CondicionExitoSimulacion
+        CondicionExitoSimulacion.objects.create(
+            simulacion=self.sim, descripcion='Meta razonable', codigo_indicador='eficiencia',
+            operador='>=', valor_objetivo=0.9, bonificacion=5, usuario_creacion=self.usuario)
+        self.assertNotIn('se cumple sola', self._mensajes())
+
+    def test_vincula_la_alternativa_con_la_decision_que_la_ejecuta(self):
+        from simulador.management.commands.auditar_coherencia import Command
+        from simulador.models import AccionSugeridaSimulacion, OpcionCasoSimulacion
+        alternativa = OpcionCasoSimulacion.objects.create(
+            simulacion=self.sim, nombre='Proyecto A: planta propia', valor_referencia='VAN 5',
+            fortaleza='f', riesgo='r', orden=1, usuario_creacion=self.usuario)
+        accion = AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, texto='Ejecutar el Proyecto A financiado con deuda',
+            descripcion='d', impacto_base={'eficiencia': 0.1}, usuario_creacion=self.usuario)
+        self.assertEqual(Command._vincular_por_nombre(self.sim), 1)
+        accion.refresh_from_db()
+        self.assertEqual(accion.opcion_caso_id, alternativa.pk)
+
+    def test_no_vincula_cuando_es_ambiguo(self):
+        from simulador.management.commands.auditar_coherencia import Command
+        from simulador.models import AccionSugeridaSimulacion, OpcionCasoSimulacion
+        for nombre in ('Proyecto A: planta', 'Proyecto B: canal'):
+            OpcionCasoSimulacion.objects.create(
+                simulacion=self.sim, nombre=nombre, valor_referencia='x',
+                fortaleza='f', riesgo='r', orden=1, usuario_creacion=self.usuario)
+        AccionSugeridaSimulacion.objects.create(
+            simulacion=self.sim, texto='Comparar Proyecto A y Proyecto B antes de decidir',
+            descripcion='d', impacto_base={'eficiencia': 0.1}, usuario_creacion=self.usuario)
+        self.assertEqual(Command._vincular_por_nombre(self.sim), 0)
+
+
+class CamposDeDecisionConfigurablesTests(TestCase):
+    """Una ronda aceptaba UNA decision, de tipo elegir o escribir. Con campos
+    configurables el docente arma la ronda que necesita: pedir una cantidad,
+    varias decisiones a la vez, o una sola como antes."""
+
+    def setUp(self):
+        self.profesor = User.objects.create_user(username='prof_campos', is_staff=True)
+        carrera = Carrera.objects.create(nombre='C', codigo='CC2', usuario_creacion=self.profesor)
+        malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='MC2', usuario_creacion=self.profesor)
+        nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N', usuario_creacion=self.profesor)
+        materia = Materia.objects.create(codigo='C2', nombre='C', usuario_creacion=self.profesor)
+        mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia, usuario_creacion=self.profesor)
+        self.sim = Simulacion.objects.create(
+            materia_malla=mm, profesor=self.profesor, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Caso campos', contexto='c', objetivo='o', resultado_aprendizaje='r',
+            situacion_inicial='s', instrucciones_ia='i', maximo_decisiones=2,
+            usuario_creacion=self.profesor)
+        self.client = Client()
+        self.client.force_login(self.profesor)
+
+    def _guardar(self, extra):
+        datos = {'action': 'guardar_rondas', 'id': self.sim.pk}
+        for n in (1, 2):
+            datos[f'modo_{n}'] = 'escribir'
+            datos[f'etiqueta_decision_{n}'] = ''
+            datos[f'etiqueta_justificacion_{n}'] = ''
+        datos.update(extra)
+        respuesta = self.client.post('/simulador/pro_simulaciones', datos,
+                                     headers={'x-requested-with': 'XMLHttpRequest'})
+        self.sim.refresh_from_db()
+        return respuesta
+
+    def _campos(self, numero=1):
+        from simulador.services import campos_decision_ronda
+        return campos_decision_ronda(self.sim, numero)
+
+    def test_sin_campos_configurados_la_ronda_no_cambia(self):
+        self._guardar({})
+        self.assertEqual(self._campos(1), [])
+
+    def test_el_docente_puede_pedir_una_cantidad(self):
+        self._guardar({
+            'campo_etiqueta_1_1': 'Cuanto producir', 'campo_tipo_1_1': 'numero',
+            'campo_unidad_1_1': 'unidades', 'campo_minimo_1_1': '0',
+            'campo_maximo_1_1': '5000', 'campo_objetivo_1_1': '3000',
+            'campo_tolerancia_1_1': '200', 'campo_obligatorio_1_1': 'on',
+        })
+        campos = self._campos(1)
+        self.assertEqual(len(campos), 1)
+        self.assertEqual(campos[0]['tipo'], 'numero')
+        self.assertEqual(campos[0]['objetivo'], 3000)
+        self.assertEqual(campos[0]['unidad'], 'unidades')
+
+    def test_el_docente_puede_pedir_varias_decisiones_a_la_vez(self):
+        self._guardar({
+            'campo_etiqueta_1_1': 'Precio', 'campo_tipo_1_1': 'numero', 'campo_objetivo_1_1': '50',
+            'campo_etiqueta_1_2': 'Publicidad', 'campo_tipo_1_2': 'numero', 'campo_objetivo_1_2': '8000',
+            'campo_etiqueta_1_3': 'Como lo justificas', 'campo_tipo_1_3': 'texto',
+        })
+        campos = self._campos(1)
+        self.assertEqual([c['etiqueta'] for c in campos], ['Precio', 'Publicidad', 'Como lo justificas'])
+
+    def test_los_campos_numericos_se_corrigen_solos(self):
+        from simulador.services import evaluar_campos_numericos
+        campos = [{'clave': 'x', 'etiqueta': 'Tasa', 'tipo': 'numero',
+                   'objetivo': 15, 'tolerancia': 1, 'obligatorio': True}]
+        self.assertEqual(evaluar_campos_numericos(campos, {'x': '15'})['puntaje'], 100)
+        self.assertEqual(evaluar_campos_numericos(campos, {'x': '15.5'})['puntaje'], 100)
+        self.assertEqual(evaluar_campos_numericos(campos, {'x': '99'})['puntaje'], 0)
+        parcial = evaluar_campos_numericos(campos, {'x': '16.5'})['puntaje']
+        self.assertTrue(0 < parcial < 100, parcial)
+
+    def test_un_campo_sin_valor_esperado_no_puntua(self):
+        """El docente solo queria el dato, no corregirlo."""
+        from simulador.services import evaluar_campos_numericos
+        campos = [{'clave': 'x', 'etiqueta': 'Cuanto', 'tipo': 'numero',
+                   'objetivo': None, 'tolerancia': None, 'obligatorio': True}]
+        self.assertIsNone(evaluar_campos_numericos(campos, {'x': '42'}))
+
+    def test_no_deja_avanzar_con_campos_vacios_o_fuera_de_rango(self):
+        from simulador.services import validar_campos_decision
+        campos = [{'clave': 'x', 'etiqueta': 'Precio', 'tipo': 'numero',
+                   'minimo': 10, 'maximo': 80, 'obligatorio': True}]
+        self.assertIn('Falta "Precio".', validar_campos_decision(campos, {}))
+        self.assertIn('no puede ser mayor', ' '.join(validar_campos_decision(campos, {'x': '90'})))
+        self.assertIn('debe ser un numero', ' '.join(validar_campos_decision(campos, {'x': 'mucho'})))
+        self.assertEqual(validar_campos_decision(campos, {'x': '45'}), [])
+
+    def test_un_campo_opcional_vacio_no_bloquea(self):
+        from simulador.services import validar_campos_decision
+        campos = [{'clave': 'x', 'etiqueta': 'Nota', 'tipo': 'texto', 'obligatorio': False}]
+        self.assertEqual(validar_campos_decision(campos, {}), [])
+
+    def test_el_estudiante_ve_los_campos_en_la_consola(self):
+        self._guardar({
+            'campo_etiqueta_1_1': 'Tasa CIF a aplicar', 'campo_tipo_1_1': 'numero',
+            'campo_objetivo_1_1': '15', 'campo_obligatorio_1_1': 'on',
+        })
+        alumno = User.objects.create_user(username='alu_campos')
+        intento = IntentoSimulacion.objects.create(
+            estudiante=alumno, simulacion=self.sim, usuario_creacion=alumno)
+        cliente = Client()
+        cliente.force_login(alumno)
+        html = cliente.get(f'/simulador/alu_simulaciones?action=simular&intento_id={intento.pk}').content.decode()
+        self.assertIn('Tasa CIF a aplicar', html)
+        self.assertIn('name="campo_1_1"', html)
+
+
+class ConfiguracionDelDocenteLlegaAlAlumnoTests(TestCase):
+    """De nada sirve que la pantalla del docente guarde si la consola del alumno
+    no cambia. Estos tests recorren el camino completo: el docente configura y
+    el estudiante recibe exactamente eso."""
+
+    def setUp(self):
+        from simulador.models import AccionSugeridaSimulacion, IndicadorSimulacion
+        self.docente = User.objects.create_user(username='doc_e2e', is_staff=True)
+        self.alumno = User.objects.create_user(username='alu_e2e')
+        carrera = Carrera.objects.create(nombre='C', codigo='CE3',
+                                         usuario_creacion=self.docente)
+        malla = Malla.objects.create(carrera=carrera, nombre='M', codigo='ME3',
+                                     usuario_creacion=self.docente)
+        nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N',
+                                          usuario_creacion=self.docente)
+        materia = Materia.objects.create(codigo='E3', nombre='E',
+                                         usuario_creacion=self.docente)
+        mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia,
+                                         usuario_creacion=self.docente)
+        self.sim = Simulacion.objects.create(
+            materia_malla=mm, profesor=self.docente, tipo_simulacion=Simulacion.TIPO_CON_IA_DINAMICA,
+            titulo='Caso e2e', contexto='c', objetivo='o', resultado_aprendizaje='r',
+            situacion_inicial='s', instrucciones_ia='i', estado=Simulacion.PUBLICADA,
+            maximo_decisiones=2, usuario_creacion=self.docente)
+        IndicadorSimulacion.objects.create(
+            simulacion=self.sim, codigo='margen', nombre='Margen', valor_inicial=40,
+            valor_minimo=0, valor_maximo=100, direccion_optima='ALTO',
+            usuario_creacion=self.docente)
+        for texto in ('Bajar el precio', 'Sostener el precio'):
+            AccionSugeridaSimulacion.objects.create(
+                simulacion=self.sim, texto=texto, descripcion='d', numero_ronda=1,
+                impacto_base={'margen': 5}, usuario_creacion=self.docente)
+        self.docente_cliente = Client()
+        self.docente_cliente.force_login(self.docente)
+        self.cabecera = {'x-requested-with': 'XMLHttpRequest'}
+
+    def _configurar(self, extra, modo='hibrido'):
+        datos = {'action': 'guardar_rondas', 'id': self.sim.pk}
+        for n in (1, 2):
+            datos['modo_%d' % n] = modo
+            datos['etiqueta_decision_%d' % n] = ''
+            datos['etiqueta_justificacion_%d' % n] = ''
+        datos.update(extra)
+        respuesta = self.docente_cliente.post('/simulador/pro_simulaciones', datos,
+                                              headers=self.cabecera)
+        self.sim.refresh_from_db()
+        return respuesta
+
+    def _consola(self):
+        IntentoSimulacion.objects.filter(estudiante=self.alumno, simulacion=self.sim).delete()
+        intento = IntentoSimulacion.objects.create(
+            estudiante=self.alumno, simulacion=self.sim, usuario_creacion=self.alumno)
+        cliente = Client()
+        cliente.force_login(self.alumno)
+        url = '/simulador/alu_simulaciones?action=simular&intento_id=%d' % intento.pk
+        return cliente, intento, cliente.get(url).content.decode()
+
+    def test_el_docente_abre_el_editor_de_rondas(self):
+        respuesta = self.docente_cliente.get('/simulador/pro_simulaciones',
+                                             {'action': 'rondas', 'id': self.sim.pk})
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(len(respuesta.context['rondas']), 2)
+
+    def test_modo_escribir_quita_las_opciones_de_la_consola(self):
+        self._configurar({}, modo='escribir')
+        _, _, html = self._consola()
+        self.assertNotIn('name="accion_id"', html)
+
+    def test_modo_elegir_muestra_las_opciones_y_quita_el_texto(self):
+        self._configurar({}, modo='elegir')
+        _, _, html = self._consola()
+        self.assertGreaterEqual(html.count('name="accion_id"'), 2)
+        self.assertNotIn('name="decision"', html)
+
+    def test_las_etiquetas_del_docente_llegan_a_la_consola(self):
+        self._configurar({'etiqueta_decision_1': 'Base de aplicacion elegida'})
+        _, _, html = self._consola()
+        self.assertIn('Base de aplicacion elegida', html)
+
+    def test_pedir_una_cantidad_y_que_se_valide_sola(self):
+        self._configurar({
+            'campo_etiqueta_1_1': 'Tasa a aplicar', 'campo_tipo_1_1': 'numero',
+            'campo_minimo_1_1': '5', 'campo_maximo_1_1': '30', 'campo_objetivo_1_1': '15',
+            'campo_tolerancia_1_1': '1', 'campo_obligatorio_1_1': 'on',
+        })
+        cliente, intento, html = self._consola()
+        self.assertIn('Tasa a aplicar', html)
+        self.assertIn('name="campo_1_1"', html)
+
+        base = {'action': 'ejecutar_paso', 'intento_id': intento.pk,
+                'decision': 'Aplico por horas maquina',
+                'justificacion': 'El 70% del costo indirecto es depreciacion.'}
+        sin_dato = cliente.post('/simulador/alu_simulaciones', base, headers=self.cabecera)
+        self.assertFalse(sin_dato.json()['result'])
+        self.assertIn('Falta', sin_dato.json()['mensaje'])
+
+        fuera = cliente.post('/simulador/alu_simulaciones', dict(base, campo_1_1='99'),
+                             headers=self.cabecera)
+        self.assertFalse(fuera.json()['result'])
+        self.assertIn('mayor que 30', fuera.json()['mensaje'])
+
+    def test_varias_decisiones_en_la_misma_ronda(self):
+        self._configurar({
+            'campo_etiqueta_1_1': 'Precio', 'campo_tipo_1_1': 'numero',
+            'campo_objetivo_1_1': '45', 'campo_obligatorio_1_1': 'on',
+            'campo_etiqueta_1_2': 'Publicidad', 'campo_tipo_1_2': 'numero',
+            'campo_objetivo_1_2': '6000', 'campo_obligatorio_1_2': 'on',
+            'campo_etiqueta_1_3': 'Que sacrificas', 'campo_tipo_1_3': 'texto',
+        })
+        _, _, html = self._consola()
+        for etiqueta in ('Precio', 'Publicidad', 'Que sacrificas'):
+            self.assertIn(etiqueta, html)
+
+    def test_quitar_los_campos_deja_la_ronda_como_estaba(self):
+        self._configurar({'campo_etiqueta_1_1': 'Precio', 'campo_tipo_1_1': 'numero'})
+        self.assertTrue(self.sim.parametros['rondas'][0]['campos'])
+        self._configurar({})
+        self.assertEqual(self.sim.parametros['rondas'][0]['campos'], [])
+        _, _, html = self._consola()
+        self.assertNotIn('name="campo_1_1"', html)
+
+    def test_un_estudiante_no_puede_configurar_rondas(self):
+        cliente = Client()
+        cliente.force_login(self.alumno)
+        respuesta = cliente.post('/simulador/pro_simulaciones', {
+            'action': 'guardar_rondas', 'id': self.sim.pk, 'modo_1': 'elegir',
+        }, headers=self.cabecera)
+        self.assertEqual(respuesta.status_code, 302)
+
+
+class RecorridoPorMallaTests(TestCase):
+    """El mismo camino en todos los paneles: malla -> materias por nivel ->
+    simulaciones. Antes cada listado mezclaba simulaciones de todas las mallas y
+    no habia forma de saber de que plan de estudios era cada una."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from core.models import PerfilUsuario
+
+        cls.admin = User.objects.create_user('admin_recorrido', password='x')
+        PerfilUsuario.objects.create(
+            usuario=cls.admin, rol=PerfilUsuario.ADMIN,
+        )
+        carrera = Carrera.objects.create(nombre='Sistemas', codigo='SIS')
+        cls.malla_a = Malla.objects.create(carrera=carrera, nombre='Malla A', codigo='MA')
+        cls.malla_b = Malla.objects.create(carrera=carrera, nombre='Malla B', codigo='MB')
+        cls.sim_a = cls._simulacion(cls.malla_a, 1, 'AA', 'Caso de la malla A')
+        cls.sim_b = cls._simulacion(cls.malla_b, 1, 'BB', 'Caso de la malla B')
+        # Materia sin simulaciones: el hueco tambien se tiene que ver.
+        cls.mm_vacia = cls._materia_malla(cls.malla_a, 2, 'AV', 'Materia sin caso')
+
+    @classmethod
+    def _materia_malla(cls, malla, numero, codigo, nombre):
+        nivel, _ = NivelMalla.objects.get_or_create(
+            malla=malla, numero=numero, defaults={'nombre': f'Nivel {numero}'},
+        )
+        materia = Materia.objects.create(codigo=codigo, nombre=nombre)
+        return MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
+
+    @classmethod
+    def _simulacion(cls, malla, numero, codigo, titulo):
+        materia_malla = cls._materia_malla(malla, numero, codigo, f'Materia {codigo}')
+        return Simulacion.objects.create(
+            materia_malla=materia_malla, titulo=titulo, maximo_decisiones=1,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def test_el_panel_admin_manda_al_recorrido_de_materias(self):
+        """Materias elige la malla antes de entrar a sus simulaciones."""
+        respuesta = self.client.get('/simulador/adm_simulaciones')
+
+        self.assertRedirects(respuesta, '/academico/adm_materias')
+
+        hub = self.client.get('/academico/adm_materias')
+        self.assertContains(hub, 'Malla A')
+        self.assertContains(hub, f'/academico/adm_materias?action=malla&pk={self.malla_a.pk}')
+        # Todavia no se listan casos: primero se elige la malla.
+        self.assertNotContains(hub, 'Caso de la malla A')
+
+        materias = self.client.get('/academico/adm_materias', {
+            'action': 'malla', 'pk': self.malla_a.pk,
+        })
+        self.assertContains(materias, f'/simulador/adm_simulaciones?malla={self.malla_a.pk}')
+
+    def test_al_entrar_a_una_malla_solo_salen_sus_simulaciones(self):
+        respuesta = self.client.get('/simulador/adm_simulaciones', {'malla': self.malla_a.pk})
+
+        self.assertContains(respuesta, 'Caso de la malla A')
+        self.assertNotContains(respuesta, 'Caso de la malla B')
+
+    def test_las_materias_salen_agrupadas_por_nivel_y_se_ven_los_huecos(self):
+        respuesta = self.client.get('/simulador/adm_simulaciones', {'malla': self.malla_a.pk})
+
+        niveles = respuesta.context['niveles']
+        self.assertEqual([n['numero'] for n in niveles], [1, 2])
+        self.assertEqual(niveles[0]['total_simulaciones'], 1)
+        self.assertEqual(niveles[1]['total_simulaciones'], 0)
+        self.assertContains(respuesta, 'Materia sin caso')
+        self.assertContains(respuesta, 'Sin simulaciones todavia')
+
+    def test_la_etiqueta_de_materia_dice_malla_y_nivel(self):
+        from simulador.forms import SimulacionForm
+
+        etiqueta = SimulacionForm().fields['materia_malla'].label_from_instance(self.mm_vacia)
+
+        self.assertEqual(etiqueta, 'MA / Nivel 2 - AV Materia sin caso')

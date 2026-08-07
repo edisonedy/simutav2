@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker">
+            <a href="{% url 'adm_materias' %}" class="text-decoration-none">Materias del periodo</a>
+            / {{ malla.carrera }}
+        </div>
+        <h1 class="h3 mb-1">{% if malla_periodo %}{{ malla_periodo.nombre_visible }}{% else %}{{ malla.nombre }}{% endif %}</h1>
+        <div class="text-muted">
+            Malla: <strong>{{ malla.nombre }}</strong>
+            {% if periodo %}&middot; Periodo: <strong>{{ periodo }}</strong>{% endif %}
+            {% if not malla_periodo %}
+                &middot; <span class="chip">Sin abrir en este periodo</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="page-head-actions">
+        {% if puede_editar and not malla_periodo %}
+            <button type="button" class="btn btn-primary"
+                    onclick="abrir_modal('{% url 'adm_materias' %}?action=add_malla_periodo&malla={{ malla.pk }}')">
+                Abrir la malla en el periodo
+            </button>
+        {% elif puede_editar and pendientes %}
+            <button type="button" class="btn btn-primary"
+                    onclick="abrir_modal('{% url 'adm_materias' %}?action=add_materia_periodo&malla_periodo={{ malla_periodo.pk }}')">
+                + Crear materia
+            </button>
+        {% endif %}
+        <a href="/simulador/adm_simulaciones?malla={{ malla.pk }}" class="btn btn-outline-primary">
+            Casos de esta malla
+        </a>
+        <a href="{% url 'adm_materias' %}" class="btn btn-outline-secondary">Volver</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="module-card p-3 metric-card">
+            <span class="metric-ico">&#128218;</span>
+            <div><div class="metric-label">Niveles</div><div class="mission-ind-val">{{ niveles|length }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="module-card p-3 metric-card">
+            <span class="metric-ico">&#9989;</span>
+            <div><div class="metric-label">Materias creadas</div><div class="mission-ind-val">{{ total_materias }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="module-card p-3 metric-card">
+            <span class="metric-ico">&#9203;</span>
+            <div><div class="metric-label">Sin crear</div><div class="mission-ind-val">{{ pendientes }}</div></div>
+        </div>
+    </div>
+</div>
+
+{% for grupo in niveles %}
+    <section class="module-card mb-3">
+        <div class="group-head">
+            <div>
+                <div class="page-kicker">Nivel {{ grupo.nivel.numero }}</div>
+                <h2 class="h6 mb-0">{{ grupo.nivel.nombre }}</h2>
+                <div class="text-muted small">
+                    {{ grupo.total_creadas }} creada{{ grupo.total_creadas|pluralize }}
+                    &middot; {{ grupo.total_pendientes }} sin crear
+                </div>
+            </div>
+
+            {% if puede_editar and malla_periodo and grupo.total_pendientes %}
+                <button type="button" class="btn btn-outline-primary btn-sm"
+                        onclick="abrir_modal('{% url 'adm_materias' %}?action=add_materia_periodo&malla_periodo={{ malla_periodo.pk }}&nivel={{ grupo.nivel.pk }}')">
+                    + Crear materia del nivel
+                </button>
+            {% endif %}
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 110px;">Codigo</th>
+                        <th>Asignatura de la malla</th>
+                        <th style="width: 150px;">En el periodo</th>
+                        <th style="width: 170px; text-align: center;">Contenido</th>
+                        <th style="width: 220px; text-align: center;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for fila in grupo.filas %}
+                    <tr>
+                        <td class="text-muted">{{ fila.materia_malla.materia.codigo }}</td>
+                        <td>
+                            <strong>{{ fila.materia_malla.materia.nombre }}</strong>
+                            {% if not fila.materia_malla.obligatoria %}
+                                <span class="chip">Optativa</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if fila.materia_periodo %}
+                                <span class="chip chip-media">Materia creada</span>
+                            {% else %}
+                                <span class="chip chip-alta">Sin crear</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center small text-muted">
+                            Temas: {{ fila.total_temas }}<br>
+                            Actividades: {{ fila.total_actividades }}<br>
+                            Casos: {{ fila.total_simulaciones }}
+                        </td>
+                        <td class="text-center">
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="{% url 'adm_materias' %}?action=detalle&pk={{ fila.materia_malla.pk }}{% if malla_periodo %}&malla_periodo={{ malla_periodo.pk }}{% endif %}">
+                                Ver contenido
+                            </a>
+                            {% if puede_editar and fila.materia_periodo %}
+                                <form method="post" action="{% url 'adm_materias' %}" class="d-inline"
+                                      onsubmit="return confirm('Quitar esta materia del periodo?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_materia_periodo">
+                                    <input type="hidden" name="pk" value="{{ fila.materia_periodo.pk }}">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">Quitar</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% empty %}
+    <div class="module-card data-card">
+        <div class="empty-state">
+            <span class="empty-ico">&#128218;</span>
+            <div class="empty-title">La malla no tiene asignaturas todavia</div>
+            <p class="empty-text">Agrega asignaturas a los niveles desde la estructura de la malla.</p>
+        </div>
+    </div>
+{% endfor %}
+{% endblock %}

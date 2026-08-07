@@ -334,19 +334,16 @@ class Command(BaseCommand):
         materias_malla = list(
             MateriaMalla.objects
             .filter(malla_id=malla['malla'], activo=True)
-            .select_related('malla__carrera__institucion', 'materia', 'nivel')
+            .select_related('malla__carrera', 'materia', 'nivel')
             .order_by('nivel__numero', 'orden', 'materia__nombre')
         )
         malla_obj = materias_malla[0].malla
-        institucion = malla_obj.carrera.institucion
 
-        perfil.institucion = institucion
         perfil.rol = PerfilUsuario.ADMIN
         perfil.usuario_creacion = perfil.usuario_creacion or usuario
         perfil.save()
 
         periodo, _ = PeriodoAcademico.objects.get_or_create(
-            institucion=institucion,
             nombre='Periodo Pruebas SimutaV2',
             defaults={
                 'fecha_inicio': timezone.datetime(2026, 1, 1).date(),
