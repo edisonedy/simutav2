@@ -40,6 +40,14 @@
     </div>
 </div>
 
+{% if resumen.abandonados %}
+<div class="module-card p-3 mb-3 briefing">
+    <strong>&#9888; {{ resumen.abandonados }} intento{{ resumen.abandonados|pluralize }} sin terminar.</strong>
+    <span class="text-muted">Alguien lo abrio y lo dejo a medias: suele ser senal de que el
+    enunciado no se entiende o el juego es muy largo.</span>
+</div>
+{% endif %}
+
 {% if mejores %}
 <div class="module-card p-3 table-responsive">
     <table class="table table-hover align-middle mb-0">

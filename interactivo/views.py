@@ -396,6 +396,10 @@ def estadisticas_actividad(request, actividad_id):
         aprobados=Count('id', filter=Q(aprobado=True)),
         no_aprobados=Count('id', filter=Q(aprobado=False)),
     )
+    # Quien lo abrio y lo dejo a medias: la senal de que algo no se entiende.
+    resumen['abandonados'] = actividad.intentos.filter(
+        estado=IntentoActividadInteractiva.EN_PROCESO,
+    ).count()
     mejores = (
         intentos.values('estudiante__username', 'estudiante__first_name', 'estudiante__last_name')
         .annotate(mejor=Max('porcentaje'), intentos=Count('id'))

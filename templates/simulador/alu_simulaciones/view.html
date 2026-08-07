@@ -45,6 +45,16 @@
                 <div class="sim-card-top">
                     <h2 class="h6 mb-0">{{ materia_malla.materia.nombre }}</h2>
                 </div>
+                {% if materia_malla.total_juegos %}
+                <a class="juegos-link" href="{% url 'interactivo:lista' materia_malla.pk %}">
+                    <span class="juegos-ico">🎮</span>
+                    <span>
+                        <strong>{{ materia_malla.total_juegos }} juego{{ materia_malla.total_juegos|pluralize }}</strong>
+                        para practicar
+                    </span>
+                    <span class="juegos-go">→</span>
+                </a>
+                {% endif %}
                 <div class="exam-list">
                 {% for sim in materia_malla.simulaciones_disponibles %}
                     <div class="sim-row">

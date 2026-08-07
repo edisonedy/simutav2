@@ -153,10 +153,41 @@
                     <div class="scenario-box mb-3"><strong>📌 Tarea del curso</strong> (sin fecha límite). Nota mínima para aprobar: {{ asignacion.nota_minima_aprobacion }}.</div>
                 {% endif %}
             {% endif %}
+            {% if juegos_del_caso %}
+            <div class="game-card mb-3">
+                <div class="game-tag">Entrenamiento previo</div>
+                <p class="small text-muted mb-2">
+                    {% if juegos_pendientes %}
+                        Calienta con estos juegos antes de entrar. Los marcados son
+                        obligatorios: sin aprobarlos no se abre el caso.
+                    {% else %}
+                        Ya superaste el entrenamiento. Puedes repetirlo cuando quieras.
+                    {% endif %}
+                </p>
+                <div class="warmup-list">
+                    {% for juego in juegos_del_caso %}
+                    <a class="warmup-item{% if juego in juegos_pendientes %} is-pending{% else %} is-done{% endif %}"
+                       href="{% url 'interactivo:jugar' juego.pk %}">
+                        <span class="warmup-ico">{% if juego in juegos_pendientes %}🔒{% else %}✅{% endif %}</span>
+                        <span class="warmup-body">
+                            <span class="warmup-title">{{ juego.titulo }}</span>
+                            <span class="warmup-meta">{{ juego.motor }} · mínimo {{ juego.puntaje_minimo }}%</span>
+                        </span>
+                        <span class="warmup-go">Jugar →</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <div class="game-card mission-start">
                 <p class="small text-muted mb-3">Este caso tiene <strong>{{ simulacion.maximo_decisiones }} {% if simulacion.maximo_decisiones == 1 %}ronda{% else %}rondas{% endif %}</strong>, únicamente las necesarias para practicar el aprendizaje. ¿List@ para comenzar?</p>
                 {% if asignacion and asignacion.cerrada %}
                     <button class="btn btn-secondary btn-lg w-100" disabled>Tarea cerrada</button>
+                {% elif juegos_pendientes %}
+                    <button class="btn btn-secondary btn-lg w-100" disabled>
+                        🔒 Termina el entrenamiento para desbloquear
+                    </button>
                 {% else %}
                 <form method="post" action="?action=iniciar" onsubmit="return enviar_formulario(this)">
                     {% csrf_token %}

@@ -3,13 +3,14 @@ from types import SimpleNamespace
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, render
 from core.funciones import ok_json, bad_json
 from academico.models import InscripcionMalla, MateriaMalla, PeriodoAcademico
+from interactivo.services import actividades_pendientes
 from simulador.models import InvestigacionSimulacion, Simulacion, IntentoSimulacion
 from simulador import cursos_service
 from simulador.forms import PasoSimulacionForm
@@ -1420,6 +1421,20 @@ def view(request):
                     return bad_json(mensaje=mensaje)
                 messages.error(request, mensaje)
                 return HttpResponseRedirect('?action=iniciar&simulacion_id=' + str(simulacion.pk))
+
+            # Los juegos obligatorios del caso son un candado: sin aprobarlos, el
+            # estudiante no entra. Es el punto de la preparacion previa.
+            pendientes = actividades_pendientes(simulacion, request.user)
+            if pendientes:
+                nombres = ', '.join(juego.titulo for juego in pendientes)
+                mensaje = (
+                    f'Antes de entrar al caso tienes que aprobar: {nombres}.'
+                )
+                if _es_ajax(request):
+                    return bad_json(mensaje=mensaje)
+                messages.error(request, mensaje)
+                return HttpResponseRedirect('?action=iniciar&simulacion_id=' + str(simulacion.pk))
+
             periodo = PeriodoAcademico.objects.filter(activo_matricula=True).first()
             escenario_inicial = None
             situacion_actual = simulacion.situacion_inicial or simulacion.contexto
@@ -1655,6 +1670,11 @@ def view(request):
                 item for item in indicadores if _es_indicador_academico(item.codigo)
             ]
             data['asignacion'] = cursos_service.asignacion_para(request.user, simulacion)
+            # La portada avisa que juegos faltan antes de dejar entrar.
+            data['juegos_pendientes'] = actividades_pendientes(simulacion, request.user)
+            data['juegos_del_caso'] = simulacion.actividades_interactivas.filter(
+                publicada=True, activo=True,
+            ).order_by('orden', 'pk')
             data['objetivos_mision'] = _objetivos_desde_estado(simulacion, construir_estado_inicial(simulacion))
             data.update(_datos_visibles_caso(simulacion))
             return render(request, 'simulador/alu_simulaciones/iniciar.html', data)
@@ -1799,6 +1819,16 @@ def view(request):
             .filter(malla_id=malla_sel, malla_id__in=mallas_ids, activo=True)
             .select_related('materia', 'nivel', 'malla__carrera')
             .prefetch_related('simulaciones')
+            .annotate(
+                total_juegos=Count(
+                    'actividades_interactivas',
+                    filter=Q(
+                        actividades_interactivas__publicada=True,
+                        actividades_interactivas__activo=True,
+                    ),
+                    distinct=True,
+                ),
+            )
             .order_by('nivel__numero', 'orden', 'materia__nombre')
         )
         data['malla_sel'] = materias[0].malla if materias else None

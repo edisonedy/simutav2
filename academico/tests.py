@@ -577,8 +577,10 @@ class ContenidoDeMateriaTests(_BaseAcademicaMixin, TestCase):
         self.assertTrue(respuesta.json()['result'], respuesta.json())
         tema = TemaMateria.objects.get(nombre='Reclutamiento')
 
+        # Los juegos (relacionar, memoria, ordenar...) los hace ActividadInteractiva;
+        # aqui solo van trabajos con instrucciones o archivo.
         for categoria, titulo, tipo in (
-            (ActividadMateria.REFUERZO, 'Relacionar conceptos', 'RELACIONAR'),
+            (ActividadMateria.REFUERZO, 'Guia de reclutamiento', 'GUIA_APE'),
             (ActividadMateria.EVALUACION, 'Prueba corta', 'PRUEBA'),
         ):
             respuesta = self._post_ajax({
@@ -593,7 +595,7 @@ class ContenidoDeMateriaTests(_BaseAcademicaMixin, TestCase):
         }).content.decode()
         self.assertIn('Reclutamiento', html)
         self.assertIn('Practicar y reforzar', html)
-        self.assertIn('Relacionar conceptos', html)
+        self.assertIn('Guia de reclutamiento', html)
         self.assertIn('Evaluar y aplicar', html)
         self.assertIn('Prueba corta', html)
 

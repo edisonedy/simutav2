@@ -35,16 +35,19 @@
     }
 
     function bloquePregunta(numero, enunciado) {
-        var bloque = crear('div', 'module-card p-3 mb-3');
-        bloque.appendChild(crear('div', 'page-kicker', 'Pregunta ' + numero));
-        bloque.appendChild(crear('div', 'play-label', enunciado));
+        var bloque = crear('div', 'juego-pregunta');
+        bloque.style.animationDelay = (numero - 1) * 0.05 + 's';
+        var titulo = crear('div', 'juego-enunciado');
+        titulo.appendChild(crear('span', 'juego-num', String(numero)));
+        titulo.appendChild(document.createTextNode(enunciado));
+        bloque.appendChild(titulo);
         return bloque;
     }
 
-    /* Opcion clicable con el input escondido (lo pinta el CSS de la casa). */
+    /* Opcion clicable entera, con el input escondido: la marca la pinta el CSS. */
     function opcion(tipo, nombre, valor, texto) {
-        var etiqueta = crear('label', 'play-option mb-2');
-        var entrada = crear('input', 'play-option-control');
+        var etiqueta = crear('label', 'juego-opcion');
+        var entrada = document.createElement('input');
         entrada.type = tipo;
         entrada.name = nombre;
         entrada.value = valor;
@@ -140,24 +143,32 @@
                 }
             }
 
+            function renumerar() {
+                Array.prototype.forEach.call(lista.children, function (fila, i) {
+                    fila.querySelector('.juego-orden-num').textContent = (i + 1) + '.';
+                });
+            }
+
             (config.elementos || []).forEach(function (elemento) {
-                var fila = crear('div', 'play-option d-flex align-items-center gap-2 mb-2');
+                var fila = crear('div', 'juego-fila-orden');
                 fila.dataset.elemento = elemento.id;
+                fila.appendChild(crear('span', 'juego-orden-num', ''));
                 fila.appendChild(crear('span', 'flex-grow-1', elemento.texto));
 
-                var subir = crear('button', 'btn btn-sm btn-outline-secondary', '↑');
+                var subir = crear('button', 'juego-mover', '↑');
                 subir.type = 'button';
-                subir.addEventListener('click', function () { mover(fila, -1); });
+                subir.addEventListener('click', function () { mover(fila, -1); renumerar(); });
 
-                var bajar = crear('button', 'btn btn-sm btn-outline-secondary', '↓');
+                var bajar = crear('button', 'juego-mover', '↓');
                 bajar.type = 'button';
-                bajar.addEventListener('click', function () { mover(fila, 1); });
+                bajar.addEventListener('click', function () { mover(fila, 1); renumerar(); });
 
                 fila.appendChild(subir);
                 fila.appendChild(bajar);
                 lista.appendChild(fila);
             });
             zona.appendChild(lista);
+            renumerar();
         },
         responder: function (zona) {
             var filas = zona.querySelectorAll('[data-elemento]');
@@ -173,12 +184,11 @@
     SimutaJugadores.registrar('relacionar', {
         dibujar: function (zona, config) {
             (config.izquierdas || []).forEach(function (izquierda) {
-                var fila = crear('div', 'module-card p-3 mb-2 d-flex align-items-center gap-3 flex-wrap');
+                var fila = crear('div', 'juego-par');
                 fila.dataset.izquierda = izquierda.id;
-                fila.appendChild(crear('div', 'play-label mb-0 flex-grow-1', izquierda.texto));
+                fila.appendChild(crear('div', 'juego-par-izq', izquierda.texto));
 
                 var selector = crear('select', 'form-select');
-                selector.style.maxWidth = '20rem';
                 selector.appendChild(new Option('Elige...', ''));
                 (config.derechas || []).forEach(function (derecha) {
                     selector.appendChild(new Option(derecha.texto, derecha.id));
@@ -210,19 +220,19 @@
             var volteadas = [];
             var bloqueado = false;
 
-            var tablero = crear('div', 'case-mini-grid');
+            var tablero = crear('div', 'juego-tablero');
             (config.tarjetas || []).forEach(function (tarjeta) {
-                var carta = crear('button', 'play-option case-mini text-center');
+                var carta = crear('button', 'juego-carta');
                 carta.type = 'button';
                 carta.dataset.pareja = tarjeta.pareja;
                 carta.textContent = '?';
 
                 carta.addEventListener('click', function () {
-                    if (bloqueado || carta.classList.contains('is-selected')) {
+                    if (bloqueado || carta.classList.contains('is-vuelta')) {
                         return;
                     }
                     carta.textContent = tarjeta.texto;
-                    carta.classList.add('is-selected');
+                    carta.classList.add('is-vuelta');
                     volteadas.push(carta);
 
                     if (volteadas.length < 2) {
@@ -233,8 +243,10 @@
                     if (primera.dataset.pareja === segunda.dataset.pareja) {
                         encontradas.push(primera.dataset.pareja);
                         zona.dataset.encontradas = encontradas.join(',');
-                        primera.disabled = true;
-                        segunda.disabled = true;
+                        [primera, segunda].forEach(function (c) {
+                            c.classList.add('is-pareja');
+                            c.disabled = true;
+                        });
                         volteadas = [];
                         return;
                     }
@@ -242,7 +254,7 @@
                     window.setTimeout(function () {
                         [primera, segunda].forEach(function (c) {
                             c.textContent = '?';
-                            c.classList.remove('is-selected');
+                            c.classList.remove('is-vuelta');
                         });
                         volteadas = [];
                         bloqueado = false;
@@ -263,12 +275,11 @@
     // -------------------------------------------------------- completar espacios
     SimutaJugadores.registrar('completar_espacios', {
         dibujar: function (zona, config) {
-            var parrafo = crear('div', 'briefing-text');
+            var parrafo = crear('div', 'juego-texto');
             (config.partes || []).forEach(function (parte) {
                 if (parte.tipo === 'espacio') {
-                    var entrada = crear('input', 'form-control d-inline-block mx-1');
+                    var entrada = crear('input', 'juego-espacio');
                     entrada.type = 'text';
-                    entrada.style.width = '10rem';
                     entrada.dataset.espacio = parte.id;
                     parrafo.appendChild(entrada);
                 } else {
@@ -328,6 +339,69 @@
             return campo ? campo.value : '';
         }
 
+        /* Telemetria: que hizo el estudiante y cuando. No afecta la nota; sirve
+         * para saber donde se traba y cuantos abandonan sin terminar. */
+        function registrar(verbo, elementoId, datos) {
+            if (!datos_url_evento) {
+                return;
+            }
+            fetch(datos_url_evento, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrf(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    verbo: verbo,
+                    elemento_id: elementoId || '',
+                    tiempo_segundos: Math.round((Date.now() - inicio) / 1000),
+                    datos: datos || {}
+                })
+            }).catch(function () { /* la telemetria nunca debe romper el juego */ });
+        }
+
+        var datos_url_evento = datos.dataset.urlEvento;
+        registrar('inicio', '', {renderer: zona.dataset.renderer});
+
+        /* Cuanto llevas resuelto. Cuenta los grupos que ya tienen respuesta, sin
+         * saber nada del motor: sirve igual para preguntas, pares y espacios. */
+        var barra = document.querySelector('.juego-progreso-barra');
+        function actualizarProgreso() {
+            if (!barra) {
+                return;
+            }
+            var grupos = zona.querySelectorAll('[data-pregunta], [data-izquierda]');
+            var espacios = zona.querySelectorAll('[data-espacio]');
+            var total = grupos.length + espacios.length;
+            if (!total) {
+                barra.style.width = '100%';
+                return;
+            }
+            var hechos = 0;
+            Array.prototype.forEach.call(grupos, function (grupo) {
+                var select = grupo.querySelector('select');
+                if (select) {
+                    hechos += select.value ? 1 : 0;
+                } else if (grupo.querySelector('input:checked')) {
+                    hechos += 1;
+                }
+            });
+            Array.prototype.forEach.call(espacios, function (entrada) {
+                hechos += entrada.value.trim() ? 1 : 0;
+            });
+            barra.style.width = Math.round((hechos * 100) / total) + '%';
+        }
+
+        // Cada vez que el estudiante toca algo, queda el rastro y avanza la barra.
+        zona.addEventListener('change', function (evento) {
+            var objetivo = evento.target;
+            registrar('responde', objetivo.name || objetivo.dataset.espacio || '', {});
+            actualizarProgreso();
+        });
+        zona.addEventListener('input', actualizarProgreso);
+        zona.addEventListener('click', actualizarProgreso);
+
         function finalizar() {
             if (terminado) {
                 return;
@@ -354,6 +428,7 @@
                     if (!resultado.ok) {
                         throw new Error(resultado.error || 'No se pudo calificar.');
                     }
+                    registrar('finaliza', '', {porcentaje: resultado.porcentaje});
                     window.location.href = resultado.redirect_url;
                 })
                 .catch(function (error) {

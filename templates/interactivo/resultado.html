@@ -1,39 +1,44 @@
 {% extends "base.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-<div class="page-head">
-    <div>
-        <div class="page-kicker">Interactivo &middot; {{ intento.actividad.motor }}</div>
-        <h1 class="h3">{{ intento.actividad.titulo }}</h1>
-        <div class="text-muted">
-            {{ intento.estudiante.get_full_name|default:intento.estudiante.username }}
-            &middot; intento {{ intento.numero_intento }}
-        </div>
+
+<div class="resultado-hero {% if intento.aprobado %}es-aprobado{% else %}es-reprobado{% endif %}">
+    <span class="resultado-emoji">
+        {% if intento.porcentaje >= 90 %}&#127942;
+        {% elif intento.aprobado %}&#127881;
+        {% elif intento.porcentaje >= 40 %}&#128170;
+        {% else %}&#128302;{% endif %}
+    </span>
+    <div class="resultado-nota">{{ intento.porcentaje|floatformat:0 }}%</div>
+    <div class="resultado-frase">
+        {% if intento.porcentaje >= 90 %}
+            Impecable. Te lo sabes.
+        {% elif intento.aprobado %}
+            Aprobado. Buen trabajo.
+        {% elif intento.porcentaje >= 40 %}
+            Casi. Te faltan {{ intento.actividad.puntaje_minimo|floatformat:0 }}% para pasar: dale otra.
+        {% else %}
+            Esta se te atravieso. Repasa el tema y vuelve.
+        {% endif %}
     </div>
-    <div class="page-head-actions">
-        <a class="btn btn-outline-secondary" href="{% url 'interactivo:lista' intento.actividad.materia_malla_id %}">Volver</a>
-        <a class="btn btn-primary" href="{% url 'interactivo:jugar' intento.actividad.pk %}">Intentar de nuevo</a>
+    <div class="resultado-barra">
+        <span style="width: {{ intento.porcentaje }}%"></span>
     </div>
 </div>
 
-<div class="module-card p-4 mb-3">
-    <div class="d-flex align-items-center gap-3 flex-wrap">
-        {% if intento.aprobado %}
-            <span class="chip chip-media">Aprobado</span>
-        {% else %}
-            <span class="chip chip-alta">No aprobado</span>
-        {% endif %}
-        <div>
-            <div class="metric-label">Resultado</div>
-            <div class="h3 mb-0 game-points">{{ intento.porcentaje }}%</div>
-        </div>
-        <div>
-            <div class="metric-label">Minimo para aprobar</div>
-            <div class="mission-ind-val">{{ intento.actividad.puntaje_minimo }}%</div>
+<div class="page-head">
+    <div>
+        <div class="page-kicker">{{ intento.actividad.motor }}</div>
+        <h1 class="h3 mb-1">{{ intento.actividad.titulo }}</h1>
+        <div class="text-muted">
+            {{ intento.estudiante.get_full_name|default:intento.estudiante.username }}
+            &middot; intento {{ intento.numero_intento }}
+            &middot; minimo para aprobar {{ intento.actividad.puntaje_minimo }}%
         </div>
     </div>
-    <div class="progress mt-3" style="height: 10px;">
-        <div class="progress-bar" role="progressbar" style="width: {{ intento.porcentaje }}%"></div>
+    <div class="page-head-actions">
+        <a class="btn btn-outline-secondary" href="{% url 'interactivo:lista' intento.actividad.materia_malla_id %}">Volver a los juegos</a>
+        <a class="btn btn-primary" href="{% url 'interactivo:jugar' intento.actividad.pk %}">&#128260; Otra vez</a>
     </div>
 </div>
 
@@ -63,4 +68,15 @@
         </div>
     </div>
 </div>
+
+{% if intento.actividad.simulacion_id and intento.aprobado %}
+<div class="module-card p-3 mt-3 briefing">
+    &#128275; <strong>Desbloqueaste el caso.</strong>
+    Ya puedes entrar a <em>{{ intento.actividad.simulacion.titulo }}</em>.
+    <a class="btn btn-sm btn-primary ms-2"
+       href="/simulador/alu_simulaciones?action=iniciar&simulacion_id={{ intento.actividad.simulacion_id }}">
+        Ir al caso &rarr;
+    </a>
+</div>
+{% endif %}
 {% endblock %}

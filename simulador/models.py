@@ -313,11 +313,13 @@ class Simulacion(ModeloBase):
 
 
 class ActividadMateria(ModeloBase):
-    """Actividad de aprendizaje general o asociada a un tema.
+    """Trabajo de la materia con instrucciones o archivo adjunto.
 
-    Las simulaciones conservan su motor especializado y se muestran junto a
-    las actividades de evaluacion. Este modelo cubre refuerzos, pruebas,
-    proyectos y guias APE que pueden ser instrucciones o archivos.
+    Cubre pruebas, proyectos, guias APE y casos practicos escritos. Los JUEGOS
+    (memoria, relacionar, ordenar, crucigrama...) NO viven aqui: los hace
+    ActividadInteractiva, que ademas se juega y se califica sola. Tenerlos en
+    los dos sitios solo lograba que el docente creara una "Memoria" que no se
+    podia jugar.
     """
 
     REFUERZO = 'REFUERZO'
@@ -327,12 +329,6 @@ class ActividadMateria(ModeloBase):
         (EVALUACION, 'Evaluar y aplicar'),
     ]
 
-    SOPA_LETRAS = 'SOPA_LETRAS'
-    MEMORIA = 'MEMORIA'
-    RELACIONAR = 'RELACIONAR'
-    ORDENAR = 'ORDENAR'
-    CUESTIONARIO = 'CUESTIONARIO'
-    CRUCIGRAMA = 'CRUCIGRAMA'
     PRUEBA = 'PRUEBA'
     EXAMEN_CORTO = 'EXAMEN_CORTO'
     CASO_PRACTICO = 'CASO_PRACTICO'
@@ -340,12 +336,6 @@ class ActividadMateria(ModeloBase):
     PROYECTO = 'PROYECTO'
     OTRO = 'OTRO'
     TIPOS = [
-        (SOPA_LETRAS, 'Sopa de letras'),
-        (MEMORIA, 'Memoria'),
-        (RELACIONAR, 'Relacionar conceptos'),
-        (ORDENAR, 'Ordenar procesos'),
-        (CUESTIONARIO, 'Cuestionario de practica'),
-        (CRUCIGRAMA, 'Crucigrama'),
         (PRUEBA, 'Prueba'),
         (EXAMEN_CORTO, 'Examen corto'),
         (CASO_PRACTICO, 'Caso practico'),
