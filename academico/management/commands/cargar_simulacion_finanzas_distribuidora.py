@@ -25,6 +25,15 @@ from simulador.models import (
 )
 
 
+def _modalidad_presencial():
+    """La modalidad es un catalogo: se referencia, no se escribe."""
+    from academico.models import Modalidad
+
+    modalidad, _ = Modalidad.objects.get_or_create(nombre='Presencial')
+    return modalidad
+
+
+
 class Command(BaseCommand):
     help = 'Carga la simulacion financiera de Distribuidora Andina S.A.S.'
 
@@ -51,7 +60,7 @@ class Command(BaseCommand):
             defaults={
                 'nombre': 'Administracion de Empresas',
                 'titulo_otorga': 'Licenciado/a en Administracion',
-                'modalidad': 'Presencial',
+                'modalidad': _modalidad_presencial(),
                 'duracion_periodos': 8,
                 'usuario_creacion': usuario,
             },

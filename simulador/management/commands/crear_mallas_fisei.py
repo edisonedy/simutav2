@@ -29,6 +29,15 @@ from simulador.models import (
     CriterioEvaluacion, IndicadorSimulacion, RestriccionSimulacion, Simulacion,
 )
 
+
+def _modalidad_presencial():
+    """La modalidad es un catalogo: se referencia, no se escribe."""
+    from academico.models import Modalidad
+
+    modalidad, _ = Modalidad.objects.get_or_create(nombre='Presencial')
+    return modalidad
+
+
 User = get_user_model()
 
 
@@ -226,7 +235,7 @@ class Command(BaseCommand):
         # Carrera + malla Software (FISEI)
         carrera_sw, _ = Carrera.objects.get_or_create(
             codigo='SW-FISEI',
-            defaults={'nombre': 'Software', 'modalidad': 'Presencial', 'duracion_periodos': 9,
+            defaults={'nombre': 'Software', 'modalidad': _modalidad_presencial(), 'duracion_periodos': 9,
                       'titulo_otorga': 'Ingeniero en Software', 'usuario_creacion': bpalate})
         malla_sw, _ = Malla.objects.get_or_create(
             carrera=carrera_sw, codigo='FISEI-SW-2026',

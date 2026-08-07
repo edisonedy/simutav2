@@ -1,0 +1,304 @@
+/* Estilos de los juegos.
+ *
+ * La idea: que jugar se sienta como jugar. Piezas grandes que responden al
+ * dedo, feedback inmediato al tocar, y una celebracion cuando se aprueba.
+ * Todo sobre la paleta azul de la casa (--accent, --cyan).
+ */
+
+/* ------------------------------------------------- entrada desde la materia */
+.juegos-link {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    margin: 0 0 .8rem;
+    padding: .7rem .9rem;
+    border-radius: .8rem;
+    text-decoration: none;
+    color: var(--ink);
+    background: linear-gradient(100deg, rgba(53,182,232,.16) 0%, rgba(var(--accent-rgb), .10) 100%);
+    border: 1px solid rgba(53,182,232,.32);
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+.juegos-link:hover {
+    color: var(--ink);
+    box-shadow: 0 8px 20px rgba(53,182,232,.25);
+}
+@media (prefers-reduced-motion: no-preference) {
+    .juegos-link:hover { transform: translateY(-2px); }
+}
+.juegos-ico { font-size: 1.4rem; }
+.juegos-go { margin-left: auto; font-weight: 700; color: var(--accent); }
+
+/* ------------------------------------------- entrenamiento previo a un caso */
+.warmup-list { display: grid; gap: .5rem; }
+.warmup-item {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .7rem .9rem;
+    border-radius: .8rem;
+    text-decoration: none;
+    border: 1.5px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    transition: border-color .18s ease, transform .18s ease;
+}
+.warmup-item:hover { color: var(--ink); border-color: var(--cyan); }
+@media (prefers-reduced-motion: no-preference) {
+    .warmup-item:hover { transform: translateX(3px); }
+}
+.warmup-item.is-pending { border-left: 4px solid var(--accent); }
+.warmup-item.is-done    { border-left: 4px solid var(--forest); opacity: .78; }
+.warmup-ico { font-size: 1.2rem; }
+.warmup-body { display: flex; flex-direction: column; line-height: 1.25; }
+.warmup-title { font-weight: 700; }
+.warmup-meta { font-size: .78rem; color: var(--muted); }
+.warmup-go { margin-left: auto; font-weight: 700; color: var(--accent); font-size: .88rem; }
+
+/* --------------------------------------------------- cabecera del juego */
+.juego-hud {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    padding: 1.3rem 1.5rem;
+    margin-bottom: 1.1rem;
+    color: #fff;
+    background:
+        radial-gradient(120% 160% at 100% 0%, rgba(53,182,232,.42) 0%, rgba(53,182,232,0) 55%),
+        linear-gradient(115deg, var(--accent-dark) 0%, var(--accent) 55%, var(--slate) 100%);
+    box-shadow: 0 16px 38px rgba(10,20,32,.30);
+}
+.juego-hud-top {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap;
+}
+.juego-motor {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .68rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--cyan);
+}
+.juego-titulo {
+    font-family: "Fredoka", "Nunito", sans-serif;
+    font-weight: 700; font-size: 1.7rem; line-height: 1.1; margin: .15rem 0 0;
+}
+.juego-meta { font-size: .85rem; color: rgba(255,255,255,.75); }
+.juego-progreso {
+    height: 8px; border-radius: 999px; margin-top: .9rem;
+    background: rgba(255,255,255,.18); overflow: hidden;
+}
+.juego-progreso-barra {
+    height: 100%; width: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--cyan) 0%, #7ee0ff 100%);
+    transition: width .35s cubic-bezier(.2,.8,.3,1);
+}
+
+/* ------------------------------------------------------------ las piezas */
+.juego-zona { display: grid; gap: .9rem; }
+
+.juego-pregunta {
+    border: 1.5px solid var(--line);
+    border-radius: 1rem;
+    background: var(--card);
+    padding: 1.15rem 1.25rem;
+    box-shadow: 0 6px 18px rgba(22,32,42,.05);
+    animation: entrarPieza .35s ease both;
+}
+@keyframes entrarPieza {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+.juego-num {
+    display: inline-grid; place-items: center;
+    width: 1.7rem; height: 1.7rem; border-radius: 50%;
+    font-family: "IBM Plex Mono", monospace; font-size: .8rem; font-weight: 700;
+    color: #fff; background: var(--accent); margin-right: .5rem;
+}
+.juego-enunciado {
+    font-weight: 700; font-size: 1.05rem; line-height: 1.4;
+    margin-bottom: .8rem; display: block;
+}
+
+/* Opciones: grandes, clicables enteras, con marca clara al elegir. */
+.juego-opcion {
+    position: relative;
+    display: flex; align-items: center; gap: .7rem;
+    padding: .8rem 1rem; margin-bottom: .5rem;
+    border: 2px solid var(--line); border-radius: .8rem;
+    background: var(--paper); cursor: pointer; user-select: none;
+    font-size: .98rem;
+    transition: border-color .16s ease, background-color .16s ease, transform .12s ease;
+}
+.juego-opcion:last-child { margin-bottom: 0; }
+.juego-opcion input {
+    position: absolute !important; width: 1px; height: 1px;
+    opacity: 0; pointer-events: none;
+}
+.juego-opcion::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 1.15rem; height: 1.15rem;
+    border: 2px solid var(--line); border-radius: 50%;
+    transition: border-color .16s ease, background-color .16s ease;
+}
+.juego-opcion:hover { border-color: var(--cyan); background: #fff; }
+@media (prefers-reduced-motion: no-preference) {
+    .juego-opcion:active { transform: scale(.985); }
+}
+.juego-opcion:has(input:checked) {
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb), .07);
+}
+.juego-opcion:has(input:checked)::before {
+    border-color: var(--accent);
+    background: radial-gradient(circle, var(--accent) 45%, transparent 50%);
+}
+.juego-opcion:focus-within { box-shadow: 0 0 0 4px rgba(53,182,232,.18); }
+
+/* Ordenar */
+.juego-fila-orden {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .75rem .9rem; margin-bottom: .5rem;
+    border: 2px solid var(--line); border-radius: .8rem;
+    background: var(--paper); font-size: .98rem;
+}
+.juego-fila-orden .juego-mover {
+    border: none; background: rgba(var(--accent-rgb), .10);
+    color: var(--accent); font-weight: 700; font-size: 1rem;
+    width: 2rem; height: 2rem; border-radius: .55rem; cursor: pointer;
+    transition: background-color .16s ease;
+}
+.juego-fila-orden .juego-mover:hover { background: rgba(var(--accent-rgb), .2); }
+.juego-orden-num {
+    flex: 0 0 auto;
+    font-family: "IBM Plex Mono", monospace; font-weight: 700;
+    color: var(--muted); min-width: 1.4rem;
+}
+
+/* Relacionar */
+.juego-par {
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    padding: .9rem 1rem; margin-bottom: .5rem;
+    border: 1.5px solid var(--line); border-radius: .9rem; background: var(--card);
+}
+.juego-par-izq { font-weight: 700; flex: 1 1 12rem; }
+.juego-par select { max-width: 20rem; }
+
+/* Memoria */
+.juego-tablero {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+    gap: .6rem;
+}
+.juego-carta {
+    aspect-ratio: 4 / 3;
+    display: grid; place-items: center; text-align: center;
+    padding: .6rem; font-size: .86rem; font-weight: 600; line-height: 1.25;
+    border: 2px solid var(--line); border-radius: .8rem; cursor: pointer;
+    background: linear-gradient(140deg, var(--accent) 0%, var(--accent-2) 100%);
+    color: #fff;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.juego-carta:hover { box-shadow: 0 8px 20px rgba(var(--accent-rgb), .3); }
+@media (prefers-reduced-motion: no-preference) {
+    .juego-carta:hover { transform: translateY(-3px); }
+}
+.juego-carta.is-vuelta {
+    background: #fff; color: var(--ink); border-color: var(--cyan);
+    animation: voltear .3s ease;
+}
+.juego-carta.is-pareja {
+    background: rgba(14,122,110,.12); color: var(--forest);
+    border-color: var(--forest); cursor: default;
+}
+.juego-carta:disabled { opacity: .85; }
+@keyframes voltear {
+    0%   { transform: rotateY(90deg); }
+    100% { transform: rotateY(0); }
+}
+
+/* Completar espacios */
+.juego-texto {
+    font-size: 1.06rem; line-height: 2.3;
+    padding: 1.1rem 1.25rem;
+    border-left: 4px solid var(--cyan);
+    background: var(--paper); border-radius: .8rem;
+}
+.juego-espacio {
+    display: inline-block; width: 9rem; margin: 0 .3rem;
+    padding: .3rem .6rem;
+    border: none; border-bottom: 2.5px solid var(--accent);
+    border-radius: .4rem .4rem 0 0;
+    background: #fff; font-size: 1rem; font-weight: 600; color: var(--accent);
+    text-align: center;
+}
+.juego-espacio:focus {
+    outline: none; background: rgba(53,182,232,.10);
+    border-bottom-color: var(--cyan);
+}
+
+/* --------------------------------------------------------- pie de la partida */
+.juego-pie {
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    margin-top: 1.1rem; padding-top: 1.1rem;
+    border-top: 1px solid var(--line);
+}
+.btn-jugar {
+    font-family: "Fredoka", "Nunito", sans-serif;
+    font-size: 1.05rem; font-weight: 600;
+    padding: .7rem 1.8rem; border: none; border-radius: .8rem; color: #fff;
+    background: linear-gradient(100deg, var(--accent) 0%, var(--accent-2) 100%);
+    box-shadow: 0 10px 22px rgba(var(--accent-rgb), .35);
+    cursor: pointer;
+    transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+.btn-jugar:hover:not(:disabled) { filter: brightness(1.08); }
+@media (prefers-reduced-motion: no-preference) {
+    .btn-jugar:hover:not(:disabled) { transform: translateY(-2px); }
+}
+.btn-jugar:disabled { opacity: .55; cursor: default; box-shadow: none; }
+
+/* ------------------------------------------------------------- el resultado */
+.resultado-hero {
+    position: relative; overflow: hidden;
+    border-radius: 1.1rem; padding: 2.2rem 1.5rem; text-align: center;
+    color: #fff; margin-bottom: 1.2rem;
+}
+.resultado-hero.es-aprobado {
+    background: linear-gradient(135deg, #0e7a6e 0%, #14a08f 55%, #0e6e7a 100%);
+    box-shadow: 0 18px 40px rgba(14,122,110,.35);
+}
+.resultado-hero.es-reprobado {
+    background: linear-gradient(135deg, var(--accent-dark) 0%, var(--accent) 60%, var(--slate) 100%);
+    box-shadow: 0 18px 40px rgba(var(--accent-rgb), .35);
+}
+.resultado-emoji {
+    font-size: 3.2rem; display: block; margin-bottom: .3rem;
+    animation: brincar .6s cubic-bezier(.2,.9,.3,1.4) both;
+}
+@keyframes brincar {
+    0%   { transform: scale(.3) translateY(20px); opacity: 0; }
+    60%  { transform: scale(1.15) translateY(-6px); opacity: 1; }
+    100% { transform: scale(1) translateY(0); }
+}
+.resultado-nota {
+    font-family: "Fredoka", "Nunito", sans-serif;
+    font-size: 4rem; font-weight: 700; line-height: 1; margin: .2rem 0;
+    text-shadow: 0 6px 24px rgba(0,0,0,.28);
+}
+.resultado-frase { font-size: 1.05rem; color: rgba(255,255,255,.88); }
+.resultado-barra {
+    height: 10px; border-radius: 999px; margin: 1.1rem auto 0; max-width: 26rem;
+    background: rgba(255,255,255,.22); overflow: hidden;
+}
+.resultado-barra span {
+    display: block; height: 100%; border-radius: 999px; background: #fff;
+    animation: llenar .9s cubic-bezier(.2,.8,.3,1) both;
+}
+@keyframes llenar { from { width: 0 !important; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .juego-pregunta, .resultado-emoji, .resultado-barra span, .juego-carta.is-vuelta {
+        animation: none;
+    }
+}

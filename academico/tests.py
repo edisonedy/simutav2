@@ -18,6 +18,7 @@ from academico.models import (
     MateriaMalla,
     MateriaMallaPredecesora,
     MateriaPeriodo,
+    Modalidad,
     NivelMalla,
     MallaPeriodo,
     PeriodoAcademico,
@@ -152,7 +153,7 @@ class PermisosAdministracionTests(TestCase):
         antes = Carrera.objects.count()
         respuesta = self.client.post(reverse('adm_carreras'), {
             'action': 'add', 'nombre': 'Carrera pirata', 'codigo': 'HACK',
-            'modalidad': 'PRESENCIAL', 'duracion_periodos': 8, 'activo': 'on',
+            'duracion_periodos': 8, 'activo': 'on',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
         self.assertEqual(respuesta.status_code, 403)
         self.assertEqual(Carrera.objects.count(), antes)
@@ -882,13 +883,24 @@ class AltaDelCatalogoAcademicoTests(TestCase):
                 self.assertNotIn('name="institucion"', html)
 
     def test_se_crea_una_carrera(self):
+        presencial = Modalidad.objects.create(nombre='Presencial')
+
         respuesta = self.client.post(reverse('adm_carreras'), {
             'action': 'add', 'nombre': 'Software', 'codigo': 'SW',
-            'modalidad': 'PRESENCIAL', 'duracion_periodos': 8, 'activo': 'on',
+            'modalidad': presencial.pk, 'duracion_periodos': 8, 'activo': 'on',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
 
         self.assertTrue(respuesta.json()['result'], respuesta.json())
-        self.assertTrue(Carrera.objects.filter(codigo='SW').exists())
+        self.assertEqual(Carrera.objects.get(codigo='SW').modalidad, presencial)
+
+    def test_la_modalidad_se_elige_de_la_lista_no_se_escribe(self):
+        """Antes era texto libre y convivian 'Presencial' y 'PRESENCIAL'."""
+        Modalidad.objects.create(nombre='Presencial')
+
+        html = self.client.get(reverse('adm_carreras'), {'action': 'add'}).content.decode()
+
+        self.assertIn('<select name="modalidad"', html)
+        self.assertIn('Presencial', html)
 
     def test_se_crea_un_periodo(self):
         respuesta = self.client.post(reverse('adm_periodos'), {

@@ -8,6 +8,7 @@ from .models import (
     Materia,
     MateriaMalla,
     MateriaMallaPredecesora,
+    Modalidad,
     NivelMalla,
     PeriodoAcademico,
     ProfesorMateria,
@@ -15,6 +16,7 @@ from .models import (
 )
 
 
+admin.site.register(Modalidad)
 admin.site.register(Carrera)
 admin.site.register(Malla)
 admin.site.register(MallaPeriodo)

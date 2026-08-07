@@ -23,6 +23,15 @@ from simulador.models import (
 )
 
 
+def _modalidad_presencial():
+    """La modalidad es un catalogo: se referencia, no se escribe."""
+    from academico.models import Modalidad
+
+    modalidad, _ = Modalidad.objects.get_or_create(nombre='Presencial')
+    return modalidad
+
+
+
 class Command(BaseCommand):
     help = 'Carga un ejemplo completo para evaluar una respuesta abierta sobre compra de computadora.'
 
@@ -69,7 +78,7 @@ class Command(BaseCommand):
             defaults={
                 'nombre': 'Tecnologia de la Informacion',
                 'titulo_otorga': 'Tecnologo/a en TI',
-                'modalidad': 'Presencial',
+                'modalidad': _modalidad_presencial(),
                 'duracion_periodos': 4,
                 'usuario_creacion': profesor,
             },

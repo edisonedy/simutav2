@@ -20,6 +20,15 @@ from simulador.models import (
 )
 
 
+def _modalidad_presencial():
+    """La modalidad es un catalogo: se referencia, no se escribe."""
+    from academico.models import Modalidad
+
+    modalidad, _ = Modalidad.objects.get_or_create(nombre='Presencial')
+    return modalidad
+
+
+
 class Command(BaseCommand):
     help = 'Carga una simulacion Django con IA dinamica de una sola ronda.'
 
@@ -31,7 +40,7 @@ class Command(BaseCommand):
             defaults={
                 'nombre': 'Ingenieria de Software',
                 'titulo_otorga': 'Ingeniero/a de Software',
-                'modalidad': 'Presencial',
+                'modalidad': _modalidad_presencial(),
                 'duracion_periodos': 8,
                 'usuario_creacion': usuario,
             },

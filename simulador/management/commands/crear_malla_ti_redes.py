@@ -23,6 +23,15 @@ from simulador.models import (
 )
 
 
+def _modalidad_presencial():
+    """La modalidad es un catalogo: se referencia, no se escribe."""
+    from academico.models import Modalidad
+
+    modalidad, _ = Modalidad.objects.get_or_create(nombre='Presencial')
+    return modalidad
+
+
+
 # Materias de la malla (nivel, codigo, nombre)
 MATERIAS_TI = [
     (1, 'TI-101', 'Fundamentos de Redes'),
@@ -160,7 +169,7 @@ class Command(BaseCommand):
 
         carrera, _ = Carrera.objects.get_or_create(
             codigo='TI-UTA',
-            defaults={'nombre': 'Tecnologias de la Informacion', 'modalidad': 'Presencial',
+            defaults={'nombre': 'Tecnologias de la Informacion', 'modalidad': _modalidad_presencial(),
                       'duracion_periodos': 8, 'titulo_otorga': 'Ingeniero en Tecnologias de la Informacion',
                       'usuario_creacion': profesor},
         )

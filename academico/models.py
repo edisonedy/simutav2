@@ -5,12 +5,38 @@ from django.db import models
 from core.models import ModeloBase
 
 
+class Modalidad(ModeloBase):
+    """Presencial, En linea, Semipresencial...
+
+    Era un campo de texto libre en Carrera, y ya convivian 'Presencial' y
+    'PRESENCIAL' como si fueran cosas distintas. Un catalogo se elige de una
+    lista y no se escribe, que es justo lo que evita esa basura.
+    """
+
+    nombre = models.CharField(max_length=80, unique=True)
+    descripcion = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = 'modalidad'
+        verbose_name_plural = 'modalidades'
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+
 class Carrera(ModeloBase):
     nombre = models.CharField(max_length=200)
     codigo = models.CharField(max_length=30, unique=True)
     descripcion = models.TextField(blank=True)
     titulo_otorga = models.CharField(max_length=200, blank=True)
-    modalidad = models.CharField(max_length=80, blank=True)
+    modalidad = models.ForeignKey(
+        Modalidad,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='carreras',
+    )
     duracion_periodos = models.PositiveIntegerField(default=0)
 
     class Meta:

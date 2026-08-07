@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-kicker">Academico</div>
+        <h1 class="h3">Modalidades <span class="count-pill">{{ list|length }}</span></h1>
+        <div class="text-muted">La lista que se elige al crear una carrera, para no escribirla a mano.</div>
+    </div>
+    <div class="page-head-actions">
+        <input type="search" class="table-search" placeholder="Buscar modalidad..." oninput="filtrar_tabla(this, 'tabla-modalidades')">
+        <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_modalidades' %}?action=add')">+ Nueva modalidad</button>
+    </div>
+</div>
+<div class="module-card data-card table-responsive">
+    <table class="table table-hover align-middle" id="tabla-modalidades">
+        <thead><tr><th>Nombre</th><th>Descripcion</th><th>Carreras</th><th class="text-end">Acciones</th></tr></thead>
+        <tbody>
+        {% for item in list %}
+            <tr data-row>
+                <td class="cell-strong">{{ item.nombre }}</td>
+                <td>{% if item.descripcion %}{{ item.descripcion }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                <td class="cell-num">{{ item.total_carreras }}</td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-primary btn-action" onclick="abrir_modal('{% url 'adm_modalidades' %}?action=edit&pk={{ item.pk }}')">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger btn-action" onclick="abrir_modal('{% url 'adm_modalidades' %}?action=delete&pk={{ item.pk }}')">Eliminar</button>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="4">
+                <div class="empty-state">
+                    <span class="empty-ico">&#127891;</span>
+                    <div class="empty-title">Aun no hay modalidades</div>
+                    <p class="empty-text">Crea las que use la universidad (Presencial, En linea, Semipresencial) y despues eligelas al registrar una carrera.</p>
+                    <button class="btn btn-primary" onclick="abrir_modal('{% url 'adm_modalidades' %}?action=add')">+ Crear modalidad</button>
+                </div>
+            </td></tr>
+        {% endfor %}
+            <tr class="no-match row-hidden"><td colspan="4"><div class="empty-state"><span class="empty-ico">&#128269;</span><div class="empty-title">Sin coincidencias</div><p class="empty-text">Ninguna modalidad coincide con tu busqueda.</p></div></td></tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}

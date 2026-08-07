@@ -30,6 +30,7 @@ from .models import (
     MateriaMalla,
     MateriaMallaPredecesora,
     MateriaPeriodo,
+    Modalidad,
     NivelMalla,
     PeriodoAcademico,
     ProfesorMateria,
@@ -60,6 +61,12 @@ def validate_date_range(cleaned_data):
         raise forms.ValidationError('La fecha fin no puede ser anterior a la fecha inicio.')
 
 
+class ModalidadForm(forms.ModelForm):
+    class Meta:
+        model = Modalidad
+        fields = ['nombre', 'descripcion', 'activo']
+
+
 class CarreraForm(ActiveQuerysetsMixin, forms.ModelForm):
     class Meta:
         model = Carrera
@@ -72,6 +79,16 @@ class CarreraForm(ActiveQuerysetsMixin, forms.ModelForm):
             'descripcion',
             'activo',
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        modalidad = self.fields['modalidad']
+        modalidad.empty_label = 'Sin definir'
+        modalidad.help_text = format_html(
+            'Se elige de la lista. Para agregar una nueva ve a '
+            '<a href="{}" target="_blank">Modalidades</a>.',
+            reverse_lazy('adm_modalidades'),
+        )
 
 
 class MallaForm(ActiveQuerysetsMixin, forms.ModelForm):

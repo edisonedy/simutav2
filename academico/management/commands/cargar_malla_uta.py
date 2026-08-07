@@ -5,6 +5,15 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
 from academico.models import Carrera, Malla, Materia, MateriaMalla, NivelMalla
+
+
+def _modalidad_presencial():
+    """La modalidad es un catalogo: se referencia, no se escribe."""
+    from academico.models import Modalidad
+
+    modalidad, _ = Modalidad.objects.get_or_create(nombre='Presencial')
+    return modalidad
+
 def generar_codigo(nombre, numero_nivel, orden):
     texto = unicodedata.normalize('NFKD', nombre).encode('ascii', 'ignore').decode('ascii')
     texto = re.sub(r'[^A-Z0-9]+', '_', texto.upper()).strip('_')
@@ -24,7 +33,7 @@ class Command(BaseCommand):
             defaults={
                 'nombre': 'Administracion de Empresas',
                 'titulo_otorga': 'Licenciado/a en Administracion de Empresas',
-                'modalidad': 'Presencial',
+                'modalidad': _modalidad_presencial(),
                 'duracion_periodos': 8,
                 'usuario_creacion': usuario,
             },
