@@ -12,7 +12,6 @@ from .models import (
     NivelMalla,
     PeriodoAcademico,
     ProfesorMateria,
-    RecordAcademico,
 )
 
 
@@ -27,4 +26,4 @@ admin.site.register(MateriaMallaPredecesora)
 admin.site.register(PeriodoAcademico)
 admin.site.register(InscripcionMalla)
 admin.site.register(ProfesorMateria)
-admin.site.register(RecordAcademico)
+

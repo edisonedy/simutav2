@@ -71,7 +71,7 @@ def periodo_de_sesion(request):
         periodo = periodos.filter(pk=elegido).first()
         if periodo:
             return periodo
-    return periodos.filter(activo_matricula=True).first() or periodos.first()
+    return periodos.filter().first() or periodos.first()
 
 
 def conservar_seleccion_actual(form):

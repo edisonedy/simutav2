@@ -169,6 +169,17 @@ class Simulacion(ModeloBase):
         (TIPO_CON_IA_DINAMICA, 'Con IA - Simulacion dinamica'),
     ]
 
+    # Como se encadenan las rondas. Es lo que separa los tres casos reales que
+    # llegan de las facultades, sin necesitar tres motores distintos.
+    MODO_CASO_INDEPENDIENTE = 'CASO_INDEPENDIENTE'
+    MODO_ARBOL_DECISION = 'ARBOL_DECISION'
+    MODO_SIMULACION_ENCADENADA = 'SIMULACION_ENCADENADA'
+    MODOS_EJECUCION = [
+        (MODO_CASO_INDEPENDIENTE, 'Decisiones independientes'),
+        (MODO_ARBOL_DECISION, 'Arbol de decisiones'),
+        (MODO_SIMULACION_ENCADENADA, 'Simulacion encadenada'),
+    ]
+
     DIFICULTAD_BASICA = 'BASICA'
     DIFICULTAD_MEDIA = 'MEDIA'
     DIFICULTAD_AVANZADA = 'AVANZADA'
@@ -220,7 +231,24 @@ class Simulacion(ModeloBase):
     tipo_simulacion = models.CharField(
         max_length=30,
         choices=TIPOS_SIMULACION,
-        default=TIPO_SIN_IA_ARBOL,
+        # Coherente con el default de `modo_ejecucion`: el caso normal es de
+        # decisiones independientes, y ese lo mueve el motor dinamico. Antes el
+        # default era el arbol, asi que un caso recien creado nacia con los dos
+        # campos contradiciendose y solo fallaba al jugarlo.
+        default=TIPO_CON_IA_DINAMICA,
+    )
+    modo_ejecucion = models.CharField(
+        'como se encadenan las rondas',
+        max_length=30,
+        choices=MODOS_EJECUCION,
+        default=MODO_CASO_INDEPENDIENTE,
+        help_text=(
+            'Decisiones independientes: cada ronda es una situacion ya preparada y lo que '
+            'el estudiante contesto en la ronda 1 no cambia la ronda 2. Es el caso normal. '
+            'Arbol de decisiones: cada eleccion lleva a un escenario distinto. '
+            'Simulacion encadenada: la decision mueve los indicadores y la siguiente ronda '
+            'arranca con la empresa como quedo.'
+        ),
     )
     profesor = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
@@ -292,7 +320,17 @@ class Simulacion(ModeloBase):
     modelo_ia = models.CharField(max_length=80, blank=True, default='')
     prompt_version = models.CharField(max_length=40, blank=True, default='simuta-rubrica-v2')
     esquema_ia_version = models.CharField(max_length=40, blank=True, default='rubrica-docente-v2')
-    ia_habilitada = models.BooleanField(default=True)
+    ia_habilitada = models.BooleanField(
+        'usar IA para evaluar lo que el estudiante escribe',
+        default=True,
+        help_text=(
+            'Desactivalo cuando el caso ya trae respuesta correcta: puntaje por '
+            'alternativa, valores esperados en los campos numericos y rubrica de '
+            'conceptos. Asi se corrige con aritmetica y palabras clave, sin '
+            'llamar a ningun proveedor. Es como funcionan los simuladores '
+            'entregados por los docentes.'
+        ),
+    )
     estado = models.CharField(max_length=20, choices=ESTADOS, default=BORRADOR)
     fecha_publicacion = models.DateTimeField(null=True, blank=True)
 
@@ -310,6 +348,216 @@ class Simulacion(ModeloBase):
             and self.tema_materia.materia_malla_id != self.materia_malla_id
         ):
             raise ValidationError('El tema debe pertenecer a la misma materia de la malla.')
+        # `modo_ejecucion` y `tipo_simulacion` describen lo mismo desde dos
+        # angulos, y si se contradicen el caso revienta al jugarlo: el motor de
+        # arbol pide un escenario que un caso de decisiones independientes no
+        # tiene. Se valida aqui para que falle al configurar, no ante el alumno.
+        es_arbol_motor = self.tipo_simulacion == self.TIPO_SIN_IA_ARBOL
+        es_arbol_modo = self.modo_ejecucion == self.MODO_ARBOL_DECISION
+        if es_arbol_motor != es_arbol_modo:
+            raise ValidationError({
+                'modo_ejecucion': (
+                    'El arbol de decisiones necesita el motor "Sin IA - Arbol de '
+                    'decisiones", y ese motor solo sirve para el arbol. '
+                    'Los otros dos modos usan el motor de simulacion dinamica.'
+                ),
+            })
+
+
+class RondaSimulacion(ModeloBase):
+    """Una ronda del caso, configurada por el docente.
+
+    Antes la ronda vivia dentro de `Simulacion.parametros['rondas']`, un JSON
+    suelto que solo se sabia llenar escribiendo un comando de Python por caso.
+    Aqui es una fila editable: situacion, datos, tipo de respuesta, puntaje y
+    retroalimentacion. El motor de juego sigue leyendo el JSON, que ahora se
+    genera desde estas filas (ver `servicios de rondas`), asi que configurar un
+    caso nuevo ya no necesita programar.
+    """
+
+    OPCION_UNICA = 'OPCION_UNICA'
+    OPCION_MULTIPLE = 'OPCION_MULTIPLE'
+    TEXTO = 'TEXTO'
+    NUMERICA = 'NUMERICA'
+    ARCHIVO = 'ARCHIVO'
+    MIXTA = 'MIXTA'
+    TIPOS_RESPUESTA = [
+        (OPCION_UNICA, 'Elegir una alternativa'),
+        (OPCION_MULTIPLE, 'Elegir varias alternativas'),
+        (TEXTO, 'Responder por escrito'),
+        (NUMERICA, 'Calcular un valor'),
+        (ARCHIVO, 'Subir un archivo'),
+        (MIXTA, 'Varias cosas a la vez'),
+    ]
+
+    simulacion = models.ForeignKey(
+        Simulacion,
+        on_delete=models.CASCADE,
+        related_name='rondas',
+    )
+    numero = models.PositiveIntegerField()
+    titulo = models.CharField(max_length=250)
+    situacion = models.TextField(
+        help_text='Lo que pasa en esta ronda y que tiene que resolver el estudiante.',
+    )
+    instrucciones = models.TextField(blank=True, default='')
+    datos = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            'Tablas y cifras del caso para esta ronda. Formato: '
+            '{"tablas": [{"titulo": "...", "columnas": [...], '
+            '"filas": [[...], ...]}], "formula": "...", "nota": "..."}.'
+        ),
+    )
+    tipo_respuesta = models.CharField(
+        max_length=20,
+        choices=TIPOS_RESPUESTA,
+        default=OPCION_UNICA,
+    )
+    campos = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            'Lo que se le pide capturar, cuando no alcanza con elegir una '
+            'alternativa. Cada campo: {"clave", "etiqueta", "tipo": '
+            '"numero|texto|opcion", "objetivo", "tolerancia", "unidad"}.'
+        ),
+    )
+    requiere_justificacion = models.BooleanField(default=True)
+    puntaje_maximo = models.DecimalField(max_digits=5, decimal_places=2, default=100)
+    respuesta_modelo = models.TextField(
+        blank=True,
+        default='',
+        help_text='El desarrollo del docente. Se muestra al cerrar la ronda, para comparar.',
+    )
+    retroalimentacion = models.TextField(blank=True, default='')
+
+    class Meta:
+        verbose_name = 'ronda del caso'
+        verbose_name_plural = 'rondas del caso'
+        ordering = ['simulacion', 'numero']
+        unique_together = [('simulacion', 'numero')]
+
+    def __str__(self):
+        return f'{self.simulacion} / Ronda {self.numero}: {self.titulo}'
+
+    def clean(self):
+        super().clean()
+        if self.numero is not None and self.numero < 1:
+            raise ValidationError({'numero': 'Las rondas se numeran desde 1.'})
+
+    @property
+    def pide_elegir(self):
+        return self.tipo_respuesta in (self.OPCION_UNICA, self.OPCION_MULTIPLE, self.MIXTA)
+
+    @property
+    def pide_escribir(self):
+        return self.requiere_justificacion or self.tipo_respuesta in (self.TEXTO, self.MIXTA)
+
+    @property
+    def modo_interaccion(self):
+        """Como lo ve el motor de juego: elegir, escribir o las dos cosas."""
+        if self.pide_elegir and self.pide_escribir:
+            return 'hibrido'
+        if self.pide_elegir:
+            return 'elegir'
+        return 'escribir'
+
+
+class OpcionRondaSimulacion(ModeloBase):
+    """Alternativa de una ronda concreta.
+
+    `impacto` solo lo usan las simulaciones encadenadas: mueve indicadores. En
+    las de decisiones independientes se deja vacio y la opcion solo puntua.
+    """
+
+    ronda = models.ForeignKey(
+        RondaSimulacion,
+        on_delete=models.CASCADE,
+        related_name='opciones',
+    )
+    texto = models.CharField(max_length=300)
+    descripcion = models.TextField(blank=True, default='')
+    puntaje = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    retroalimentacion = models.TextField(blank=True, default='')
+    impacto = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Solo en simulaciones encadenadas: {"codigo_indicador": variacion}.',
+    )
+    orden = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        verbose_name = 'alternativa de la ronda'
+        verbose_name_plural = 'alternativas de la ronda'
+        ordering = ['ronda', 'orden', 'texto']
+
+    def __str__(self):
+        return self.texto
+
+
+class RecursoSimulacionArchivo(ModeloBase):
+    """El Excel, el PDF o la imagen que acompanan al caso.
+
+    Con `vista_previa` el estudiante ve la tabla dentro de la pantalla sin
+    tener que descargar nada, y el archivo original sigue disponible para
+    trabajarlo.
+    """
+
+    EXCEL = 'EXCEL'
+    PDF = 'PDF'
+    IMAGEN = 'IMAGEN'
+    DOCUMENTO = 'DOCUMENTO'
+    OTRO = 'OTRO'
+    TIPOS = [
+        (EXCEL, 'Excel'),
+        (PDF, 'PDF'),
+        (IMAGEN, 'Imagen'),
+        (DOCUMENTO, 'Documento'),
+        (OTRO, 'Otro'),
+    ]
+
+    simulacion = models.ForeignKey(
+        Simulacion,
+        on_delete=models.CASCADE,
+        related_name='archivos',
+    )
+    ronda = models.ForeignKey(
+        RondaSimulacion,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='archivos',
+        help_text='Vacio cuando el archivo sirve para todo el caso.',
+    )
+    tipo = models.CharField(max_length=20, choices=TIPOS, default=OTRO)
+    nombre = models.CharField(max_length=250)
+    archivo = models.FileField(upload_to='simulaciones/archivos/%Y/%m/', blank=True)
+    descripcion = models.TextField(blank=True, default='')
+    vista_previa = models.ImageField(
+        upload_to='simulaciones/preview/%Y/%m/',
+        blank=True,
+        help_text='Captura del archivo para mostrarla dentro del caso.',
+    )
+    orden = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        verbose_name = 'archivo del caso'
+        verbose_name_plural = 'archivos del caso'
+        ordering = ['simulacion', 'ronda__numero', 'orden', 'nombre']
+
+    def __str__(self):
+        return self.nombre
+
+    def clean(self):
+        super().clean()
+        if (
+            self.ronda_id
+            and self.simulacion_id
+            and self.ronda.simulacion_id != self.simulacion_id
+        ):
+            raise ValidationError('La ronda debe pertenecer al mismo caso.')
 
 
 class ActividadMateria(ModeloBase):
@@ -600,6 +848,20 @@ class AccionSugeridaSimulacion(ModeloBase):
     numero_ronda = models.PositiveIntegerField(null=True, blank=True)
     texto = models.CharField(max_length=300)
     descripcion = models.TextField(blank=True, default='')
+    puntaje = models.DecimalField(
+        'puntaje de elegir esta alternativa',
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text=(
+            'Cuanto vale, por si sola, elegir esta alternativa (0-100). Es lo que '
+            'permite calificar sin IA: en un caso con respuesta correcta, elegir '
+            'mal no puede puntuar igual que elegir bien. Vacio significa que la '
+            'alternativa no puntua sola y la nota sale solo de la rubrica.'
+        ),
+    )
+    retroalimentacion = models.TextField(
+        blank=True, default='',
+        help_text='Lo que se le dice al estudiante despues de elegirla.',
+    )
     impacto_base = models.JSONField(default=dict, blank=True)
     costo_recursos = models.JSONField(default=dict, blank=True)
 

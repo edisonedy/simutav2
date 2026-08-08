@@ -37,8 +37,14 @@
         </div>
     </div>
     <div class="page-head-actions">
-        <a class="btn btn-outline-secondary" href="{% url 'interactivo:lista' intento.actividad.materia_malla_id %}">Volver a los juegos</a>
-        <a class="btn btn-primary" href="{% url 'interactivo:jugar' intento.actividad.pk %}">&#128260; Otra vez</a>
+        <a class="btn btn-outline-secondary" href="{{ volver_url }}">&larr; {{ volver_texto }}</a>
+        <a class="btn btn-outline-secondary" href="{% url 'interactivo:lista' intento.actividad.materia_malla_id %}">Otros juegos</a>
+        <a class="btn btn-outline-primary" href="{% url 'interactivo:jugar' intento.actividad.pk %}">&#128260; Otra vez</a>
+        {% if caso_desbloqueado %}
+        <a class="btn btn-primary" href="{% url 'alu_simulaciones' %}?action=iniciar&amp;simulacion_id={{ caso_desbloqueado.pk }}">
+            &#128275; Entrar al caso &rarr;
+        </a>
+        {% endif %}
     </div>
 </div>
 

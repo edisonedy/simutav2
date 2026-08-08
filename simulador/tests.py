@@ -867,9 +867,9 @@ class PermisosPanelProfesorTests(TestCase):
         self.mm2 = MateriaMalla.objects.create(
             malla=malla, nivel=nivel, materia=materia2, usuario_creacion=self.profesor1)
         ProfesorMateria.objects.create(
-            profesor=self.profesor1, materia_malla=self.mm1, periodo=periodo, usuario_creacion=self.profesor1)
+            profesor=self.profesor1, materia_malla=self.mm1, usuario_creacion=self.profesor1)
         ProfesorMateria.objects.create(
-            profesor=self.profesor2, materia_malla=self.mm2, periodo=periodo, usuario_creacion=self.profesor1)
+            profesor=self.profesor2, materia_malla=self.mm2, usuario_creacion=self.profesor1)
         self.sim1 = self._crear_simulacion(self.mm1, self.profesor1, 'Sim profesor 1')
         self.sim2 = self._crear_simulacion(self.mm2, self.profesor2, 'Sim profesor 2')
 
@@ -1342,7 +1342,7 @@ class CandadoTareaTests(TestCase):
         nivel = NivelMalla.objects.create(malla=malla, numero=1, nombre='N')
         materia = Materia.objects.create(codigo='C', nombre='Caso')
         mm = MateriaMalla.objects.create(malla=malla, nivel=nivel, materia=materia)
-        cls.periodo = PeriodoAcademico.objects.create(nombre='P', fecha_inicio=date(2026,1,1), fecha_fin=date(2026,12,31), activo_matricula=True)
+        cls.periodo = PeriodoAcademico.objects.create(nombre='P', fecha_inicio=date(2026,1,1), fecha_fin=date(2026,12,31))
         cls.sim = Simulacion.objects.create(materia_malla=mm, profesor=prof, titulo='Asignada', estado=Simulacion.PUBLICADA, maximo_decisiones=1)
         cls.sim_libre = Simulacion.objects.create(materia_malla=mm, profesor=prof, titulo='Libre', estado=Simulacion.PUBLICADA, maximo_decisiones=1)
         cls.sec = Seccion.objects.create(materia_malla=mm, periodo=cls.periodo, profesor=prof, paralelo='A')
@@ -2081,7 +2081,7 @@ class EdicionMateriaSimulacionTests(TestCase):
         self.mm_suelta = MateriaMalla.objects.create(
             malla=malla, nivel=nivel, materia=suelta, usuario_creacion=self.profesor)
         ProfesorMateria.objects.create(
-            profesor=self.profesor, materia_malla=self.mm_asignada, periodo=periodo,
+            profesor=self.profesor, materia_malla=self.mm_asignada,
             usuario_creacion=self.profesor)
         # El profesor es dueño de la simulacion, pero no esta asignado a su materia.
         self.simulacion = Simulacion.objects.create(

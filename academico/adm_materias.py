@@ -16,6 +16,7 @@ from academico.models import (
 )
 from core.funciones import errores_formulario, periodo_de_sesion, respuesta_error, respuesta_ok
 from core.permisos import es_administrativo, es_docente
+from interactivo.models import ActividadInteractiva
 from simulador.forms import ActividadMateriaForm, TemaMateriaForm
 from simulador.models import ActividadMateria, Simulacion, TemaMateria
 
@@ -197,8 +198,18 @@ def _contenido_materia(materia_malla):
         ).select_related('tema_materia').order_by('tema_materia__orden', 'titulo')
     )
 
+    # Los juegos tambien son contenido de la materia. Sin esto, un tema que solo
+    # tiene juegos -como el "Refuerzo interactivo" que crea el sembrador- salia
+    # vacio en pantalla y parecia que no habia nada cargado.
+    juegos = list(
+        ActividadInteractiva.objects.filter(
+            materia_malla=materia_malla, activo=True,
+        ).select_related('tema', 'simulacion').order_by('tema__orden', 'orden', 'titulo')
+    )
+
     def separar(tema_id):
-        return {
+        bloque = {
+            'juegos': [j for j in juegos if j.tema_id == tema_id],
             'refuerzo': [
                 a for a in actividades
                 if a.tema_id == tema_id and a.categoria == ActividadMateria.REFUERZO
@@ -209,6 +220,8 @@ def _contenido_materia(materia_malla):
             ],
             'simulaciones': [s for s in simulaciones if s.tema_materia_id == tema_id],
         }
+        bloque['vacio'] = not any(bloque.values())
+        return bloque
 
     temas = []
     for tema in TemaMateria.objects.filter(

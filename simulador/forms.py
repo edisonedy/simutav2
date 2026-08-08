@@ -293,8 +293,28 @@ class SimulacionForm(MateriaMallaLegibleMixin, forms.ModelForm):
         self.fields['modelo_ia'].label = 'Modelo de IA'
         self.fields['prompt_version'].label = 'Version del prompt'
         self.fields['esquema_ia_version'].label = 'Version del esquema de IA'
-        self.fields['ia_habilitada'].label = 'IA habilitada'
+        self.fields['modo_ejecucion'].label = 'Como se encadenan las rondas'
+        # Tolerante a proposito: un envio que no traiga el modo no debe fallar,
+        # se queda con el caso normal (decisiones independientes).
+        self.fields['modo_ejecucion'].required = False
+        self.fields['ia_habilitada'].label = 'Usar IA para evaluar lo escrito'
         self.fields['activo'].label = 'Activo'
+
+    def clean_modo_ejecucion(self):
+        return self.cleaned_data.get('modo_ejecucion') or Simulacion.MODO_CASO_INDEPENDIENTE
+
+    def clean(self):
+        cleaned = super().clean()
+        # El motor se deduce del modo: son la misma decision contada dos veces.
+        # Antes se podia elegir "Decisiones independientes" dejando el motor en
+        # arbol, y el caso solo fallaba cuando el alumno intentaba jugarlo.
+        modo = cleaned.get('modo_ejecucion') or Simulacion.MODO_CASO_INDEPENDIENTE
+        cleaned['tipo_simulacion'] = (
+            Simulacion.TIPO_SIN_IA_ARBOL
+            if modo == Simulacion.MODO_ARBOL_DECISION
+            else Simulacion.TIPO_CON_IA_DINAMICA
+        )
+        return cleaned
 
     def clean_maximo_decisiones(self):
         cantidad = self.cleaned_data.get('maximo_decisiones')
@@ -305,7 +325,7 @@ class SimulacionForm(MateriaMallaLegibleMixin, forms.ModelForm):
         model = Simulacion
         fields = [
             'materia_malla', 'tema_materia', 'plantilla_origen', 'perfil_materia_ia',
-            'tipo_simulacion', 'titulo', 'tema',
+            'tipo_simulacion', 'modo_ejecucion', 'titulo', 'tema',
             'nivel_dificultad', 'maximo_decisiones', 'tiempo_estimado',
             'peso_resultado', 'peso_rubrica_decision',
             'bonus_pronostico', 'bonus_reflexion', 'bonus_adaptacion',
@@ -569,10 +589,12 @@ class AccionSugeridaForm(forms.ModelForm):
         fields = [
             'simulacion', 'numero_ronda', 'opcion_caso', 'requiere_accion_previa',
             'bloqueada_por_accion_previa', 'maximo_ejecuciones',
-            'texto', 'descripcion', 'activo',
+            'texto', 'descripcion', 'puntaje', 'retroalimentacion', 'activo',
         ]
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 2}),
+            'retroalimentacion': forms.Textarea(attrs={'rows': 2}),
+            'puntaje': forms.NumberInput(attrs={'min': 0, 'max': 100, 'step': '1'}),
         }
 
     def __init__(self, *args, simulacion_obj=None, **kwargs):

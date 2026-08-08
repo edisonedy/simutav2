@@ -22,13 +22,13 @@ def dashboard(request):
         contexto['inscripciones'] = InscripcionMalla.objects.filter(
             estudiante=request.user,
             estado=InscripcionMalla.ACTIVA,
-        ).select_related('malla', 'periodo')
+        ).select_related('malla_periodo__malla', 'malla_periodo__periodo')
         contexto['intentos'] = IntentoSimulacion.objects.filter(estudiante=request.user)[:5]
     elif rol == PerfilUsuario.PROFESOR:
         contexto['asignaciones'] = ProfesorMateria.objects.filter(
             profesor=request.user,
             activo=True,
-        ).select_related('materia_malla__materia', 'periodo')
+        ).select_related('materia_malla__materia', 'materia_malla__nivel', 'materia_malla__malla')
     else:
         contexto['total_carreras'] = Carrera.objects.count()
         contexto['total_mallas'] = Malla.objects.count()

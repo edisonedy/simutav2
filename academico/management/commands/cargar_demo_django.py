@@ -76,7 +76,6 @@ class Command(BaseCommand):
             defaults={
                 'fecha_inicio': timezone.datetime(2026, 1, 1).date(),
                 'fecha_fin': timezone.datetime(2026, 12, 31).date(),
-                'activo_matricula': True,
                 'usuario_creacion': usuario,
             },
         )

@@ -188,6 +188,21 @@
                     <button class="btn btn-secondary btn-lg w-100" disabled>
                         🔒 Termina el entrenamiento para desbloquear
                     </button>
+                {% elif intento_en_curso %}
+                    {% comment %}
+                    Dejaste el caso a medias: se retoma donde quedaste. Antes,
+                    volver a esta portada arrancaba un intento nuevo y el
+                    anterior se quedaba colgado.
+                    {% endcomment %}
+                    <a class="btn btn-primary btn-play btn-lg w-100"
+                       href="?action=simular&amp;intento_id={{ intento_en_curso.pk }}">
+                        ▶ Continuar en la ronda {{ intento_en_curso.numero_ronda_actual }}
+                    </a>
+                    <form method="post" action="?action=iniciar" class="mt-2" onsubmit="return enviar_formulario(this)">
+                        {% csrf_token %}
+                        <input type="hidden" name="simulacion_id" value="{{ simulacion.pk }}">
+                        <button class="btn btn-outline-secondary btn-sm w-100">Empezar de nuevo</button>
+                    </form>
                 {% else %}
                 <form method="post" action="?action=iniciar" onsubmit="return enviar_formulario(this)">
                     {% csrf_token %}
@@ -195,6 +210,10 @@
                     <button class="btn btn-primary btn-play btn-lg w-100">▶ Iniciar misión</button>
                 </form>
                 {% endif %}
+                <a class="btn btn-link btn-sm w-100 mt-2"
+                   href="{% url 'alu_simulaciones' %}?malla={{ simulacion.materia_malla.malla_id }}">
+                    &larr; Volver a {{ simulacion.materia_malla.materia.nombre }}
+                </a>
             </div>
         </div>
     </div>

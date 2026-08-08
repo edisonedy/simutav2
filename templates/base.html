@@ -317,6 +317,116 @@
             background: linear-gradient(90deg, var(--accent) 0%, var(--cyan) 100%);
         }
         .sim-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: .7rem; }
+        /* Los dos bloques de una materia: jugar para aprender, practicar para decidir. */
+        .bloque-materia + .bloque-materia { margin-top: 1rem; }
+        .bloque-titulo {
+            font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+            color: var(--muted); padding-bottom: .3rem; margin-bottom: .55rem;
+            border-bottom: 1px solid var(--line);
+            font-family: "IBM Plex Mono", ui-monospace, monospace;
+        }
+        .sim-row-link { text-decoration: none; color: inherit; }
+        .sim-row-link:hover { color: inherit; border-color: var(--accent); }
+
+        /* ---- Tablero de la malla: el progreso ES la interfaz ---------------- */
+        .malla-barra {
+            height: .4rem; border-radius: 999px; overflow: hidden;
+            background: rgba(255,255,255,.22);
+        }
+        .malla-barra span {
+            display: block; height: 100%; border-radius: 999px;
+            background: linear-gradient(90deg, var(--cyan) 0%, #7ee0a0 100%);
+            transition: width .7s cubic-bezier(.2,.8,.2,1);
+        }
+        .materia-cabecera {
+            display: flex; justify-content: space-between; align-items: center;
+            gap: .7rem; margin-bottom: .7rem;
+        }
+        .sim-card.es-completa { border-color: rgba(14,110,122,.45); }
+        /* Anillo de avance en CSS puro: --pct lo pone la plantilla. */
+        .anillo {
+            --pct: 0;
+            flex: 0 0 auto; width: 2.6rem; height: 2.6rem; border-radius: 50%;
+            display: grid; place-items: center;
+            background: conic-gradient(var(--accent) calc(var(--pct) * 1%), var(--field) 0);
+        }
+        .anillo::after {
+            content: ""; grid-area: 1/1; width: 2.05rem; height: 2.05rem;
+            border-radius: 50%; background: var(--card, #fff);
+        }
+        .anillo > span {
+            grid-area: 1/1; z-index: 1; font-size: .72rem; font-weight: 700;
+            color: var(--accent); font-family: "IBM Plex Mono", ui-monospace, monospace;
+        }
+        .anillo > span small { font-size: .55rem; }
+        .anillo.esta-completo { background: conic-gradient(var(--forest) 100%, var(--forest) 0); }
+        .anillo.esta-completo > span { color: var(--forest); font-size: 1rem; }
+
+        /* Una pieza = un juego o un caso. Fila minima con su estado. */
+        .pieza {
+            display: flex; align-items: center; gap: .6rem;
+            padding: .5rem .6rem; border-radius: .5rem;
+            border: 1px solid var(--line); background: var(--paper);
+            text-decoration: none; color: inherit;
+            transition: border-color .15s ease, transform .15s ease;
+        }
+        .pieza + .pieza { margin-top: .35rem; }
+        a.pieza:hover { color: inherit; border-color: var(--accent); }
+        @media (prefers-reduced-motion: no-preference) {
+            a.pieza:hover { transform: translateX(3px); }
+        }
+        .pieza-marca {
+            flex: 0 0 1.35rem; height: 1.35rem; border-radius: 50%;
+            display: grid; place-items: center; font-size: .7rem;
+            background: var(--field); color: var(--muted);
+        }
+        .pieza-cuerpo { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+        .pieza-titulo {
+            font-weight: 600; font-size: .84rem;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .pieza-meta { font-size: .7rem; color: var(--muted); }
+        .pieza-nota {
+            margin-left: auto; font-family: "IBM Plex Mono", ui-monospace, monospace;
+            font-size: .76rem; font-weight: 700; color: var(--muted);
+            text-decoration: none;
+        }
+        .pieza-nota.es-buena { color: var(--forest); }
+        .pieza.esta-hecha { background: rgba(14,110,122,.06); border-color: rgba(14,110,122,.3); }
+        .pieza.esta-hecha .pieza-marca { background: var(--forest); color: #fff; }
+        .pieza.esta-a-medias { border-color: var(--gold); }
+        .pieza.esta-a-medias .pieza-marca { background: rgba(184,134,42,.18); color: var(--gold); }
+        .pieza.es-material { background: transparent; border-style: dashed; }
+
+        /* ---- Recompensa al cerrar la ronda -------------------------------- */
+        .mision-barra {
+            height: .3rem; border-radius: 999px; overflow: hidden;
+            background: rgba(255,255,255,.2); max-width: 22rem;
+        }
+        .mision-barra span {
+            display: block; height: 100%; border-radius: 999px;
+            background: linear-gradient(90deg, var(--cyan) 0%, #7ee0a0 100%);
+            transition: width .7s cubic-bezier(.2,.8,.2,1);
+        }
+        .medallero { display: flex; flex-wrap: wrap; gap: .45rem; }
+        .medalla {
+            display: inline-flex; align-items: center; gap: .35rem;
+            padding: .3rem .6rem .3rem .4rem; border-radius: 999px;
+            background: linear-gradient(100deg, rgba(184,134,42,.18), rgba(var(--accent-rgb), .1));
+            border: 1px solid rgba(184,134,42,.45);
+            font-size: .74rem; font-weight: 700; cursor: default;
+        }
+        .medalla-ico { font-size: 1rem; line-height: 1; }
+        @media (prefers-reduced-motion: no-preference) {
+            .medalla {
+                animation: medallaEntra .45s cubic-bezier(.2,1.3,.4,1) backwards;
+                animation-delay: calc(var(--i, 0) * .1s);
+            }
+            @keyframes medallaEntra {
+                from { opacity: 0; transform: scale(.5) translateY(.4rem); }
+                to   { opacity: 1; transform: scale(1) translateY(0); }
+            }
+        }
         .sim-row {
             display: flex; justify-content: space-between; align-items: center; gap: .8rem;
             padding: .75rem; border: 1px solid var(--line); border-radius: .5rem;
@@ -539,6 +649,36 @@
         .case-mini { padding: .55rem .65rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--field); }
         .case-table { font-size: .82rem; }
         .case-table th { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .68rem; color: var(--muted); }
+        /* La formula del ejercicio: se lee como formula, no como parrafo. */
+        .formula-caso {
+            font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .8rem;
+            padding: .6rem .75rem; border-radius: .6rem; background: var(--field);
+            border-left: .2rem solid var(--accent); color: var(--ink);
+        }
+        .archivos-caso { display: grid; gap: .5rem; }
+        .archivo-caso {
+            display: flex; justify-content: space-between; align-items: center; gap: .7rem;
+            padding: .6rem .7rem; border: 1px solid var(--line); border-radius: .6rem;
+            background: var(--field);
+        }
+        .archivo-caso-info { min-width: 0; }
+        .archivo-preview { max-width: 100%; border: 1px solid var(--line); border-radius: .6rem; }
+        /* Rubrica del caso: los criterios con su peso, como la traen los
+           simuladores del docente (Planificacion 20, Analisis 25...). */
+        .rubrica-rapida { display: grid; gap: .25rem; }
+        .rubrica-fila {
+            display: flex; justify-content: space-between; align-items: baseline; gap: .6rem;
+            font-size: .78rem; padding: .3rem .55rem; border-radius: .4rem; background: var(--field);
+        }
+        .rubrica-peso { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 700; color: var(--accent); }
+        /* Comparacion con el modelo del docente: colapsado, se abre despues de responder. */
+        .modelo-docente { border-left: .2rem solid var(--gold); }
+        details.modelo-docente { border: 1px solid var(--line); border-left: .2rem solid var(--gold); border-radius: .6rem; }
+        .modelo-docente-head { cursor: pointer; padding: .6rem .8rem; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+        .modelo-docente-head::marker { color: var(--gold); }
+        .modelo-docente-cuerpo { padding: 0 .8rem .8rem; }
+        .hud-salir { color: inherit; text-decoration: underline; opacity: .8; }
+        .hud-salir:hover { color: inherit; opacity: 1; }
         .resource-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem; }
         .resource-pill { padding: .55rem .6rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--field); }
         .resource-name { color: var(--muted); font-size: .72rem; line-height: 1.15; min-height: 1.7rem; }

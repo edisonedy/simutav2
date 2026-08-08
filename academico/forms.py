@@ -26,6 +26,7 @@ from .models import (
     Carrera,
     InscripcionMalla,
     Malla,
+    MallaPeriodo,
     Materia,
     MateriaMalla,
     MateriaMallaPredecesora,
@@ -226,7 +227,7 @@ class MateriaPeriodoForm(forms.ModelForm):
 class PeriodoAcademicoForm(ActiveQuerysetsMixin, forms.ModelForm):
     class Meta:
         model = PeriodoAcademico
-        fields = ['nombre', 'fecha_inicio', 'fecha_fin', 'activo_matricula', 'activo']
+        fields = ['nombre', 'fecha_inicio', 'fecha_fin', 'activo']
         widgets = {'fecha_inicio': DateInput(), 'fecha_fin': DateInput()}
 
     def clean(self):
@@ -236,44 +237,153 @@ class PeriodoAcademicoForm(ActiveQuerysetsMixin, forms.ModelForm):
 
 
 class InscripcionMallaForm(ActiveQuerysetsMixin, forms.ModelForm):
+
     class Meta:
         model = InscripcionMalla
-        fields = ['estudiante', 'malla', 'periodo', 'estado', 'activo']
+        fields = [
+            'estudiante',
+            'malla_periodo',
+            'estado',
+            'activo',
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        estudiante = self.fields['estudiante']
-        estudiante.queryset = usuarios_con_rol(PerfilUsuario.ESTUDIANTE).order_by(
-            'last_name', 'first_name', 'username',
+
+        # ============================================
+        # ESTUDIANTES
+        # ============================================
+
+        self.fields['estudiante'].queryset = usuarios_con_rol(
+            PerfilUsuario.ESTUDIANTE
+        ).order_by(
+            'last_name',
+            'first_name',
+            'username',
         )
-        estudiante.label_from_instance = self._etiqueta_estudiante
-        estudiante.help_text = _ayuda_por_rol('Estudiante')
+
+        def etiqueta_estudiante(usuario):
+            nombre = (
+                usuario.get_full_name()
+                or usuario.username
+            )
+
+            identificacion = ''
+
+            if hasattr(usuario, 'perfil'):
+                identificacion = (
+                    usuario.perfil.identificacion
+                    or ''
+                )
+
+            return (
+                f'{nombre} ({identificacion})'
+                if identificacion
+                else nombre
+            )
+
+        self.fields[
+            'estudiante'
+        ].label_from_instance = etiqueta_estudiante
+
+        self.fields['estudiante'].help_text = _ayuda_por_rol('Estudiante')
+
+        # ============================================
+        # MALLA - PERIODO
+        # ============================================
+
+        self.fields[
+            'malla_periodo'
+        ].queryset = MallaPeriodo.objects.filter(
+            activo=True,
+        ).select_related(
+            'malla',
+            'periodo',
+            'malla__carrera',
+        ).order_by(
+            '-periodo__fecha_inicio',
+            'malla__nombre',
+        )
+
+        self.fields[
+            'malla_periodo'
+        ].label = 'Malla / periodo'
+
+        self.fields[
+            'malla_periodo'
+        ].label_from_instance = (
+            lambda obj: (
+                f'{obj.malla.nombre} - '
+                f'{obj.periodo.nombre}'
+            )
+        )
+
         conservar_seleccion_actual(self)
 
-    @staticmethod
-    def _etiqueta_estudiante(usuario):
-        nombre = usuario.get_full_name() or usuario.username
-        identificacion = getattr(getattr(usuario, 'perfil', None), 'identificacion', '')
-        return f'{nombre} ({identificacion})' if identificacion else nombre
-
-
 class ProfesorMateriaForm(ActiveQuerysetsMixin, forms.ModelForm):
-    ROLES_DOCENTES = [PerfilUsuario.PROFESOR, PerfilUsuario.COORDINADOR, PerfilUsuario.ADMIN]
+    ROLES_DOCENTES = [
+        PerfilUsuario.PROFESOR,
+        PerfilUsuario.COORDINADOR,
+        PerfilUsuario.ADMIN,
+    ]
 
     class Meta:
         model = ProfesorMateria
-        fields = ['profesor', 'materia_malla', 'periodo', 'activo']
+        fields = [
+            'profesor',
+            'materia_malla',
+            'activo',
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # ====================================================
+        # MATERIA DE LA MALLA
+        # ====================================================
+
         materia = self.fields['materia_malla']
+
         materia.label = 'Materia de la malla'
-        materia.queryset = materia.queryset.select_related('malla', 'nivel', 'materia')
-        materia.label_from_instance = etiqueta_materia_malla
-        profesor = self.fields['profesor']
-        profesor.queryset = usuarios_con_rol(*self.ROLES_DOCENTES).order_by(
-            'last_name', 'first_name', 'username',
+
+        materia.queryset = (
+            materia.queryset
+            .filter(activo=True)
+            .select_related(
+                'malla',
+                'nivel',
+                'materia',
+            )
+            .order_by(
+                'malla__nombre',
+                'nivel__numero',
+                'orden',
+                'materia__nombre',
+            )
         )
-        profesor.label_from_instance = lambda u: u.get_full_name() or u.username
-        profesor.help_text = _ayuda_por_rol('Profesor, Coordinador o Administrador')
+
+        materia.label_from_instance = etiqueta_materia_malla
+
+        # ====================================================
+        # PROFESOR
+        # ====================================================
+
+        profesor = self.fields['profesor']
+
+        profesor.queryset = usuarios_con_rol(
+            *self.ROLES_DOCENTES
+        ).order_by(
+            'last_name',
+            'first_name',
+            'username',
+        )
+
+        profesor.label_from_instance = (
+            lambda u: u.get_full_name() or u.username
+        )
+
+        profesor.help_text = _ayuda_por_rol(
+            'Profesor, Coordinador o Administrador'
+        )
+
         conservar_seleccion_actual(self)

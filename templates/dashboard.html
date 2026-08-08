@@ -36,7 +36,7 @@
                 <div class="section-title mb-2">Academico</div>
                 <h2 class="h5">Mallas inscritas</h2>
                 {% for inscripcion in inscripciones %}
-                    <div class="border-top py-2">{{ inscripcion.malla }} <span class="text-muted">{{ inscripcion.periodo }}</span></div>
+                    <div class="border-top py-2">{{ inscripcion.malla_periodo.malla }} <span class="text-muted">{{ inscripcion.malla_periodo.periodo }}</span></div>
                 {% empty %}
                     <p class="text-muted mb-0">No tienes inscripciones activas.</p>
                 {% endfor %}
@@ -61,7 +61,7 @@
                 <div class="section-title mb-2">Docencia</div>
                 <h2 class="h5">Materias asignadas</h2>
                 {% for asignacion in asignaciones %}
-                    <div class="border-top py-2">{{ asignacion.materia_malla.materia }} <span class="text-muted">{{ asignacion.periodo }}</span></div>
+                    <div class="border-top py-2">{{ asignacion.materia_malla.materia }} <span class="text-muted">{{ asignacion.materia_malla.etiqueta_corta }}</span></div>
                 {% empty %}
                     <p class="text-muted mb-0">No tienes materias asignadas.</p>
                 {% endfor %}

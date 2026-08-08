@@ -15,42 +15,33 @@ Nivel {{ nivel.numero }} &middot; {{ nivel.nombre }}
     </div>
     <div class="page-head-actions">
         {% if malla_periodo %}
-            <a class="btn btn-outline-secondary" href="{% url 'adm_materias' %}?action=apertura&pk={{ malla_periodo.pk }}">Volver a la apertura</a>
+            <a class="btn btn-outline-secondary" href="{% url 'adm_materias' %}?action=apertura&pk={{ malla_periodo.pk }}">&larr; Volver a la apertura</a>
         {% else %}
-            <a class="btn btn-outline-secondary" href="{% url 'adm_materias' %}?action=malla&pk={{ malla.pk }}">Volver a la malla</a>
+            <a class="btn btn-outline-secondary" href="{% url 'adm_materias' %}?action=malla&pk={{ malla.pk }}">&larr; Volver a la malla</a>
         {% endif %}
-        <a class="btn btn-outline-primary" href="{% url 'interactivo:lista' materia_malla.pk %}">&#127918; Juegos</a>
+        {% comment %}
+        Todo el contenido de la materia esta en ESTA pantalla, tema por tema.
+        Los botones de arriba son solo para lo que no cuelga de ningun tema.
+        {% endcomment %}
         <button class="btn btn-outline-primary"
                 onclick="abrir_modal('{% url 'adm_materias' %}?action=add_tema&materia_malla={{ materia_malla.pk }}')">+ Tema</button>
+        <a class="btn btn-outline-primary" href="{% url 'interactivo:crear' materia_malla.pk %}">+ Juego general</a>
         <button class="btn btn-outline-primary"
-                onclick="abrir_modal('{% url 'adm_materias' %}?action=add_actividad&materia_malla={{ materia_malla.pk }}')">+ Actividad general</button>
+                onclick="abrir_modal('{% url 'adm_materias' %}?action=add_actividad&materia_malla={{ materia_malla.pk }}')">+ Material general</button>
         <button class="btn btn-primary"
                 onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=add&materia_malla={{ materia_malla.pk }}')">+ Caso real</button>
     </div>
 </div>
 
-<div class="alert alert-light border">
-    Una actividad de un contenido concreto va dentro de su tema. Si abarca varios temas o toda
-    la asignatura, se crea como <strong>Actividad general</strong>.
-</div>
-
-{% if generales.refuerzo or generales.evaluacion or generales.simulaciones %}
+{% if not generales.vacio %}
 <section class="module-card data-card mb-3">
     <div class="p-3 border-bottom">
-        <h2 class="h5 mb-0">Actividades generales</h2>
-        <div class="text-muted small">Diagnostico, repaso global o evaluacion final.</div>
+        <h2 class="h5 mb-0">Contenido general de la materia</h2>
+        <div class="text-muted small">Lo que no pertenece a un tema concreto: diagnostico, repaso global o evaluacion final.</div>
     </div>
-    <div class="row g-3 p-3">
-        {% if generales.refuerzo %}<div class="col-lg-6">
-            <h3 class="h6">Practicar y reforzar</h3>
-            {% for actividad in generales.refuerzo %}{% include "academico/adm_materias/_actividad.html" %}{% endfor %}
-        </div>{% endif %}
-        {% if generales.evaluacion or generales.simulaciones %}<div class="col-lg-6">
-            <h3 class="h6">Evaluar y aplicar</h3>
-            {% for actividad in generales.evaluacion %}{% include "academico/adm_materias/_actividad.html" %}{% endfor %}
-            {% for simulacion in generales.simulaciones %}{% include "academico/adm_materias/_simulacion.html" %}{% endfor %}
-        </div>{% endif %}
-    </div>
+    {% with bloque=generales tema_pk='' %}
+        {% include "academico/adm_materias/_bloque_contenido.html" %}
+    {% endwith %}
 </section>
 {% endif %}
 
@@ -63,6 +54,12 @@ Nivel {{ nivel.numero }} &middot; {{ nivel.nombre }}
             {% if bloque.tema.descripcion %}<div class="text-muted small">{{ bloque.tema.descripcion }}</div>{% endif %}
         </div>
         <div class="text-nowrap">
+            <a class="btn btn-sm btn-outline-primary"
+               href="{% url 'interactivo:crear' materia_malla.pk %}?tema={{ bloque.tema.pk }}">+ Juego</a>
+            <button class="btn btn-sm btn-outline-primary"
+                    onclick="abrir_modal('{% url 'adm_materias' %}?action=add_actividad&materia_malla={{ materia_malla.pk }}&tema={{ bloque.tema.pk }}&categoria=REFUERZO')">+ Material</button>
+            <button class="btn btn-sm btn-outline-dark"
+                    onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=add&materia_malla={{ materia_malla.pk }}&tema_materia={{ bloque.tema.pk }}')">+ Caso</button>
             <button class="btn btn-sm btn-outline-secondary"
                     onclick="abrir_modal('{% url 'adm_materias' %}?action=edit_tema&pk={{ bloque.tema.pk }}')">Editar tema</button>
             <form class="d-inline" action="{% url 'adm_materias' %}" method="post"
@@ -74,40 +71,17 @@ Nivel {{ nivel.numero }} &middot; {{ nivel.nombre }}
             </form>
         </div>
     </div>
-    <div class="row g-3 p-3">
-        <div class="col-lg-6">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h3 class="h6 mb-0">Practicar y reforzar</h3>
-                <button class="btn btn-sm btn-outline-primary"
-                        onclick="abrir_modal('{% url 'adm_materias' %}?action=add_actividad&materia_malla={{ materia_malla.pk }}&tema={{ bloque.tema.pk }}&categoria=REFUERZO')">+ Actividad</button>
-            </div>
-            {% for actividad in bloque.refuerzo %}
-                {% include "academico/adm_materias/_actividad.html" %}
-            {% empty %}<div class="text-muted small">Sin actividades de refuerzo.</div>{% endfor %}
-        </div>
-        <div class="col-lg-6">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h3 class="h6 mb-0">Evaluar y aplicar</h3>
-                <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-primary"
-                            onclick="abrir_modal('{% url 'adm_materias' %}?action=add_actividad&materia_malla={{ materia_malla.pk }}&tema={{ bloque.tema.pk }}&categoria=EVALUACION')">+ Actividad</button>
-                    <button class="btn btn-sm btn-outline-dark"
-                            onclick="abrir_modal('{% url 'pro_simulaciones' %}?action=add&materia_malla={{ materia_malla.pk }}&tema_materia={{ bloque.tema.pk }}')">+ Simulacion</button>
-                </div>
-            </div>
-            {% for actividad in bloque.evaluacion %}{% include "academico/adm_materias/_actividad.html" %}{% endfor %}
-            {% for simulacion in bloque.simulaciones %}{% include "academico/adm_materias/_simulacion.html" %}{% endfor %}
-            {% if not bloque.evaluacion and not bloque.simulaciones %}<div class="text-muted small">Sin actividades de evaluacion.</div>{% endif %}
-        </div>
-    </div>
+    {% with tema_pk=bloque.tema.pk %}
+        {% include "academico/adm_materias/_bloque_contenido.html" %}
+    {% endwith %}
 </section>
 {% empty %}
-    {% if not generales.refuerzo and not generales.evaluacion and not generales.simulaciones %}
+    {% if generales.vacio %}
     <div class="module-card data-card">
         <div class="empty-state">
             <span class="empty-ico">&#128218;</span>
             <div class="empty-title">La materia todavia no tiene contenido</div>
-            <p class="empty-text">Crea el primer tema o agrega una actividad general.</p>
+            <p class="empty-text">Crea el primer tema o agrega contenido general.</p>
         </div>
     </div>
     {% endif %}

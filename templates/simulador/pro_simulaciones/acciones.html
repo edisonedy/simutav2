@@ -59,6 +59,21 @@
                     <label class="form-label" for="id_descripcion">Descripcion / consecuencia (opcional)</label>
                     {{ form.descripcion }}
                 </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-4">
+                        <label class="form-label" for="id_puntaje">Puntaje de elegirla (0-100)</label>
+                        {{ form.puntaje }}
+                        <div class="form-text">
+                            En un caso con respuesta correcta, ponlo: es lo que hace que
+                            elegir mal no valga igual que elegir bien, sin necesitar IA.
+                            En blanco, la nota sale solo de la rubrica.
+                        </div>
+                    </div>
+                    <div class="col-sm-8">
+                        <label class="form-label" for="id_retroalimentacion">Que se le dice al elegirla</label>
+                        {{ form.retroalimentacion }}
+                    </div>
+                </div>
 
                 <div class="mb-2">
                     <label class="form-label mb-1">Efecto sobre los indicadores</label>
@@ -117,7 +132,14 @@
                             {% if item.requiere_accion_previa %}<div class="small text-primary">Requiere antes: {{ item.requiere_accion_previa.texto_visible }}</div>{% endif %}
                             {% if item.bloqueada_por_accion_previa %}<div class="small text-danger">Se bloquea si antes eligió: {{ item.bloqueada_por_accion_previa.texto_visible }}</div>{% endif %}
                             <div class="small text-muted">Ejecuciones: {% if item.maximo_ejecuciones %}máximo {{ item.maximo_ejecuciones }}{% else %}sin límite{% endif %}</div>
-                            <div class="mt-1"><span class="chip chip-soft">{% if item.numero_ronda %}Ronda {{ item.numero_ronda }}{% else %}Todas las rondas{% endif %}</span></div>
+                            <div class="mt-1">
+                                <span class="chip chip-soft">{% if item.numero_ronda %}Ronda {{ item.numero_ronda }}{% else %}Todas las rondas{% endif %}</span>
+                                {% if item.puntaje is not None %}
+                                <span class="chip {% if item.puntaje >= 70 %}chip-basica{% elif item.puntaje > 0 %}chip-media{% else %}chip-avanzada{% endif %}">
+                                    vale {{ item.puntaje|floatformat:0 }}
+                                </span>
+                                {% endif %}
+                            </div>
                             {% if item.descripcion_visible %}<div class="text-muted small">{{ item.descripcion_visible }}</div>{% endif %}
                         </div>
                         <form method="post" action="{% url 'pro_simulaciones' %}?action=delete_accion&id={{ item.pk }}"

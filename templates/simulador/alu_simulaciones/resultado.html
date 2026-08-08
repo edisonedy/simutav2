@@ -19,7 +19,10 @@
         <input type="hidden" name="intento_origen_id" value="{{ intento.pk }}">
         <button class="btn btn-primary btn-sm">Reintentar mision</button>
     </form>
-    <a class="btn btn-outline-secondary btn-sm" href="{% url 'alu_simulaciones' %}">Volver a materias</a>
+    <a class="btn btn-outline-secondary btn-sm"
+       href="{% url 'alu_simulaciones' %}?malla={{ intento.simulacion.materia_malla.malla_id }}">
+        &larr; Volver a {{ intento.simulacion.materia_malla.materia.nombre }}
+    </a>
 </div>
 
 {% if comparacion_reintento %}
@@ -356,6 +359,45 @@
         <div class="module-card p-3 mb-3">
             <div class="section-title">Retroalimentacion</div>
             <p class="mb-0 mt-2">{{ intento.retroalimentacion_final }}</p>
+        </div>
+        {% endif %}
+
+        {% comment %}
+        Como cierran los simuladores del docente: el caso desarrollado completo,
+        ronda por ronda, para contrastarlo con lo que entrego el estudiante.
+        {% endcomment %}
+        {% if modelo_docente_completo %}
+        <div class="module-card p-3 mb-3">
+            <div class="section-title">&#128104;&#8205;&#127979; Caso desarrollado por el docente</div>
+            <p class="small text-muted mt-2 mb-3">
+                Compara tu desarrollo con este modelo. No es necesario que tus
+                respuestas sean identicas, pero deben conservar la logica.
+            </p>
+            {% if criterios_caso %}
+            <div class="rubrica-rapida mb-3">
+                {% for c in criterios_caso %}
+                <div class="rubrica-fila" title="{{ c.descripcion }}">
+                    <span>{{ c.nombre }}</span>
+                    <span class="rubrica-peso">{{ c.peso|floatformat:0 }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="vstack gap-2">
+            {% for bloque in modelo_docente_completo %}
+                <details class="modelo-docente">
+                    <summary class="modelo-docente-head">
+                        <span class="fw-semibold">Ronda {{ bloque.numero }} &middot; {{ bloque.titulo }}</span>
+                    </summary>
+                    <div class="modelo-docente-cuerpo">
+                        {% if bloque.modelo %}<p class="mb-0">{{ bloque.modelo|linebreaksbr }}</p>{% endif %}
+                        {% if bloque.cierre %}
+                        <div class="alert alert-info py-2 small mt-2 mb-0">{{ bloque.cierre }}</div>
+                        {% endif %}
+                    </div>
+                </details>
+            {% endfor %}
+            </div>
         </div>
         {% endif %}
 

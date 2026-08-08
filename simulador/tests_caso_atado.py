@@ -38,7 +38,6 @@ class CasoAtadoAMateriaTests(TestCase):
         cls.periodo = PeriodoAcademico.objects.create(
             nombre='2026-1',
             fecha_inicio=date(2026, 1, 1), fecha_fin=date(2026, 6, 30),
-            activo_matricula=True,
         )
         cls.materia = MateriaMalla.objects.create(
             malla=malla, nivel=nivel,
@@ -50,7 +49,7 @@ class CasoAtadoAMateriaTests(TestCase):
         )
         for materia in (cls.materia, cls.otra_materia):
             ProfesorMateria.objects.create(
-                profesor=cls.profesor, materia_malla=materia, periodo=cls.periodo,
+                profesor=cls.profesor, materia_malla=materia,
             )
 
     def setUp(self):
@@ -126,7 +125,7 @@ class CasoAtadoAMateriaTests(TestCase):
             materia=Materia.objects.create(codigo='MKT1', nombre='Marketing'),
         )
         ProfesorMateria.objects.create(
-            profesor=ajeno, materia_malla=suya, periodo=self.periodo,
+            profesor=ajeno, materia_malla=suya,
         )
         self.client.force_login(ajeno)
 

@@ -13,7 +13,7 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from academico.models import InscripcionMalla, MateriaMalla, Malla, PeriodoAcademico, ProfesorMateria
+from academico.models import InscripcionMalla, Malla, MallaPeriodo, MateriaMalla, PeriodoAcademico, ProfesorMateria
 from core.models import PerfilUsuario
 from simulador.models import (
     EventoSimulacion,
@@ -138,7 +138,9 @@ def _crear_recursos_y_costos(simulacion, usuario):
 def _score_malla(malla):
     return (
         Simulacion.objects.filter(materia_malla__malla=malla, activo=True, estado=Simulacion.PUBLICADA).count(),
-        InscripcionMalla.objects.filter(malla=malla, activo=True, estado=InscripcionMalla.ACTIVA).count(),
+        InscripcionMalla.objects.filter(
+            malla_periodo__malla=malla, activo=True, estado=InscripcionMalla.ACTIVA,
+        ).count(),
         MateriaMalla.objects.filter(malla=malla, activo=True).count(),
         -malla.pk,
     )
@@ -161,7 +163,7 @@ def _consolidar_mallas_duplicadas():
                 estado=Simulacion.ARCHIVADA,
             )
             MateriaMalla.objects.filter(malla=malla).update(activo=False)
-            InscripcionMalla.objects.filter(malla=malla).update(
+            InscripcionMalla.objects.filter(malla_periodo__malla=malla).update(
                 activo=False,
                 estado=InscripcionMalla.RETIRADA,
             )
@@ -172,11 +174,18 @@ def _consolidar_mallas_duplicadas():
 
 
 def _consolidar_inscripciones_duplicadas(periodo_preferido):
+    """Una malla se puede abrir en varios periodos, pero el estudiante no deberia
+    arrastrar inscripciones activas en todas: se queda con la del periodo
+    preferido y las demas pasan a retiradas."""
     desactivadas = 0
     pares = (
         InscripcionMalla.objects
-        .filter(activo=True, estado=InscripcionMalla.ACTIVA, malla__activo=True)
-        .values_list('estudiante_id', 'malla_id')
+        .filter(
+            activo=True,
+            estado=InscripcionMalla.ACTIVA,
+            malla_periodo__malla__activo=True,
+        )
+        .values_list('estudiante_id', 'malla_periodo__malla_id')
         .distinct()
     )
     for estudiante_id, malla_id in pares:
@@ -184,15 +193,18 @@ def _consolidar_inscripciones_duplicadas(periodo_preferido):
             InscripcionMalla.objects
             .filter(
                 estudiante_id=estudiante_id,
-                malla_id=malla_id,
+                malla_periodo__malla_id=malla_id,
                 activo=True,
                 estado=InscripcionMalla.ACTIVA,
             )
-            .order_by('-periodo_id', '-id')
+            .order_by('-malla_periodo__periodo_id', '-id')
         )
         if len(inscripciones) <= 1:
             continue
-        preferidas = [i for i in inscripciones if i.periodo_id == periodo_preferido.pk]
+        preferidas = [
+            i for i in inscripciones
+            if i.malla_periodo.periodo_id == periodo_preferido.pk
+        ]
         mantener = preferidas[0] if preferidas else inscripciones[0]
         for inscripcion in inscripciones:
             if inscripcion.pk == mantener.pk:
@@ -230,12 +242,10 @@ class Command(BaseCommand):
                 defaults={
                     'fecha_inicio': date(2026, 1, 1),
                     'fecha_fin': date(2026, 12, 31),
-                    'activo_matricula': True,
                     'usuario_creacion': creador,
                 },
             )
             periodo.activo = True
-            periodo.activo_matricula = True
             periodo.save()
 
             estudiantes = [
@@ -244,6 +254,10 @@ class Command(BaseCommand):
             ]
 
             mallas = list(Malla.objects.filter(activo=True).order_by('codigo'))
+            aperturas = {
+                malla.pk: MallaPeriodo.abrir(malla, periodo, usuario=creador)
+                for malla in mallas
+            }
             materias = list(MateriaMalla.objects.filter(activo=True).select_related('malla'))
             inscripciones = 0
             asignaciones = 0
@@ -251,7 +265,6 @@ class Command(BaseCommand):
                 _, created = ProfesorMateria.objects.get_or_create(
                     profesor=profesor,
                     materia_malla=materia_malla,
-                    periodo=periodo,
                     defaults={'usuario_creacion': creador or profesor},
                 )
                 asignaciones += int(created)
@@ -260,8 +273,7 @@ class Command(BaseCommand):
                 for malla in mallas:
                     _, created = InscripcionMalla.objects.update_or_create(
                         estudiante=estudiante,
-                        malla=malla,
-                        periodo=periodo,
+                        malla_periodo=aperturas[malla.pk],
                         defaults={
                             'estado': InscripcionMalla.ACTIVA,
                             'activo': True,

@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from academico.models import (
+    MallaPeriodo,
     Carrera,
     InscripcionMalla,
     Malla,
@@ -95,20 +96,18 @@ class Command(BaseCommand):
             defaults={
                 'fecha_inicio': timezone.datetime(2026, 1, 1).date(),
                 'fecha_fin': timezone.datetime(2026, 12, 31).date(),
-                'activo_matricula': True,
                 'usuario_creacion': usuario,
             },
         )
+        malla_periodo = MallaPeriodo.abrir(malla, periodo, usuario=usuario)
         ProfesorMateria.objects.get_or_create(
             profesor=usuario,
             materia_malla=materia_malla,
-            periodo=periodo,
             defaults={'usuario_creacion': usuario},
         )
         InscripcionMalla.objects.get_or_create(
             estudiante=usuario,
-            malla=malla,
-            periodo=periodo,
+            malla_periodo=malla_periodo,
             defaults={'usuario_creacion': usuario},
         )
 

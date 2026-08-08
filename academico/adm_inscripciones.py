@@ -54,5 +54,18 @@ def view(request):
             obj = get_object_or_404(InscripcionMalla, pk=pk)
             return render(request, 'academico/adm_inscripciones/delete.html', {'object': obj})
         else:
-            data['list'] = InscripcionMalla.objects.filter(activo=True).select_related('estudiante', 'malla', 'periodo')
+            data['list'] = (
+                InscripcionMalla.objects
+                .filter(activo=True)
+                .select_related(
+                    'estudiante',
+                    'malla_periodo',
+                    'malla_periodo__malla',
+                    'malla_periodo__periodo',
+                )
+                .order_by(
+                    'estudiante__last_name',
+                    'estudiante__first_name',
+                )
+            )
             return render(request, 'academico/adm_inscripciones/view.html', data)

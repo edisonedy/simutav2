@@ -14,6 +14,7 @@ from .models import (
     IntentoSimulacion,
     MatrizEvaluacionCaso,
     OpcionCasoSimulacion,
+    OpcionRondaSimulacion,
     PasoSimulacion,
     PerfilMateriaIA,
     PlantillaConcepto,
@@ -24,12 +25,40 @@ from .models import (
     PistaTutor,
     Equipo,
     RecursoSimulacion,
+    RecursoSimulacionArchivo,
     ResultadoAprendizaje,
     RestriccionSimulacion,
+    RondaSimulacion,
     Seccion,
     Simulacion,
     TemaMateria,
 )
+
+
+class OpcionRondaInline(admin.TabularInline):
+    model = OpcionRondaSimulacion
+    extra = 0
+
+
+class ArchivoRondaInline(admin.TabularInline):
+    model = RecursoSimulacionArchivo
+    fk_name = 'ronda'
+    extra = 0
+
+
+@admin.register(RondaSimulacion)
+class RondaSimulacionAdmin(admin.ModelAdmin):
+    list_display = ['simulacion', 'numero', 'titulo', 'tipo_respuesta', 'puntaje_maximo']
+    list_filter = ['tipo_respuesta', 'simulacion__materia_malla__materia']
+    search_fields = ['titulo', 'situacion', 'simulacion__titulo']
+    inlines = [OpcionRondaInline, ArchivoRondaInline]
+
+
+@admin.register(RecursoSimulacionArchivo)
+class RecursoSimulacionArchivoAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'simulacion', 'ronda', 'tipo', 'orden']
+    list_filter = ['tipo']
+    search_fields = ['nombre', 'simulacion__titulo']
 
 admin.site.register(Simulacion)
 admin.site.register(TemaMateria)

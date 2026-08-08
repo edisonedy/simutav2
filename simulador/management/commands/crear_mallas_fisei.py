@@ -20,7 +20,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from academico.models import (
-    Carrera, Malla, NivelMalla, Materia, MateriaMalla, PeriodoAcademico,
+    Carrera, Malla, MallaPeriodo, NivelMalla, Materia, MateriaMalla, PeriodoAcademico,
     ProfesorMateria, InscripcionMalla,
 )
 from core.models import PerfilUsuario
@@ -276,9 +276,8 @@ class Command(BaseCommand):
         periodo, _ = PeriodoAcademico.objects.get_or_create(
             nombre='Periodo Pruebas SimutaV2',
             defaults={'fecha_inicio': date(2026, 1, 1), 'fecha_fin': date(2026, 12, 31),
-                      'activo_matricula': True, 'usuario_creacion': admin})
+'usuario_creacion': admin})
         periodo.activo = True
-        periodo.activo_matricula = True
         periodo.save()
 
         # Mallas FISEI a las que asignar: Software (nueva) + TI (si existe la del comando anterior)
@@ -289,14 +288,15 @@ class Command(BaseCommand):
 
         asignadas = 0
         for malla in mallas_fisei:
+            malla_periodo = MallaPeriodo.abrir(malla, periodo, usuario=admin)
             for mm in MateriaMalla.objects.filter(malla=malla, activo=True):
                 ProfesorMateria.objects.get_or_create(
-                    profesor=bpalate, materia_malla=mm, periodo=periodo,
+                    profesor=bpalate, materia_malla=mm,
                     defaults={'usuario_creacion': bpalate})
                 asignadas += 1
             for est in estudiantes:
                 InscripcionMalla.objects.get_or_create(
-                    estudiante=est, malla=malla, periodo=periodo,
+                    estudiante=est, malla_periodo=malla_periodo,
                     defaults={'estado': InscripcionMalla.ACTIVA, 'usuario_creacion': admin})
 
         self.stdout.write(self.style.SUCCESS('Mallas FISEI listas.'))

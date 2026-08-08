@@ -3,15 +3,18 @@ from types import SimpleNamespace
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, render
 from core.funciones import ok_json, bad_json
 from academico.models import InscripcionMalla, MateriaMalla, PeriodoAcademico
+from interactivo.models import ActividadInteractiva, IntentoActividadInteractiva
 from interactivo.services import actividades_pendientes
-from simulador.models import InvestigacionSimulacion, Simulacion, IntentoSimulacion
+from simulador.models import (
+    ActividadMateria, InvestigacionSimulacion, PerfilJuego, Simulacion, IntentoSimulacion,
+)
 from simulador import cursos_service
 from simulador.forms import PasoSimulacionForm
 from simulador.services import (
@@ -49,6 +52,29 @@ CODIGOS_EVALUACION_ACADEMICA = {
 
 def _es_indicador_academico(codigo):
     return str(codigo or '').lower() in CODIGOS_EVALUACION_ACADEMICA
+
+
+def _periodo_del_estudiante(usuario):
+    """El periodo con el que se sella un intento.
+
+    Sale de la malla en la que el estudiante esta inscrito. Si esta en varias,
+    manda la mas reciente; si no esta en ninguna, el intento se guarda sin
+    periodo, que es un dato de reporteria y no un requisito para jugar.
+    """
+    inscripcion = InscripcionMalla.objects.filter(
+        estudiante=usuario,
+        estado=InscripcionMalla.ACTIVA,
+        activo=True,
+    ).select_related(
+        'malla_periodo__periodo',
+    ).order_by(
+        '-malla_periodo__periodo__fecha_inicio',
+    ).first()
+
+    if inscripcion:
+        return inscripcion.malla_periodo.periodo
+
+    return PeriodoAcademico.objects.filter(activo=True).order_by('-fecha_inicio').first()
 
 
 def _pronostico_desde_post(request):
@@ -457,15 +483,35 @@ def _investigacion_del_intento(intento, investigacion_id):
 
 
 def _situacion_actual(intento, numero):
+    """Que se le plantea al estudiante en esta ronda.
+
+    En un caso de decisiones independientes manda SIEMPRE lo que el docente
+    escribio en la ronda: la ronda 2 es una situacion ya preparada, no la
+    consecuencia de la ronda 1. En una simulacion encadenada es al reves: pesa
+    mas como quedo la empresa despues de la decision anterior.
+    """
+    caso = _caso_del_intento(intento)
+    configurada = (_configuracion_ronda(
+        intento.simulacion, numero, caso.get('parametros') or {},
+    ).get('situacion') or '').strip()
+    encadenada = (
+        intento.simulacion.modo_ejecucion == Simulacion.MODO_SIMULACION_ENCADENADA
+    )
+
+    if configurada and not encadenada:
+        return configurada
+
     if numero == 1:
-        caso = _caso_del_intento(intento)
-        return caso.get('situacion_inicial') or (
+        return caso.get('situacion_inicial') or configurada or (
             f'{caso.get("contexto", "")} Actuas como {caso.get("rol_estudiante", "")}. '
             f'Objetivo: {caso.get("objetivo", "")}.'
         )
+
     ultimo = intento.pasos.order_by('-numero').first()
     if ultimo and ultimo.siguiente_situacion:
         return ultimo.siguiente_situacion
+    if configurada:
+        return configurada
     return f'Ronda {numero}: Continua con la simulacion de decisiones.'
 
 
@@ -680,12 +726,19 @@ def _rubrica_visible(intento, numero):
         if restricciones_datos else
         list(intento.simulacion.restricciones.filter(activo=True).order_by('codigo_indicador')[:5])
     )
-    if not conceptos and not indicadores and not restricciones:
+    # Los criterios del caso con su peso: es la "rubrica rapida" que traen los
+    # simuladores del docente (Planificacion 20, Analisis 25...). El estudiante
+    # tiene que saber contra que se lo mide ANTES de responder.
+    criterios_caso = list(
+        intento.simulacion.criterios.filter(activo=True).order_by('-peso', 'nombre')
+    )
+    if not conceptos and not indicadores and not restricciones and not criterios_caso:
         return None
     return {
         'conceptos': conceptos[:5],
         'indicadores': indicadores,
         'restricciones': restricciones,
+        'criterios_caso': criterios_caso,
         # Los criterios del metodo del caso valen nota de verdad, asi que el
         # estudiante debe verlos antes de responder, no descubrirlos despues.
         'criterios_decision': CRITERIOS_DECISION,
@@ -1209,6 +1262,61 @@ def _hud_simulacion(intento):
     }
 
 
+def _medallas_de_la_ronda(intento, paso):
+    """Lo que el estudiante se gano en la ronda que acaba de cerrar.
+
+    El ciclo de recompensa tiene que cerrarse EN EL MOMENTO. Las insignias del
+    perfil solo se veian al final, en "Mi carrera": para cuando llegaban, el
+    estudiante ya no recordaba que hizo bien. Cada medalla se ancla a algo que
+    de verdad hizo, no a haber pulsado el boton.
+    """
+    if paso is None or not paso.es_valido:
+        return []
+
+    nota = float(paso.puntaje_paso)
+    medallas = []
+
+    if nota >= 90:
+        medallas.append({'icono': '\U0001F3AF', 'nombre': 'Certero',
+                         'detalle': f'Cerraste la ronda con {nota:g}.'})
+    if not paso.intento.intentos_invalidos_actuales and nota >= 70:
+        medallas.append({'icono': '\U0001F9E0', 'nombre': 'A la primera',
+                         'detalle': 'Resolviste la ronda sin intentos fallidos.'})
+
+    anterior = (
+        intento.pasos.filter(es_valido=True, numero__lt=paso.numero)
+        .order_by('-numero').first()
+    )
+    if anterior and nota - float(anterior.puntaje_paso) >= 20:
+        medallas.append({'icono': '\U0001F4C8', 'nombre': 'Remontada',
+                         'detalle': 'Subiste 20 puntos o mas frente a la ronda anterior.'})
+
+    if (paso.pronostico_resultado or {}).get('estado') == 'acierto':
+        medallas.append({'icono': '\U0001F52E', 'nombre': 'Vidente',
+                         'detalle': 'Anticipaste bien como se moveria el indicador.'})
+    if (paso.tradeoff_resultado or {}).get('estado') == 'tradeoff_real':
+        medallas.append({'icono': '⚖', 'nombre': 'Honesto',
+                         'detalle': 'Declaraste el costo de tu decision y se cumplio.'})
+
+    if intento.finalizado:
+        medallas.append({'icono': '\U0001F3C1', 'nombre': 'Caso cerrado',
+                         'detalle': 'Completaste todas las rondas.'})
+
+    return medallas
+
+
+def _avance_mision(intento, numero, total):
+    """Cuanto llevas de la mision, para la barra del HUD."""
+    total = max(1, int(total or 1))
+    hechas = intento.pasos.filter(es_valido=True).count()
+    return {
+        'hechas': hechas,
+        'total': total,
+        'pct': min(100, round(hechas / total * 100)),
+        'ronda': numero,
+    }
+
+
 def _indicadores_finales(intento):
     estado = intento.estado_actual or {}
     indicadores = []
@@ -1375,6 +1483,143 @@ def _visibilidad_ronda(simulacion, numero, parametros=None):
     }
 
 
+def _progreso_del_estudiante(usuario, materias):
+    """El estado real de cada juego y cada caso de la malla, en 2 consultas.
+
+    Sin esto la pantalla era una lista de titulos: el estudiante no sabia que
+    ya habia aprobado, que dejo a medias ni cuanto le falta. El progreso es lo
+    que convierte el listado en un tablero de juego.
+    """
+    ids_juegos, ids_casos = [], []
+    for materia in materias:
+        ids_juegos.extend(j.pk for j in materia.juegos_disponibles)
+        ids_casos.extend(s.pk for s in materia.simulaciones_disponibles)
+
+    mejor_juego = {}
+    for intento in IntentoActividadInteractiva.objects.filter(
+        estudiante=usuario, actividad_id__in=ids_juegos, completado=True,
+    ).order_by('actividad_id', '-porcentaje'):
+        actual = mejor_juego.get(intento.actividad_id)
+        if actual is None or intento.porcentaje > actual['porcentaje']:
+            mejor_juego[intento.actividad_id] = {
+                'porcentaje': intento.porcentaje,
+                'aprobado': intento.aprobado,
+            }
+
+    casos = {}
+    for intento in IntentoSimulacion.objects.filter(
+        estudiante=usuario, simulacion_id__in=ids_casos, activo=True,
+    ).order_by('simulacion_id', '-fecha_inicio'):
+        actual = casos.setdefault(intento.simulacion_id, {
+            'nota': None, 'en_curso': None, 'ronda': 0,
+        })
+        if intento.finalizado:
+            nota = float(intento.puntuacion_final)
+            if actual['nota'] is None or nota > actual['nota']:
+                actual['nota'] = nota
+        elif actual['en_curso'] is None:
+            actual['en_curso'] = intento.pk
+            actual['ronda'] = intento.numero_ronda_actual
+
+    return mejor_juego, casos
+
+
+def _pintar_progreso(materias, mejor_juego, casos):
+    """Cuelga el estado de cada pieza y el avance de la materia."""
+    for materia in materias:
+        hechos = 0
+        for juego in materia.juegos_disponibles:
+            estado = mejor_juego.get(juego.pk)
+            juego.jugado = estado is not None
+            juego.aprobado_por_mi = bool(estado and estado['aprobado'])
+            juego.mi_porcentaje = estado['porcentaje'] if estado else None
+            hechos += int(juego.aprobado_por_mi)
+        for caso in materia.simulaciones_disponibles:
+            estado = casos.get(caso.pk) or {}
+            caso.mi_nota = estado.get('nota')
+            caso.mi_intento_en_curso = estado.get('en_curso')
+            caso.mi_ronda = estado.get('ronda') or 0
+            hechos += int(caso.mi_nota is not None)
+        total = len(materia.juegos_disponibles) + len(materia.simulaciones_disponibles)
+        materia.piezas_hechas = hechos
+        materia.piezas_totales = total
+        materia.avance = round(hechos / total * 100) if total else 0
+        materia.completa = bool(total) and hechos == total
+
+
+def _datos_de_la_ronda(ronda_config):
+    """Las tablas, la formula y la nota que el docente puso en esta ronda.
+
+    Se normaliza aqui y no en la plantilla para que una ficha mal escrita
+    (una tabla sin filas, por ejemplo) no reviente la pantalla del alumno.
+    """
+    datos = (ronda_config or {}).get('datos') or {}
+    if not isinstance(datos, dict):
+        return None
+
+    tablas = []
+    for bruto in datos.get('tablas') or []:
+        if not isinstance(bruto, dict):
+            continue
+        filas = [f for f in (bruto.get('filas') or []) if isinstance(f, (list, tuple))]
+        if not filas:
+            continue
+        tablas.append({
+            'titulo': str(bruto.get('titulo') or ''),
+            'columnas': [str(c) for c in (bruto.get('columnas') or [])],
+            'filas': [[str(celda) for celda in fila] for fila in filas],
+        })
+
+    formula = str(datos.get('formula') or '').strip()
+    nota = str(datos.get('nota') or '').strip()
+    if not (tablas or formula or nota):
+        return None
+    return {'tablas': tablas, 'formula': formula, 'nota': nota}
+
+
+def _modelo_docente_de_la_ronda(simulacion, numero, parametros=None):
+    """El desarrollo del docente para una ronda, para comparar despues de
+    responderla. Vacio si el docente no lo escribio."""
+    if not numero:
+        return None
+    ronda = _configuracion_ronda(simulacion, numero, parametros)
+    modelo = (ronda.get('respuesta_modelo') or '').strip()
+    cierre = (ronda.get('retroalimentacion') or '').strip()
+    if not (modelo or cierre):
+        return None
+    return {
+        'numero': numero,
+        'titulo': ronda.get('titulo') or f'Ronda {numero}',
+        'modelo': modelo,
+        'cierre': cierre,
+    }
+
+
+def _modelo_docente_completo(intento):
+    """Todos los desarrollos del docente, ronda por ronda, para el cierre."""
+    parametros = (_caso_del_intento(intento).get('parametros') or {})
+    total = int(_caso_del_intento(intento).get('maximo_decisiones')
+                or intento.simulacion.maximo_decisiones or 0)
+    bloques = []
+    for numero in range(1, total + 1):
+        bloque = _modelo_docente_de_la_ronda(intento.simulacion, numero, parametros)
+        if bloque:
+            bloques.append(bloque)
+    return bloques
+
+
+def _archivos_de_la_ronda(simulacion, numero):
+    """Los adjuntos del caso: los generales mas los propios de esta ronda."""
+    from simulador.models import RecursoSimulacionArchivo
+
+    return list(
+        RecursoSimulacionArchivo.objects
+        .filter(simulacion=simulacion, activo=True)
+        .filter(Q(ronda__isnull=True) | Q(ronda__numero=numero))
+        .order_by('ronda__numero', 'orden', 'nombre')
+    )
+
+
 def _es_ajax(request):
     return request.headers.get('x-requested-with') == 'XMLHttpRequest'
 
@@ -1435,9 +1680,18 @@ def view(request):
                 messages.error(request, mensaje)
                 return HttpResponseRedirect('?action=iniciar&simulacion_id=' + str(simulacion.pk))
 
-            periodo = PeriodoAcademico.objects.filter(activo_matricula=True).first()
+            # Con que periodo se sella el intento: el que el estudiante tiene
+            # abierto en su inscripcion. Antes se leia una bandera del periodo
+            # (activo_matricula), que ya no existe porque SimutaV2 no lleva
+            # matricula: el periodo sale de la malla en la que esta inscrito.
+            periodo = _periodo_del_estudiante(request.user)
             escenario_inicial = None
             situacion_actual = simulacion.situacion_inicial or simulacion.contexto
+            # Si el docente escribio la ronda 1, esa es la situacion: el
+            # contexto general ya se leyo en la portada del caso.
+            primera = simulacion.rondas.filter(activo=True, numero=1).first()
+            if primera and primera.situacion.strip():
+                situacion_actual = primera.situacion
             if simulacion.tipo_simulacion == Simulacion.TIPO_SIN_IA_ARBOL:
                 escenario_inicial = obtener_escenario_inicial(simulacion)
                 situacion_actual = escenario_inicial.situacion if escenario_inicial else ''
@@ -1577,9 +1831,21 @@ def view(request):
                 simulacion, intento.numero_ronda_actual, intento.configuracion_snapshot,
             )
             valores_campos = {}
+            decision_enviada = (request.POST.get('decision') or '').strip()
             if campos_ronda:
                 valores_campos = {c['clave']: (request.POST.get(c['clave']) or '').strip()
                                   for c in campos_ronda}
+                # En una ronda de calculo, LO QUE CAPTURO ES SU DECISION. Sin
+                # esto el estudiante ponia el numero, dejaba vacio el texto
+                # libre y el motor le rechazaba la jugada pidiendole "una
+                # decision concreta" que la ronda nunca le pidio.
+                if not decision_enviada:
+                    decision_enviada = '. '.join(
+                        f"{campo['etiqueta']}: {valores_campos[campo['clave']]}"
+                        f"{' ' + campo['unidad'] if campo.get('unidad') else ''}"
+                        for campo in campos_ronda
+                        if valores_campos.get(campo['clave'])
+                    )
                 problemas = validar_campos_decision(campos_ronda, valores_campos)
                 if problemas:
                     mensaje = ' '.join(problemas)
@@ -1627,7 +1893,7 @@ def view(request):
                         return bad_json(mensaje='La decision elegida no pertenece a esta version del intento.')
                 paso = ejecutar_ronda_ia_dinamica(
                     intento,
-                    request.POST.get('decision', ''),
+                    decision_enviada,
                     request.POST.get('justificacion', ''),
                     accion=accion,
                     pronostico=pronostico,
@@ -1670,6 +1936,15 @@ def view(request):
                 item for item in indicadores if _es_indicador_academico(item.codigo)
             ]
             data['asignacion'] = cursos_service.asignacion_para(request.user, simulacion)
+            # Si dejo el caso a medias, se retoma donde quedo. Antes cada
+            # regreso a la portada creaba un intento nuevo y el anterior
+            # quedaba huerfano "en curso".
+            data['intento_en_curso'] = IntentoSimulacion.objects.filter(
+                estudiante=request.user,
+                simulacion=simulacion,
+                finalizado=False,
+                activo=True,
+            ).order_by('-fecha_inicio').first()
             # La portada avisa que juegos faltan antes de dejar entrar.
             data['juegos_pendientes'] = actividades_pendientes(simulacion, request.user)
             data['juegos_del_caso'] = simulacion.actividades_interactivas.filter(
@@ -1691,13 +1966,22 @@ def view(request):
             data['intento'] = intento
             data['simulacion'] = intento.simulacion
             data['caso'] = _caso_del_intento(intento)
-            data['situacion'] = intento.situacion_actual or _situacion_actual(intento, numero)
+            # En decisiones independientes manda la ronda configurada; en arbol
+            # y en encadenada manda el estado que dejo la decision anterior.
+            if intento.simulacion.modo_ejecucion == Simulacion.MODO_CASO_INDEPENDIENTE:
+                data['situacion'] = _situacion_actual(intento, numero) or intento.situacion_actual
+            else:
+                data['situacion'] = intento.situacion_actual or _situacion_actual(intento, numero)
             data['numero'] = numero
             data['form'] = PasoSimulacionForm(ronda=numero)
             parametros_caso = data['caso'].get('parametros') or {}
             data.update(_datos_visibles_caso(intento.simulacion, intento.configuracion_snapshot))
             data['ronda_config'] = _configuracion_ronda(intento.simulacion, numero, parametros_caso)
             data.update(_visibilidad_ronda(intento.simulacion, numero, parametros_caso))
+            # Las tablas del caso y sus adjuntos: el Estado de Resultados o el
+            # Excel del ejercicio no son decoracion, son con lo que se decide.
+            data['datos_ronda'] = _datos_de_la_ronda(data['ronda_config'])
+            data['archivos_ronda'] = _archivos_de_la_ronda(intento.simulacion, numero)
             data['rubrica_visible'] = (
                 _rubrica_visible(intento, numero) if data['mostrar_rubrica'] else None
             )
@@ -1705,6 +1989,14 @@ def view(request):
             data['etiqueta_decision'] = etq_dec
             data['etiqueta_justificacion'] = etq_jus
             data['ultimo_paso'] = intento.pasos.order_by('-numero').first()
+            # El cierre de los simuladores del docente: despues de responder, el
+            # estudiante compara su desarrollo con el modelo. No tiene que ser
+            # identico, pero si coherente. Es de la ronda YA respondida.
+            data['modelo_docente'] = _modelo_docente_de_la_ronda(
+                intento.simulacion,
+                data['ultimo_paso'].numero if data['ultimo_paso'] else None,
+                parametros_caso,
+            )
             data['pedir_reflexion_ultimo'] = bool(
                 data['ultimo_paso']
                 and _visibilidad_ronda(
@@ -1758,6 +2050,11 @@ def view(request):
                     intento.simulacion, numero, data['caso'].get('maximo_decisiones'), parametros_caso,
                 )
                 data['hud'] = _hud_simulacion(intento)
+            # El premio se entrega al cerrar la ronda, no al final del caso.
+            data['medallas_ronda'] = _medallas_de_la_ronda(intento, data['ultimo_paso'])
+            data['avance_mision'] = _avance_mision(
+                intento, numero, data['caso'].get('maximo_decisiones'),
+            )
             return render(request, 'simulador/alu_simulaciones/simular.html', data)
 
         elif action == 'resultado':
@@ -1784,18 +2081,28 @@ def view(request):
                 resultado_del_caso(intento) if intento.simulacion.peso_resultado else None
             )
             data['casos_equivalentes'] = _casos_equivalentes(intento, request.user)
+            # El cierre del caso: el desarrollo completo del docente, ronda por
+            # ronda, para comparar. No tiene que coincidir palabra por palabra;
+            # tiene que ser coherente.
+            data['modelo_docente_completo'] = _modelo_docente_completo(intento)
+            data['criterios_caso'] = list(
+                intento.simulacion.criterios.filter(activo=True).order_by('-peso', 'nombre')
+            )
             return render(request, 'simulador/alu_simulaciones/resultado.html', data)
 
         elif action == 'carrera':
             data.update(_carrera_contexto(request.user))
+            # Para volver a la malla desde la que se abrio, no al selector.
+            malla_volver = request.GET.get('malla') or ''
+            data['malla_volver'] = malla_volver if malla_volver.isdigit() else ''
             return render(request, 'simulador/alu_simulaciones/carrera.html', data)
 
         from academico.models import Malla
         inscripciones = InscripcionMalla.objects.filter(
             estudiante=request.user,
             estado=InscripcionMalla.ACTIVA,
-        ).select_related('malla')
-        mallas_ids = list(inscripciones.values_list('malla_id', flat=True))
+        ).select_related('malla_periodo__malla')
+        mallas_ids = list(inscripciones.values_list('malla_periodo__malla_id', flat=True))
         malla_sel = request.GET.get('malla')
 
         # Paso 1: el estudiante elige primero la malla (para no mezclar materias).
@@ -1814,31 +2121,57 @@ def view(request):
             return render(request, 'simulador/alu_simulaciones/mallas.html', data)
 
         # Paso 2: ya eligio una malla -> mostrar solo SUS materias por nivel.
+        #
+        # Cada materia trae sus dos bloques por separado:
+        #   JUEGOS           -> ActividadInteractiva (aprender y reforzar)
+        #   PRACTICAS REALES -> Simulacion + ActividadMateria (aplicar y decidir)
+        #
+        # Estaban mezclados y el estudiante no distinguia "jugar un memoria" de
+        # "resolver un caso de tres rondas", que son dos cosas distintas.
         materias = (
             MateriaMalla.objects
             .filter(malla_id=malla_sel, malla_id__in=mallas_ids, activo=True)
             .select_related('materia', 'nivel', 'malla__carrera')
-            .prefetch_related('simulaciones')
-            .annotate(
-                total_juegos=Count(
+            .prefetch_related(
+                Prefetch(
+                    'simulaciones',
+                    queryset=Simulacion.objects.filter(
+                        activo=True, estado=Simulacion.PUBLICADA,
+                    ).select_related('tema_materia').order_by('tema_materia__orden', 'titulo'),
+                    to_attr='simulaciones_disponibles',
+                ),
+                Prefetch(
                     'actividades_interactivas',
-                    filter=Q(
-                        actividades_interactivas__publicada=True,
-                        actividades_interactivas__activo=True,
-                    ),
-                    distinct=True,
+                    queryset=ActividadInteractiva.objects.filter(
+                        activo=True, publicada=True,
+                    ).select_related('tema').order_by('tema__orden', 'orden', 'titulo'),
+                    to_attr='juegos_disponibles',
+                ),
+                Prefetch(
+                    'actividades',
+                    queryset=ActividadMateria.objects.filter(
+                        activo=True,
+                    ).select_related('tema').order_by('tema__orden', 'orden', 'titulo'),
+                    to_attr='trabajos_disponibles',
                 ),
             )
             .order_by('nivel__numero', 'orden', 'materia__nombre')
         )
+        materias = list(materias)
         data['malla_sel'] = materias[0].malla if materias else None
+        # El estado real de cada pieza: que aprobo, que dejo a medias y cuanto
+        # le falta. Es lo que hace que la pantalla sea un tablero y no un indice.
+        mejor_juego, casos_jugados = _progreso_del_estudiante(request.user, materias)
+        _pintar_progreso(materias, mejor_juego, casos_jugados)
         # Agrupar por nivel en orden (primero -> ultimo) para el dashboard.
         niveles = OrderedDict()
         total_simulaciones = 0
+        total_juegos = 0
         for m in materias:
-            sims = [s for s in m.simulaciones.all() if s.estado == Simulacion.PUBLICADA and s.activo]
-            m.simulaciones_disponibles = sims
-            total_simulaciones += len(sims)
+            total_simulaciones += len(m.simulaciones_disponibles)
+            total_juegos += len(m.juegos_disponibles)
+            m.total_juegos = len(m.juegos_disponibles)
+            m.total_practicas = len(m.simulaciones_disponibles) + len(m.trabajos_disponibles)
             numero = m.nivel.numero if m.nivel else 0
             if numero not in niveles:
                 niveles[numero] = {
@@ -1848,8 +2181,16 @@ def view(request):
                     'total_simulaciones': 0,
                 }
             niveles[numero]['materias'].append(m)
-            niveles[numero]['total_simulaciones'] += len(sims)
+            niveles[numero]['total_simulaciones'] += len(m.simulaciones_disponibles)
         data['niveles'] = list(niveles.values())
         data['total_simulaciones'] = total_simulaciones
+        data['total_juegos'] = total_juegos
         data['total_materias'] = len(materias)
+        # Marcador de la malla: cuanto lleva hecho de todo lo que hay.
+        hechas = sum(m.piezas_hechas for m in materias)
+        totales = sum(m.piezas_totales for m in materias)
+        data['avance_malla'] = round(hechas / totales * 100) if totales else 0
+        data['piezas_hechas'] = hechas
+        data['piezas_totales'] = totales
+        data['perfil_juego'] = PerfilJuego.objects.filter(usuario=request.user).first()
         return render(request, 'simulador/alu_simulaciones/view.html', data)

@@ -12,12 +12,13 @@
             Los obligatorios que apuntan a un caso hay que aprobarlos antes de entrar a el.
         </div>
     </div>
-    {% if puede_gestionar %}
     <div class="page-head-actions">
-        <a class="btn btn-outline-secondary" href="{% url 'interactivo:catalogo' %}">Tipos de juego</a>
+        <a class="btn btn-outline-secondary" href="{{ volver_url }}">&larr; {{ volver_texto }}</a>
+        {% if puede_gestionar %}
+        <a class="btn btn-outline-secondary" href="{% url 'interactivo:catalogo' %}?materia_malla={{ materia_malla.pk }}">Tipos de juego</a>
         <a class="btn btn-primary" href="{% url 'interactivo:crear' materia_malla.pk %}">+ Nuevo juego</a>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
 {% for grupo in grupos %}

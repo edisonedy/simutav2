@@ -8,6 +8,8 @@
             <div class="hud-label">Mi carrera</div>
             <div class="hud-title">{{ user.get_full_name|default:user.username }}</div>
             <div class="hud-role">▶ Nivel {{ perfil.nivel }} · puesto #{{ mi_posicion }} en el ranking</div>
+            <a class="hud-salir mt-2 d-inline-block"
+               href="{% url 'alu_simulaciones' %}{% if malla_volver %}?malla={{ malla_volver }}{% endif %}">&larr; Volver a mis materias</a>
         </div>
         <div class="hud-stats">
             <div class="hud-stat"><div class="hud-stat-label">XP total</div><div class="hud-stat-value">{{ perfil.xp_total }}</div></div>

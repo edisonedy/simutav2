@@ -130,7 +130,7 @@ def serializar_configuracion_simulacion(simulacion):
             simulacion.acciones_sugeridas.filter(activo=True).values(
                 'id', 'numero_ronda', 'opcion_caso_id', 'requiere_accion_previa_id',
                 'bloqueada_por_accion_previa_id', 'maximo_ejecuciones',
-                'texto', 'descripcion',
+                'texto', 'descripcion', 'puntaje', 'retroalimentacion',
                 'impacto_base', 'costo_recursos',
             )
         ),

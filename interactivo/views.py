@@ -40,6 +40,30 @@ def _can_manage(user, actividad=None, materia_malla=None):
     return False
 
 
+def _volver_a_la_materia(user, materia_malla, puede_gestionar=None, malla_periodo=''):
+    """A donde vuelve el boton "Salir" desde un juego.
+
+    Un juego no es un callejon sin salida: el estudiante tiene que poder
+    regresar a SU pantalla de la materia (donde estan los juegos y las
+    practicas), no quedar encerrado en el listado de juegos, que ademas es
+    la pantalla del docente.
+    """
+    if puede_gestionar is None:
+        puede_gestionar = _can_manage(user, materia_malla=materia_malla)
+    if puede_gestionar:
+        # Se conserva la apertura del periodo si venia en la URL, para no
+        # devolver al docente a una version distinta de la misma pantalla.
+        sufijo = f'&malla_periodo={malla_periodo}' if malla_periodo else ''
+        return (
+            f"{reverse('adm_materias')}?action=detalle&pk={materia_malla.pk}{sufijo}",
+            'Volver a la materia',
+        )
+    return (
+        f"{reverse('alu_simulaciones')}?malla={materia_malla.malla_id}",
+        'Volver a mis materias',
+    )
+
+
 def _save_with_user(instance, request):
     # Compatible tanto con un ModeloBase normal como con variantes que
     # exigen guardar pasando request.
@@ -63,9 +87,16 @@ def _posted_config(request, default=None):
 @login_required
 @require_GET
 def catalogo_motores(request):
+    # Se llega aqui desde el listado de juegos de una materia; se vuelve alli.
+    materia_malla_id = request.GET.get('materia_malla')
+    volver_url = (
+        reverse('interactivo:lista', args=[materia_malla_id])
+        if (materia_malla_id or '').isdigit() else ''
+    )
     return render(request, 'interactivo/catalogo.html', {
         'title': 'Tipos de actividades interactivas',
         'motores': all_plugins(),
+        'volver_url': volver_url,
     })
 
 
@@ -100,12 +131,18 @@ def lista_actividades(request, materia_malla_id):
         )
     ]
 
+    volver_url, volver_texto = _volver_a_la_materia(
+        request.user, materia_malla, puede_gestionar,
+        malla_periodo=request.GET.get('malla_periodo') or '',
+    )
     return render(request, 'interactivo/lista.html', {
         'title': 'Juegos de la materia',
         'materia_malla': materia_malla,
         'grupos': grupos,
         'total': len(actividades),
         'puede_gestionar': puede_gestionar,
+        'volver_url': volver_url,
+        'volver_texto': volver_texto,
     })
 
 
@@ -266,6 +303,9 @@ def jugar_actividad(request, actividad_id):
     plugin_js = static(plugin.player_js) if plugin.player_js else ''
     plugin_css = static(plugin.player_css) if plugin.player_css else ''
 
+    volver_url, volver_texto = _volver_a_la_materia(
+        request.user, actividad.materia_malla, puede_gestionar,
+    )
     return render(request, 'interactivo/jugar.html', {
         'title': actividad.titulo,
         'actividad': actividad,
@@ -274,6 +314,8 @@ def jugar_actividad(request, actividad_id):
         'plugin_js': plugin_js,
         'plugin_css': plugin_css,
         'renderer_codigo': plugin.renderer or plugin.codigo,
+        'volver_url': volver_url,
+        'volver_texto': volver_texto,
     })
 
 
@@ -374,9 +416,19 @@ def resultado_intento(request, intento_id):
     )
     if intento.estudiante_id != request.user.id and not _can_manage(request.user, actividad=intento.actividad):
         raise PermissionDenied
+    actividad = intento.actividad
+    volver_url, volver_texto = _volver_a_la_materia(request.user, actividad.materia_malla)
+    # Si el juego era el candado de un caso y ya lo aprobo, el siguiente paso
+    # obvio es entrar al caso. Se lo ofrecemos aqui en vez de hacerle buscarlo.
+    caso_desbloqueado = None
+    if actividad.simulacion_id and actividad.obligatoria and intento.aprobado:
+        caso_desbloqueado = actividad.simulacion
     return render(request, 'interactivo/resultado.html', {
         'title': 'Resultado de la actividad',
         'intento': intento,
+        'volver_url': volver_url,
+        'volver_texto': volver_texto,
+        'caso_desbloqueado': caso_desbloqueado,
     })
 
 

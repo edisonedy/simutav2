@@ -8,7 +8,9 @@ from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
 
-from academico.models import InscripcionMalla, MateriaMalla, PeriodoAcademico, ProfesorMateria
+from academico.models import (
+    InscripcionMalla, MallaPeriodo, MateriaMalla, PeriodoAcademico, ProfesorMateria,
+)
 from core.models import PerfilUsuario
 from simulador.models import (
     AccionSugeridaSimulacion,
@@ -347,12 +349,10 @@ class Command(BaseCommand):
             defaults={
                 'fecha_inicio': timezone.datetime(2026, 1, 1).date(),
                 'fecha_fin': timezone.datetime(2026, 12, 31).date(),
-                'activo_matricula': True,
                 'usuario_creacion': usuario,
             },
         )
         periodo.activo = True
-        periodo.activo_matricula = True
         periodo.save()
 
         PasoSimulacion.objects.all().delete()
@@ -361,8 +361,7 @@ class Command(BaseCommand):
 
         InscripcionMalla.objects.update_or_create(
             estudiante=usuario,
-            malla=malla_obj,
-            periodo=periodo,
+            malla_periodo=MallaPeriodo.abrir(malla_obj, periodo, usuario=usuario),
             defaults={
                 'estado': InscripcionMalla.ACTIVA,
                 'activo': True,
@@ -374,7 +373,6 @@ class Command(BaseCommand):
             ProfesorMateria.objects.update_or_create(
                 profesor=usuario,
                 materia_malla=materia_malla,
-                periodo=periodo,
                 defaults={'activo': True, 'usuario_creacion': usuario},
             )
 

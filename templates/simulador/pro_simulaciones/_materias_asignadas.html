@@ -10,7 +10,6 @@ entre la pantalla de mallas y la de una malla concreta para que el atajo de
         <div class="border-top py-2">
             <div class="fw-semibold">{{ a.materia_malla.materia.nombre }}</div>
             <div class="text-muted small">{{ a.materia_malla.malla.codigo }} &middot; Nivel {{ a.materia_malla.nivel.numero }}</div>
-            <div class="text-muted small">{{ a.periodo }}</div>
             <form method="post" action="{% url 'pro_simulaciones' %}" class="mt-2" onsubmit="return enviar_formulario(this)">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="generar_desde_plantilla">

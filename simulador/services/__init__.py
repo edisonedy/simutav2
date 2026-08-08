@@ -9,3 +9,4 @@ from .core import *  # noqa: F401,F403
 # Nombres con guion bajo usados fuera del paquete (no entran con import *).
 from .core import _normalizar_texto  # noqa: F401
 from . import motor_dinamico  # noqa: F401
+from . import rondas  # noqa: F401

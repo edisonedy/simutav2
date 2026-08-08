@@ -4,6 +4,7 @@ from django.utils import timezone
 import json
 
 from academico.models import (
+    MallaPeriodo,
     Carrera,
     InscripcionMalla,
     Malla,
@@ -122,20 +123,18 @@ class Command(BaseCommand):
             defaults={
                 'fecha_inicio': timezone.datetime(2026, 1, 1).date(),
                 'fecha_fin': timezone.datetime(2026, 12, 31).date(),
-                'activo_matricula': True,
                 'usuario_creacion': profesor,
             },
         )
+        malla_periodo = MallaPeriodo.abrir(malla, periodo, usuario=profesor)
         ProfesorMateria.objects.get_or_create(
             profesor=profesor,
             materia_malla=materia_malla,
-            periodo=periodo,
             defaults={'usuario_creacion': profesor},
         )
         InscripcionMalla.objects.get_or_create(
             estudiante=estudiante,
-            malla=malla,
-            periodo=periodo,
+            malla_periodo=malla_periodo,
             defaults={'usuario_creacion': profesor},
         )
 

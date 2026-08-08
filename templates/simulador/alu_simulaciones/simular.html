@@ -7,9 +7,26 @@
     <!-- HUD superior -->
     <div class="hud">
         <div class="hud-mission">
-            <div class="hud-label">Misión {{ numero }}/{{ caso.maximo_decisiones }}</div>
+            <div class="hud-label">
+                Misión {{ numero }}/{{ caso.maximo_decisiones }}
+                {% comment %}
+                Salir sin perder nada: el intento queda en curso y la portada
+                del caso ofrece continuar en esta misma ronda.
+                {% endcomment %}
+                &middot;
+                <a class="hud-salir" href="{% url 'alu_simulaciones' %}?malla={{ simulacion.materia_malla.malla_id }}"
+                   title="Tu avance queda guardado">&larr; salir</a>
+            </div>
             <div class="hud-title">{{ caso.titulo }}</div>
             <div class="hud-role">▶ {{ caso.rol_estudiante|default:"Responsable de decisión" }}</div>
+            {% if avance_mision %}
+            <div class="mision-barra mt-2" role="progressbar"
+                 aria-valuenow="{{ avance_mision.pct }}" aria-valuemin="0" aria-valuemax="100"
+                 aria-label="Avance de la misión"
+                 title="{{ avance_mision.hechas }} de {{ avance_mision.total }} rondas resueltas">
+                <span style="width: {{ avance_mision.pct }}%"></span>
+            </div>
+            {% endif %}
         </div>
         {% if hud %}
         <div class="hud-stats">
@@ -101,6 +118,21 @@
                         </ul>
                     </div>
                 {% endif %}
+                {% comment %}
+                El premio se entrega aqui, al cerrar la ronda. Antes las
+                insignias solo aparecian al final en "Mi carrera", cuando el
+                estudiante ya no recordaba que habia hecho bien.
+                {% endcomment %}
+                {% if medallas_ronda %}
+                <div class="medallero mb-3">
+                    {% for medalla in medallas_ronda %}
+                    <div class="medalla" style="--i: {{ forloop.counter0 }}" title="{{ medalla.detalle }}">
+                        <span class="medalla-ico">{{ medalla.icono }}</span>
+                        <span class="medalla-nombre">{{ medalla.nombre }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 {% if cambios_indicadores %}
                 <div class="hud-label mb-1">Cómo reaccionó la empresa</div>
                 <div class="d-flex flex-wrap gap-2">
@@ -158,6 +190,32 @@
             </div>
             {% endif %}
 
+            {% comment %}
+            El cierre de cada ronda en los simuladores del docente: comparar tu
+            desarrollo con el suyo. Va colapsado para que el estudiante lo abra
+            DESPUES de haber respondido, no antes.
+            {% endcomment %}
+            {% if ultimo_paso and modelo_docente %}
+            <details class="game-card modelo-docente mb-3">
+                <summary class="modelo-docente-head">
+                    <span class="game-tag">&#128104;&#8205;&#127979; Modelo del docente</span>
+                    <span class="game-phase">{{ modelo_docente.titulo }}</span>
+                </summary>
+                <div class="modelo-docente-cuerpo">
+                    <p class="small text-muted mb-2">
+                        Compara tu desarrollo con este. No tiene que ser identico,
+                        pero si conservar la logica.
+                    </p>
+                    {% if modelo_docente.modelo %}
+                    <p class="mb-0">{{ modelo_docente.modelo|linebreaksbr }}</p>
+                    {% endif %}
+                    {% if modelo_docente.cierre %}
+                    <div class="alert alert-info py-2 small mt-2 mb-0">{{ modelo_docente.cierre }}</div>
+                    {% endif %}
+                </div>
+            </details>
+            {% endif %}
+
             <!-- Reflexión (ciclo de Kolb): convierte la experiencia en aprendizaje -->
             {% if ultimo_paso and ultimo_paso.es_valido and pedir_reflexion_ultimo %}
             <div class="game-card briefing mb-3" style="border-left-color: var(--gold)">
@@ -191,7 +249,72 @@
                     <span class="game-phase">{{ ronda_config.titulo|default:"Ronda" }} {{ numero }}</span>
                 </div>
                 <p class="briefing-text mb-0">{{ situacion }}</p>
+                {% if ronda_config.proposito %}
+                <p class="small text-muted mb-0 mt-2">{{ ronda_config.proposito }}</p>
+                {% endif %}
             </div>
+
+            {% comment %}
+            Los datos con los que se decide: las tablas del caso, la formula que
+            toca aplicar y los archivos originales. Sin esto, una ronda numerica
+            le pide al alumno un calculo sin darle las cifras.
+            {% endcomment %}
+            {% if datos_ronda or archivos_ronda %}
+            <div class="game-card mb-3">
+                <div class="game-card-head">
+                    <span class="game-tag">&#128202; Datos del caso</span>
+                    {% if ronda_config.titulo %}<span class="game-phase">{{ ronda_config.titulo }}</span>{% endif %}
+                </div>
+
+                {% if datos_ronda.formula %}
+                <div class="formula-caso mb-3">{{ datos_ronda.formula }}</div>
+                {% endif %}
+
+                {% for tabla in datos_ronda.tablas %}
+                <div class="mb-3">
+                    {% if tabla.titulo %}<div class="hud-label mb-1">{{ tabla.titulo }}</div>{% endif %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0 case-table">
+                            {% if tabla.columnas %}
+                            <thead><tr>{% for c in tabla.columnas %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+                            {% endif %}
+                            <tbody>
+                            {% for fila in tabla.filas %}
+                                <tr>{% for celda in fila %}<td>{{ celda }}</td>{% endfor %}</tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if datos_ronda.nota %}
+                <p class="small text-muted mb-0">{{ datos_ronda.nota }}</p>
+                {% endif %}
+
+                {% if archivos_ronda %}
+                <div class="archivos-caso mt-3">
+                    {% for archivo in archivos_ronda %}
+                    <div class="archivo-caso">
+                        <div class="archivo-caso-info">
+                            <div class="fw-semibold">
+                                {% if archivo.tipo == 'EXCEL' %}&#128200;{% elif archivo.tipo == 'PDF' %}&#128196;{% elif archivo.tipo == 'IMAGEN' %}&#128444;{% else %}&#128206;{% endif %}
+                                {{ archivo.nombre }}
+                            </div>
+                            {% if archivo.descripcion %}<div class="small text-muted">{{ archivo.descripcion }}</div>{% endif %}
+                        </div>
+                        {% if archivo.archivo %}
+                        <a class="btn btn-sm btn-outline-primary" href="{{ archivo.archivo.url }}" download>Descargar</a>
+                        {% endif %}
+                    </div>
+                    {% if archivo.vista_previa %}
+                    <img class="archivo-preview" src="{{ archivo.vista_previa.url }}" alt="Vista previa de {{ archivo.nombre }}">
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
 
             {% if rubrica_visible %}
             <div class="game-card mb-3">
@@ -227,6 +350,19 @@
                         <li>{{ r.descripcion }}</li>
                     {% endfor %}
                     </ul>
+                </div>
+                {% endif %}
+                {% if rubrica_visible.criterios_caso %}
+                <div class="mb-2">
+                    <div class="hud-label mb-1">Rubrica del caso</div>
+                    <div class="rubrica-rapida">
+                    {% for c in rubrica_visible.criterios_caso %}
+                        <div class="rubrica-fila" title="{{ c.descripcion }}">
+                            <span>{{ c.nombre }}</span>
+                            <span class="rubrica-peso">{{ c.peso|floatformat:0 }}%</span>
+                        </div>
+                    {% endfor %}
+                    </div>
                 </div>
                 {% endif %}
                 {% if rubrica_visible.peso_decision %}

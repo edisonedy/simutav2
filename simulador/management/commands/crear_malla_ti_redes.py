@@ -200,12 +200,12 @@ class Command(BaseCommand):
         periodo, _ = PeriodoAcademico.objects.get_or_create(
             nombre='Periodo Pruebas SimutaV2',
             defaults={'fecha_inicio': date(2026, 1, 1), 'fecha_fin': date(2026, 12, 31),
-                      'activo_matricula': True, 'usuario_creacion': profesor},
+'usuario_creacion': profesor},
         )
 
         sim = self._crear_simulacion_redes(materia_malla_redes, profesor)
         ProfesorMateria.objects.get_or_create(
-            profesor=profesor, materia_malla=materia_malla_redes, periodo=periodo,
+            profesor=profesor, materia_malla=materia_malla_redes,
             defaults={'usuario_creacion': profesor},
         )
 

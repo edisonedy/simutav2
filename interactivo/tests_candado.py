@@ -13,6 +13,7 @@ from academico.models import (
     Carrera,
     InscripcionMalla,
     Malla,
+    MallaPeriodo,
     Materia,
     MateriaMalla,
     NivelMalla,
@@ -44,10 +45,10 @@ class CandadoEnLaVistaTests(TestCase):
         cls.periodo = PeriodoAcademico.objects.create(
             nombre='2026-1',
             fecha_inicio=date(2026, 1, 1), fecha_fin=date(2026, 6, 30),
-            activo_matricula=True,
         )
         InscripcionMalla.objects.create(
-            estudiante=cls.alumno, malla=malla, periodo=cls.periodo,
+            estudiante=cls.alumno,
+            malla_periodo=MallaPeriodo.abrir(malla, cls.periodo),
         )
         cls.caso = Simulacion.objects.create(
             materia_malla=cls.materia_malla,

@@ -2504,7 +2504,12 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
                 )
         from simulador.ia_service import orden_proveedores, evaluar_ronda_con_proveedores
 
-        if orden_proveedores():
+        # `ia_habilitada=False` significa SIN IA de verdad: ni se llama al
+        # proveedor. Los casos que vienen de un simulador del docente ya traen
+        # su respuesta correcta, el puntaje de cada alternativa y su rubrica,
+        # asi que la nota sale de aritmetica y palabras clave. Antes este campo
+        # existia en el formulario pero el motor lo ignoraba.
+        if intento.simulacion.ia_habilitada and orden_proveedores():
             # Intenta OpenAI y/o DeepSeek (segun configuracion); si todos fallan
             # (sin cuota/timeout) cae a la rubrica local.
             try:
@@ -2608,6 +2613,30 @@ def ejecutar_ronda_ia_dinamica(intento, decision, justificacion, accion=None, pr
         )
         impacto = {codigo: delta for codigo, delta in impacto.items() if codigo in modificables}
         puntaje_sugerido = max(0, min(100, float(respuesta.get('puntaje_sugerido', 0))))
+        # En un caso con respuesta correcta, la alternativa elegida puntua por
+        # si sola. Sin esto, elegir el proveedor equivocado valia lo mismo que
+        # elegir el correcto mientras la justificacion estuviera bien escrita.
+        puntaje_opcion = _puntaje_de_la_opcion(accion)
+        pide_justificacion_escrita = justificacion_obligatoria(
+            intento.simulacion, ronda_actual, intento.configuracion_snapshot,
+        )
+        if puntaje_opcion is not None:
+            respuesta.setdefault('evaluacion_detalle', {})
+            detalle_opcion = respuesta['evaluacion_detalle']
+            detalle_opcion['puntaje_opcion'] = puntaje_opcion
+            detalle_opcion['puntaje_rubrica_previo'] = puntaje_sugerido
+            if pide_justificacion_escrita:
+                # Elegir bien y explicar bien pesan lo mismo.
+                puntaje_sugerido = round((puntaje_opcion + puntaje_sugerido) / 2, 2)
+            else:
+                puntaje_sugerido = puntaje_opcion
+            detalle_opcion['puntaje_combinado'] = puntaje_sugerido
+            retro_opcion = (getattr(accion, 'retroalimentacion', '') or '').strip()
+            if retro_opcion:
+                detalle_opcion['retroalimentacion_opcion'] = retro_opcion
+                respuesta['evaluacion'] = (
+                    f"{retro_opcion} {respuesta.get('evaluacion', '')}".strip()
+                )
         # El estado se deriva siempre del impacto ya filtrado por fase. Así una
         # opción dinámica tampoco puede saltarse los indicadores congelados.
         estado_despues = aplicar_impacto(estado_antes, impacto)
@@ -2788,6 +2817,24 @@ def _puntaje_fallback_justo(
         cobertura = 0.0
     piso = 0.45 * calidad + 0.25 * cobertura
     return round(min(100.0, max(base, piso)), 2)
+
+
+def _puntaje_de_la_opcion(accion):
+    """Cuanto vale, por si sola, la alternativa que eligio el estudiante.
+
+    Devuelve None cuando la alternativa no lleva puntaje propio: entonces la
+    nota sale solo de la rubrica, como antes. Acepta tanto un objeto del ORM
+    como el dict congelado en el snapshot del intento.
+    """
+    if accion is None:
+        return None
+    crudo = accion.get('puntaje') if isinstance(accion, dict) else getattr(accion, 'puntaje', None)
+    if crudo is None or crudo == '':
+        return None
+    try:
+        return max(0.0, min(100.0, float(crudo)))
+    except (TypeError, ValueError):
+        return None
 
 
 def _fallback_conceptos_o_mock(

@@ -62,6 +62,9 @@ def _limit_form_materia(form, profesor):
 
 
 def _simplificar_form_creacion(form):
+    # Lo que se esconde es la fontaneria de la IA y los campos derivados. NO se
+    # esconden `modo_ejecucion` ni `ia_habilitada`: son las dos decisiones que
+    # definen como se comporta el caso, y el docente tiene que poder tomarlas.
     ocultos = [
         'plantilla_origen',
         'perfil_materia_ia',
@@ -74,7 +77,6 @@ def _simplificar_form_creacion(form):
         'modelo_ia',
         'prompt_version',
         'esquema_ia_version',
-        'ia_habilitada',
         'activo',
     ]
     for nombre in ocultos:
@@ -2058,7 +2060,7 @@ def view(request):
     permitidas = _simulaciones_permitidas(request.user).filter(activo=True)
     data['asignaciones'] = [] if _tiene_acceso_global(request.user) else ProfesorMateria.objects.filter(
         profesor=request.user, activo=True,
-    ).select_related('materia_malla__materia', 'materia_malla__nivel', 'periodo')
+    ).select_related('materia_malla__materia', 'materia_malla__nivel', 'materia_malla__malla')
 
     malla_id = request.GET.get('malla')
     if not malla_id:

@@ -23,7 +23,6 @@ from academico.models import (
     MallaPeriodo,
     PeriodoAcademico,
     ProfesorMateria,
-    RecordAcademico,
 )
 from core.funciones import errores_formulario
 from core.models import PerfilUsuario
@@ -42,6 +41,7 @@ class FormulariosInscripcionTests(TestCase):
             fecha_inicio=date(2026, 1, 1),
             fecha_fin=date(2026, 6, 30),
         )
+        cls.malla_periodo = MallaPeriodo.abrir(cls.malla, cls.periodo)
         cls.estudiante = cls._usuario('est1', PerfilUsuario.ESTUDIANTE)
         cls.profesor = cls._usuario('prof1', PerfilUsuario.PROFESOR)
         cls.admin = cls._usuario('admin1', PerfilUsuario.ADMIN)
@@ -70,8 +70,7 @@ class FormulariosInscripcionTests(TestCase):
     def test_inscripcion_valida_se_guarda(self):
         form = InscripcionMallaForm({
             'estudiante': self.estudiante.pk,
-            'malla': self.malla.pk,
-            'periodo': self.periodo.pk,
+            'malla_periodo': self.malla_periodo.pk,
             'estado': InscripcionMalla.ACTIVA,
             'activo': 'on',
         })
@@ -79,12 +78,11 @@ class FormulariosInscripcionTests(TestCase):
 
     def test_inscripcion_duplicada_da_mensaje_legible(self):
         InscripcionMalla.objects.create(
-            estudiante=self.estudiante, malla=self.malla, periodo=self.periodo,
+            estudiante=self.estudiante, malla_periodo=self.malla_periodo,
         )
         form = InscripcionMallaForm({
             'estudiante': self.estudiante.pk,
-            'malla': self.malla.pk,
-            'periodo': self.periodo.pk,
+            'malla_periodo': self.malla_periodo.pk,
             'estado': InscripcionMalla.ACTIVA,
             'activo': 'on',
         })
@@ -110,6 +108,7 @@ class PermisosAdministracionTests(TestCase):
             nombre='2026-1',
             fecha_inicio=date(2026, 1, 1), fecha_fin=date(2026, 6, 30),
         )
+        cls.malla_periodo = MallaPeriodo.abrir(cls.malla, cls.periodo)
         cls.estudiante = cls._usuario('alumno', PerfilUsuario.ESTUDIANTE)
         # Los profesores tienen is_staff, pero no administran el catalogo.
         cls.profesor = cls._usuario('docente', PerfilUsuario.PROFESOR, is_staff=True)
@@ -162,7 +161,7 @@ class PermisosAdministracionTests(TestCase):
         self.client.force_login(self.estudiante)
         respuesta = self.client.post(reverse('adm_inscripciones'), {
             'action': 'add', 'estudiante': self.estudiante.pk,
-            'malla': self.malla.pk, 'periodo': self.periodo.pk,
+            'malla_periodo': self.malla_periodo.pk,
             'estado': InscripcionMalla.ACTIVA, 'activo': 'on',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
         self.assertEqual(respuesta.status_code, 403)
@@ -221,6 +220,7 @@ class ModalesAcademicoTests(TestCase):
             fecha_inicio=date(2026, 1, 1),
             fecha_fin=date(2026, 6, 30),
         )
+        cls.malla_periodo = MallaPeriodo.abrir(cls.malla, cls.periodo)
         cls.estudiante = User.objects.create_user('est1', password='x')
         PerfilUsuario.objects.create(
             usuario=cls.estudiante, rol=PerfilUsuario.ESTUDIANTE,
@@ -250,7 +250,7 @@ class ModalesAcademicoTests(TestCase):
 
     def test_modales_edit_y_delete_publican_a_una_url_existente(self):
         inscripcion = InscripcionMalla.objects.create(
-            estudiante=self.estudiante, malla=self.malla, periodo=self.periodo,
+            estudiante=self.estudiante, malla_periodo=self.malla_periodo,
         )
         url = reverse('adm_inscripciones')
         for accion in ('edit', 'delete'):
@@ -265,8 +265,7 @@ class ModalesAcademicoTests(TestCase):
         return {
             'action': 'add',
             'estudiante': self.estudiante.pk,
-            'malla': self.malla.pk,
-            'periodo': self.periodo.pk,
+            'malla_periodo': self.malla_periodo.pk,
             'estado': InscripcionMalla.ACTIVA,
             'activo': 'on',
         }
@@ -280,7 +279,9 @@ class ModalesAcademicoTests(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertTrue(respuesta.json()['result'], respuesta.json())
         self.assertTrue(
-            InscripcionMalla.objects.filter(estudiante=self.estudiante, malla=self.malla).exists()
+            InscripcionMalla.objects.filter(
+                estudiante=self.estudiante, malla_periodo__malla=self.malla,
+            ).exists()
         )
 
     def test_alta_sin_javascript_guarda_y_redirige(self):
@@ -289,12 +290,14 @@ class ModalesAcademicoTests(TestCase):
         respuesta = self.client.post(reverse('adm_inscripciones'), self._datos_inscripcion())
         self.assertRedirects(respuesta, reverse('adm_inscripciones'))
         self.assertTrue(
-            InscripcionMalla.objects.filter(estudiante=self.estudiante, malla=self.malla).exists()
+            InscripcionMalla.objects.filter(
+                estudiante=self.estudiante, malla_periodo__malla=self.malla,
+            ).exists()
         )
 
     def test_error_sin_javascript_muestra_mensaje_legible(self):
         InscripcionMalla.objects.create(
-            estudiante=self.estudiante, malla=self.malla, periodo=self.periodo,
+            estudiante=self.estudiante, malla_periodo=self.malla_periodo,
         )
         respuesta = self.client.post(
             reverse('adm_inscripciones'), self._datos_inscripcion(), follow=True,
@@ -311,7 +314,7 @@ class ModalesAcademicoTests(TestCase):
         """El dropdown solo lista estudiantes. Si a un inscrito le cambian el rol
         (o lo desactivan), el select salia vacio y guardar era imposible."""
         inscripcion = InscripcionMalla.objects.create(
-            estudiante=self.estudiante, malla=self.malla, periodo=self.periodo,
+            estudiante=self.estudiante, malla_periodo=self.malla_periodo,
         )
         perfil = self.estudiante.perfil
         perfil.rol = PerfilUsuario.ADMIN
@@ -325,8 +328,7 @@ class ModalesAcademicoTests(TestCase):
             'action': 'edit',
             'pk': inscripcion.pk,
             'estudiante': self.estudiante.pk,
-            'malla': self.malla.pk,
-            'periodo': self.periodo.pk,
+            'malla_periodo': self.malla_periodo.pk,
             'estado': InscripcionMalla.FINALIZADA,
             'activo': 'on',
         }, headers={'x-requested-with': 'XMLHttpRequest'})
@@ -378,9 +380,7 @@ class _BaseAcademicaMixin:
             cls.materias[numero] = MateriaMalla.objects.create(
                 malla=cls.malla, nivel=cls.niveles[numero], materia=materia,
             )
-        cls.malla_periodo = MallaPeriodo.objects.create(
-            periodo=cls.periodo, malla=cls.malla,
-        )
+        cls.malla_periodo = MallaPeriodo.abrir(cls.malla, cls.periodo)
 
     @classmethod
     def _admin(cls, username='rector'):
@@ -496,9 +496,10 @@ class PredecesorasTests(_BaseAcademicaMixin, TestCase):
         self.assertEqual(list(self.materias[2].predecesoras_activas()), [])
 
 
-class RequisitosDelEstudianteTests(_BaseAcademicaMixin, TestCase):
-    """Los requisitos se resuelven contra el historial, no contra la matricula
-    del periodo en curso."""
+class MateriasQueVeElEstudianteTests(_BaseAcademicaMixin, TestCase):
+    """SimutaV2 no lleva matricula ni record academico: el estudiante se inscribe
+    en la malla abierta y con eso ve TODAS sus materias. Las predecesoras siguen
+    existiendo, pero como estructura de la malla, no como candado del alumno."""
 
     @classmethod
     def setUpTestData(cls):
@@ -508,34 +509,48 @@ class RequisitosDelEstudianteTests(_BaseAcademicaMixin, TestCase):
             usuario=cls.estudiante, rol=PerfilUsuario.ESTUDIANTE,
         )
         cls.inscripcion = InscripcionMalla.objects.create(
-            estudiante=cls.estudiante, malla=cls.malla, periodo=cls.periodo,
+            estudiante=cls.estudiante, malla_periodo=cls.malla_periodo,
         )
         MateriaMallaPredecesora.objects.create(
             materia_malla=cls.materias[2], predecesora=cls.materias[1],
         )
 
-    def test_sin_el_requisito_aprobado_no_puede_tomar_la_materia(self):
-        self.assertFalse(self.inscripcion.puede_tomar_materia(self.materias[2]))
+    def test_ve_las_materias_creadas_en_su_malla_del_periodo(self):
+        for numero in (1, 2):
+            MateriaPeriodo.objects.create(
+                malla_periodo=self.malla_periodo, materia_malla=self.materias[numero],
+            )
+        vistas = {m.materia_malla_id for m in self.inscripcion.materias()}
+        self.assertEqual(vistas, {self.materias[1].pk, self.materias[2].pk})
+
+    def test_una_predecesora_pendiente_ya_no_le_esconde_la_materia(self):
+        """La materia con requisito se ve igual: el requisito describe la malla,
+        no bloquea al estudiante."""
+        materia = MateriaPeriodo.objects.create(
+            malla_periodo=self.malla_periodo, materia_malla=self.materias[2],
+        )
+        self.assertIn(materia, list(self.inscripcion.materias()))
         self.assertEqual(
-            self.inscripcion.predecesoras_pendientes(self.materias[2]), [self.materias[1]],
+            list(self.materias[2].predecesoras_activas()), [self.materias[1]],
         )
 
-    def test_haberla_cursado_sin_aprobar_no_alcanza(self):
-        RecordAcademico.objects.create(
-            estudiante=self.estudiante, materia_malla=self.materias[1],
-            periodo=self.periodo, nota=45, aprobado=False,
+    def test_si_se_retira_deja_de_ver_materias(self):
+        MateriaPeriodo.objects.create(
+            malla_periodo=self.malla_periodo, materia_malla=self.materias[1],
         )
-        self.assertFalse(self.inscripcion.puede_tomar_materia(self.materias[2]))
+        self.inscripcion.estado = InscripcionMalla.RETIRADA
+        self.inscripcion.save(update_fields=['estado'])
+        self.assertEqual(list(self.inscripcion.materias()), [])
 
-    def test_con_el_requisito_aprobado_si_puede(self):
-        RecordAcademico.objects.create(
-            estudiante=self.estudiante, materia_malla=self.materias[1],
-            periodo=self.periodo, nota=80, aprobado=True,
+    def test_no_ve_materias_de_otra_apertura(self):
+        otro_periodo = PeriodoAcademico.objects.create(
+            nombre='2026-2', fecha_inicio=date(2026, 7, 1), fecha_fin=date(2026, 12, 31),
         )
-        self.assertTrue(self.inscripcion.puede_tomar_materia(self.materias[2]))
-
-    def test_una_materia_sin_requisitos_siempre_se_puede_tomar(self):
-        self.assertTrue(self.inscripcion.puede_tomar_materia(self.materias[1]))
+        otra = MallaPeriodo.abrir(self.malla, otro_periodo)
+        MateriaPeriodo.objects.create(
+            malla_periodo=otra, materia_malla=self.materias[1],
+        )
+        self.assertEqual(list(self.inscripcion.materias()), [])
 
 
 class ContenidoDeMateriaTests(_BaseAcademicaMixin, TestCase):
@@ -550,7 +565,6 @@ class ContenidoDeMateriaTests(_BaseAcademicaMixin, TestCase):
         ProfesorMateria.objects.create(
             profesor=cls.profesor,
             materia_malla=cls.materias[1],
-            periodo=cls.periodo,
         )
 
     def setUp(self):
@@ -619,7 +633,8 @@ class ContenidoDeMateriaTests(_BaseAcademicaMixin, TestCase):
         html = self.client.get(reverse('adm_materias'), {
             'action': 'detalle', 'pk': self.materias[1].pk,
         }).content.decode()
-        self.assertIn('Actividades generales', html)
+        self.assertIn('Contenido general de la materia', html)
+        self.assertIn('Guia APE de laboratorio', html)
         self.assertIn(actividad.archivo.url, html)
 
         estructura = self.client.get(reverse('adm_mallas'), {
@@ -1033,7 +1048,7 @@ class MallaEnElPeriodoTests(_BaseAcademicaMixin, TestCase):
         self.malla_periodo.delete()
 
         pagina = self.client.get(reverse('adm_materias'), {
-            'action': 'apertura', 'pk': self.malla_periodo.pk,
+            'action': 'malla', 'pk': self.malla.pk,
         })
 
         self.assertEqual(pagina.context['aperturas'], [])
@@ -1052,7 +1067,7 @@ class MallaEnElPeriodoTests(_BaseAcademicaMixin, TestCase):
         )
 
         pagina = self.client.get(reverse('adm_materias'), {
-            'action': 'apertura', 'pk': self.malla_periodo.pk,
+            'action': 'malla', 'pk': self.malla.pk,
         })
 
         nombres = [a.nombre_visible for a in pagina.context['aperturas']]
@@ -1272,3 +1287,70 @@ class MateriaDelPeriodoTests(_BaseAcademicaMixin, TestCase):
 
         self.assertEqual(respuesta.status_code, 403)
         self.assertEqual(MateriaPeriodo.objects.count(), 0)
+
+
+class JuegosVisiblesEnLaMateriaTests(_BaseAcademicaMixin, TestCase):
+    """El tema "Refuerzo interactivo" salia vacio aunque tuviera juegos cargados.
+
+    La pantalla de la materia solo miraba ActividadMateria y Simulacion, nunca
+    ActividadInteractiva, asi que el docente veia "Sin actividades de refuerzo"
+    encima de un tema que si tenia contenido. Eso enganaba: parecia que no habia
+    nada y en realidad los juegos estaban ahi.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        from interactivo.models import ActividadInteractiva
+        from simulador.models import TemaMateria
+
+        cls._armar_malla()
+        cls.admin = cls._admin('rectora_juegos')
+        cls.tema = TemaMateria.objects.create(
+            materia_malla=cls.materias[1], nombre='Refuerzo interactivo', orden=95,
+        )
+        cls.juego = ActividadInteractiva.objects.create(
+            materia_malla=cls.materias[1],
+            tema=cls.tema,
+            creador=cls.admin,
+            motor='ordenar',
+            titulo='Ordena los pasos del costeo',
+            configuracion={'elementos': []},
+            publicada=True,
+        )
+        cls.tema_vacio = TemaMateria.objects.create(
+            materia_malla=cls.materias[1], nombre='Tema recien creado', orden=96,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def _detalle(self):
+        return self.client.get(reverse('adm_materias'), {
+            'action': 'detalle', 'pk': self.materias[1].pk,
+        }).content.decode()
+
+    def test_el_juego_del_tema_aparece_en_la_materia(self):
+        html = self._detalle()
+        self.assertIn('Ordena los pasos del costeo', html)
+        self.assertIn('Refuerzo interactivo', html)
+
+    def test_ya_no_dice_que_el_tema_esta_vacio_cuando_tiene_juegos(self):
+        html = self._detalle()
+        self.assertNotIn('Sin actividades de refuerzo', html)
+
+    def test_un_tema_realmente_vacio_lo_dice_una_sola_vez(self):
+        html = self._detalle()
+        self.assertIn('Tema recien creado', html)
+        self.assertIn('Todavia no hay contenido aqui', html)
+
+    def test_un_juego_sin_publicar_se_marca_como_borrador(self):
+        from interactivo.models import ActividadInteractiva
+
+        ActividadInteractiva.objects.create(
+            materia_malla=self.materias[1], tema=self.tema, creador=self.admin,
+            motor='memoria', titulo='Memoria en preparacion',
+            configuracion={'pares': []}, publicada=False,
+        )
+        html = self._detalle()
+        self.assertIn('Memoria en preparacion', html)
+        self.assertIn('Borrador', html)

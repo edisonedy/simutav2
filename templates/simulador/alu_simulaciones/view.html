@@ -1,31 +1,47 @@
 {% extends "base.html" %}
 {% block title %}Mis simulaciones{% endblock %}
 {% block content %}
+{% comment %}
+Tablero de la malla. Todo en UNA pantalla: los juegos y las practicas de cada
+materia estan aqui, no detras de un boton que te lleva a otro sitio.
+
+Minimalista a proposito: cada pieza es una fila con su estado (aprobado, nota,
+a medias) y nada mas. Lo que le da vida es el progreso -el anillo de la materia,
+la barra de la malla, los checks- no el adorno.
+{% endcomment %}
+
 <div class="hero-panel mb-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
         <div>
             <div class="section-title text-light-emphasis">{% if malla_sel %}{{ malla_sel.carrera.nombre }}{% else %}Panel del estudiante{% endif %}</div>
             <h1 class="h3 mb-1 text-white">{% if malla_sel %}{{ malla_sel.nombre }}{% else %}Ruta de simulaciones{% endif %}</h1>
-            <p class="mb-2 hero-sub">Practica tomando decisiones reales, nivel por nivel.</p>
+            <p class="mb-2 hero-sub">Juega para aprender, decide para aplicar.</p>
             <div class="d-flex gap-2 flex-wrap">
                 <a class="btn btn-sm btn-light" href="{% url 'alu_simulaciones' %}">&larr; Cambiar malla</a>
-                <a class="btn btn-sm btn-outline-light" href="?action=carrera">🏅 Mi carrera</a>
+                <a class="btn btn-sm btn-outline-light" href="?action=carrera&amp;malla={{ malla_sel.pk }}">&#127941; Mi carrera</a>
             </div>
         </div>
         <div class="hero-stats">
+            {% if perfil_juego %}
             <div class="hero-stat">
-                <div class="hero-stat-value">{{ niveles|length }}</div>
-                <div class="hero-stat-label">Niveles</div>
+                <div class="hero-stat-value">{{ perfil_juego.nivel }}</div>
+                <div class="hero-stat-label">Nivel</div>
             </div>
             <div class="hero-stat">
-                <div class="hero-stat-value">{{ total_materias }}</div>
-                <div class="hero-stat-label">Materias</div>
+                <div class="hero-stat-value">{{ perfil_juego.xp_total }}</div>
+                <div class="hero-stat-label">XP</div>
             </div>
+            {% endif %}
             <div class="hero-stat">
-                <div class="hero-stat-value">{{ total_simulaciones }}</div>
-                <div class="hero-stat-label">Simulaciones</div>
+                <div class="hero-stat-value">{{ avance_malla }}%</div>
+                <div class="hero-stat-label">{{ piezas_hechas }} de {{ piezas_totales }}</div>
             </div>
         </div>
+    </div>
+    <div class="malla-barra mt-3" role="progressbar"
+         aria-valuenow="{{ avance_malla }}" aria-valuemin="0" aria-valuemax="100"
+         aria-label="Avance de la malla">
+        <span style="width: {{ avance_malla }}%"></span>
     </div>
 </div>
 
@@ -35,49 +51,89 @@
         <span class="level-badge">{{ nivel.numero }}</span>
         <div>
             <div class="level-name">{{ nivel.nombre|default:"Nivel" }}</div>
-            <div class="level-meta">{{ nivel.materias|length }} materia(s) · {{ nivel.total_simulaciones }} simulacion(es)</div>
+            <div class="level-meta">{{ nivel.materias|length }} materia(s)</div>
         </div>
     </div>
     <div class="row g-3">
     {% for materia_malla in nivel.materias %}
         <div class="col-md-6 col-xl-4">
-            <div class="sim-card h-100">
-                <div class="sim-card-top">
+            <div class="sim-card h-100 {% if materia_malla.completa %}es-completa{% endif %}">
+                <div class="materia-cabecera">
                     <h2 class="h6 mb-0">{{ materia_malla.materia.nombre }}</h2>
-                </div>
-                {% if materia_malla.total_juegos %}
-                <a class="juegos-link" href="{% url 'interactivo:lista' materia_malla.pk %}">
-                    <span class="juegos-ico">🎮</span>
-                    <span>
-                        <strong>{{ materia_malla.total_juegos }} juego{{ materia_malla.total_juegos|pluralize }}</strong>
-                        para practicar
-                    </span>
-                    <span class="juegos-go">→</span>
-                </a>
-                {% endif %}
-                <div class="exam-list">
-                {% for sim in materia_malla.simulaciones_disponibles %}
-                    <div class="sim-row">
-                        <div class="sim-row-info">
-                            <div class="exam-title">{{ sim.titulo }}</div>
-                            <div class="sim-tags">
-                                {% if sim.nivel_dificultad == 'BASICA' %}
-                                    <span class="chip chip-basica">Basica</span>
-                                {% elif sim.nivel_dificultad == 'AVANZADA' %}
-                                    <span class="chip chip-avanzada">Avanzada</span>
-                                {% else %}
-                                    <span class="chip chip-media">Media</span>
-                                {% endif %}
-                                <span class="chip chip-soft">{{ sim.tiempo_estimado }} min</span>
-                                <span class="chip chip-soft">{{ sim.maximo_decisiones }} {% if sim.maximo_decisiones == 1 %}ronda{% else %}rondas{% endif %}</span>
-                            </div>
-                        </div>
-                        <a class="btn btn-sm btn-primary sim-go" href="?action=iniciar&simulacion_id={{ sim.pk }}">Iniciar &rarr;</a>
+                    {% if materia_malla.piezas_totales %}
+                    <div class="anillo {% if materia_malla.completa %}esta-completo{% endif %}"
+                         style="--pct: {{ materia_malla.avance }}"
+                         title="{{ materia_malla.piezas_hechas }} de {{ materia_malla.piezas_totales }}">
+                        <span>{% if materia_malla.completa %}&#10003;{% else %}{{ materia_malla.avance }}<small>%</small>{% endif %}</span>
                     </div>
-                {% empty %}
-                    <p class="text-muted small mb-0">Sin simulaciones publicadas aun.</p>
-                {% endfor %}
+                    {% endif %}
                 </div>
+
+                {% if materia_malla.juegos_disponibles %}
+                <div class="bloque-materia">
+                    <div class="bloque-titulo">&#127918; Juegos</div>
+                    {% for juego in materia_malla.juegos_disponibles %}
+                    <a class="pieza {% if juego.aprobado_por_mi %}esta-hecha{% elif juego.jugado %}esta-a-medias{% endif %}"
+                       href="{% url 'interactivo:jugar' juego.pk %}">
+                        <span class="pieza-marca">{% if juego.aprobado_por_mi %}&#10003;{% else %}&#9654;{% endif %}</span>
+                        <span class="pieza-cuerpo">
+                            <span class="pieza-titulo">{{ juego.titulo }}</span>
+                            <span class="pieza-meta">
+                                {{ juego.motor_nombre }}
+                                {% if juego.tema %} &middot; {{ juego.tema.nombre }}{% endif %}
+                                {% if juego.obligatoria and juego.simulacion_id %} &middot; abre un caso{% endif %}
+                            </span>
+                        </span>
+                        {% if juego.mi_porcentaje is not None %}
+                        <span class="pieza-nota {% if juego.aprobado_por_mi %}es-buena{% endif %}">{{ juego.mi_porcentaje|floatformat:0 }}%</span>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if materia_malla.simulaciones_disponibles or materia_malla.trabajos_disponibles %}
+                <div class="bloque-materia">
+                    <div class="bloque-titulo">&#129514; Practicas reales</div>
+                    {% for sim in materia_malla.simulaciones_disponibles %}
+                    <a class="pieza {% if sim.mi_nota is not None %}esta-hecha{% elif sim.mi_intento_en_curso %}esta-a-medias{% endif %}"
+                       href="?action=iniciar&amp;simulacion_id={{ sim.pk }}">
+                        <span class="pieza-marca">{% if sim.mi_nota is not None %}&#10003;{% elif sim.mi_intento_en_curso %}&#8987;{% else %}&#9654;{% endif %}</span>
+                        <span class="pieza-cuerpo">
+                            <span class="pieza-titulo">{{ sim.titulo }}</span>
+                            <span class="pieza-meta">
+                                {{ sim.maximo_decisiones }} ronda{{ sim.maximo_decisiones|pluralize }}
+                                &middot; {{ sim.tiempo_estimado }} min
+                                {% if sim.mi_intento_en_curso %} &middot; vas por la {{ sim.mi_ronda }}{% endif %}
+                                {% if sim.tema_materia %} &middot; {{ sim.tema_materia.nombre }}{% endif %}
+                            </span>
+                        </span>
+                        {% if sim.mi_nota is not None %}
+                        <span class="pieza-nota {% if sim.mi_nota >= 70 %}es-buena{% endif %}">{{ sim.mi_nota|floatformat:0 }}</span>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                    {% for trabajo in materia_malla.trabajos_disponibles %}
+                    <div class="pieza es-material">
+                        <span class="pieza-marca">&#128206;</span>
+                        <span class="pieza-cuerpo">
+                            <span class="pieza-titulo">{{ trabajo.titulo }}</span>
+                            <span class="pieza-meta">
+                                {{ trabajo.get_tipo_display }}
+                                {% if trabajo.tema %} &middot; {{ trabajo.tema.nombre }}{% endif %}
+                            </span>
+                        </span>
+                        {% if trabajo.archivo %}
+                        <a class="pieza-nota" href="{{ trabajo.archivo.url }}" download>&#11015;</a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if not materia_malla.piezas_totales and not materia_malla.trabajos_disponibles %}
+                <p class="text-muted small mb-0 mt-2">Todavia no hay nada publicado.</p>
+                {% endif %}
             </div>
         </div>
     {% endfor %}

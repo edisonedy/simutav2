@@ -89,6 +89,17 @@ class ActividadInteractiva(ModeloBase):
         from .plugins.registry import get_plugin
         return get_plugin(self.motor)
 
+    @property
+    def motor_nombre(self):
+        """Como se llama el motor en pantalla. Si el plugin ya no esta
+        instalado se muestra el codigo, en vez de reventar el listado."""
+        from .plugins.base import PluginError
+        from .plugins.registry import get_plugin
+        try:
+            return get_plugin(self.motor).nombre
+        except PluginError:
+            return self.motor
+
     def mejor_intento(self, estudiante):
         return self.intentos.filter(
             estudiante=estudiante,

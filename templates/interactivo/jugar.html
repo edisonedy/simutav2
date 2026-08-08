@@ -16,7 +16,7 @@
                 {% if actividad.tiempo_limite_segundos %}&middot; con tiempo{% endif %}
             </div>
         </div>
-        <a class="btn btn-sm btn-outline-light" href="{% url 'interactivo:lista' actividad.materia_malla_id %}">Salir</a>
+        <a class="btn btn-sm btn-outline-light" href="{{ volver_url }}">&larr; Salir</a>
     </div>
     <div class="juego-progreso"><div class="juego-progreso-barra"></div></div>
 </div>
