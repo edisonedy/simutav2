@@ -1,0 +1,455 @@
+{
+  "materia": {
+    "codigo": "AE-07-03",
+    "nombre": "Valoracion de Empresas",
+    "malla_codigo": "ADM-UTA-2026",
+    "carrera_codigo": "ADM-EMP",
+    "carrera": "Administracion de Empresas",
+    "malla": "Malla Administracion de Empresas UTA 2026",
+    "nivel": 7
+  },
+  "tema": "Unidad 4.1 - Flujos de caja libres",
+  "caso": {
+    "titulo": "Flujo de Caja Libre para los Accionistas (FCFE) - Industria Tungurahua S.A.",
+    "modo": "CASO_INDEPENDIENTE",
+    "tema": "FCFE por dos rutas",
+    "dificultad": "AVANZADA",
+    "tiempo_estimado": 45,
+    "rol_estudiante": "Analista financiero que asesora a los accionistas",
+    "contexto": "Los accionistas de Industria Tungurahua S.A. no quieren saber cuanto efectivo genera la empresa para todos sus financiadores, sino cuanto queda para ellos despues de atender a la deuda. Hay dos caminos para llegar al FCFE y deben dar el mismo numero.",
+    "objetivo": "Calcular el FCFE desde la utilidad neta y comprobarlo desde el FCFF, entendiendo por que ambas rutas coinciden.",
+    "resultado_aprendizaje": "Distingue FCFF de FCFE y explica el papel de la deuda en el flujo del accionista.",
+    "situacion_inicial": "Tienes el Estado de Resultados 2025, la informacion operativa complementaria y el informe de financiamiento.",
+    "guia_debriefing": "Preguntar por que el FCFE (581.250) es mayor que el FCFF (543.750) aunque la empresa pague intereses: la respuesta esta en la deuda nueva.",
+    "retroalimentacion_base": "FCFE = USD 581.250 por las dos rutas. Es mayor que el FCFF porque este ano la empresa tomo mas deuda de la que amortizo.",
+    "sin_ia": true
+  },
+  "archivos": [
+    {
+      "tipo": "EXCEL",
+      "nombre": "Workbook FCFE para el estudiante",
+      "ruta": "adjuntos/fcfe_estudiante.xlsx",
+      "descripcion": "Hoja de trabajo con las dos rutas del FCFE y la comparacion entre ellas."
+    }
+  ],
+  "criterios": [
+    {
+      "nombre": "Tratamiento de la deuda",
+      "peso": 30,
+      "descripcion": "Suma la deuda nueva y resta la amortizacion con el signo correcto."
+    },
+    {
+      "nombre": "Exactitud del calculo",
+      "peso": 35,
+      "descripcion": "Ambas rutas llegan a USD 581.250."
+    },
+    {
+      "nombre": "Comprension de la equivalencia",
+      "peso": 35,
+      "descripcion": "Explica por que las dos rutas coinciden."
+    }
+  ],
+  "rondas": [
+    {
+      "numero": 1,
+      "titulo": "Paso 1 - Llegar a la utilidad neta",
+      "situacion": "El FCFE parte de la utilidad neta, porque esta ya descuenta intereses e impuestos. Calculala.",
+      "instrucciones": "Desde el EBIT, resta intereses para llegar a la utilidad antes de impuestos, y despues el impuesto a la renta.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "Utilidad Neta = EBIT - Intereses - Impuesto",
+        "tablas": [
+          {
+            "titulo": "Estado de Resultados 2025 (USD)",
+            "columnas": [
+              "Concepto",
+              "Valor",
+              "Uso en FCFE"
+            ],
+            "filas": [
+              [
+                "Ventas netas",
+                "5.800.000",
+                "Contexto"
+              ],
+              [
+                "(-) Costo de ventas",
+                "-3.620.000",
+                "Contexto"
+              ],
+              [
+                "(-) Gastos administrativos",
+                "-420.000",
+                "Contexto"
+              ],
+              [
+                "(-) Gastos de ventas",
+                "-310.000",
+                "Contexto"
+              ],
+              [
+                "(-) Depreciaciones",
+                "-180.000",
+                "Se suman nuevamente"
+              ],
+              [
+                "(-) Amortizaciones",
+                "-45.000",
+                "Se suman nuevamente"
+              ],
+              [
+                "EBIT",
+                "1.225.000",
+                "Base operativa"
+              ],
+              [
+                "(-) Intereses",
+                "-150.000",
+                "Ya incluidos en la utilidad neta"
+              ],
+              [
+                "(-) Impuesto a la renta (25%)",
+                "-268.750",
+                "Ya incluido en la utilidad neta"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "uai",
+          "etiqueta": "Utilidad antes de impuestos",
+          "tipo": "numero",
+          "objetivo": 1075000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        },
+        {
+          "clave": "utilidad_neta",
+          "etiqueta": "Utilidad neta",
+          "tipo": "numero",
+          "objetivo": 806250,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "La utilidad neta ya trae intereses e impuestos",
+          "palabras_clave": "ya descuenta, intereses, impuestos, punto de partida",
+          "peso": 100,
+          "si_cumple": "Correcto: por eso sirve de punto de partida del FCFE.",
+          "si_falta": "Explica por que el FCFE parte de la utilidad neta y no del EBIT."
+        }
+      ],
+      "respuesta_modelo": "Utilidad antes de impuestos = 1.225.000 - 150.000 = USD 1.075.000. Impuesto = 1.075.000 x 0,25 = USD 268.750. Utilidad neta = USD 806.250. Sirve de punto de partida porque ya descuenta el costo de la deuda y el impuesto, que es exactamente lo que el accionista soporta antes de cobrar.",
+      "retroalimentacion": "Ojo con el impuesto: aqui se calcula sobre 1.075.000, no sobre el EBIT como en el FCFF."
+    },
+    {
+      "numero": 2,
+      "titulo": "Paso 2 - Variacion neta de deuda",
+      "situacion": "El informe de tesoreria detalla los movimientos de financiamiento del ano. Calcula la variacion neta de deuda.",
+      "instrucciones": "La deuda nueva entra efectivo y se suma. La amortizacion del capital sale y se resta. Los intereses no van aqui: ya estan dentro de la utilidad neta.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "Variacion neta de deuda = Deuda nueva - Amortizacion de capital",
+        "tablas": [
+          {
+            "titulo": "Informe de Tesoreria y Financiamiento (USD)",
+            "columnas": [
+              "Concepto",
+              "Valor",
+              "Tratamiento",
+              "Fuente"
+            ],
+            "filas": [
+              [
+                "Nueva deuda recibida",
+                "400.000",
+                "Entrada de efectivo",
+                "Contrato bancario"
+              ],
+              [
+                "Amortizacion de capital",
+                "250.000",
+                "Pago del principal",
+                "Cronograma de deuda"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "variacion_deuda",
+          "etiqueta": "Variacion neta de deuda",
+          "tipo": "numero",
+          "objetivo": 150000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "La deuda nueva es efectivo disponible",
+          "palabras_clave": "entrada de efectivo, deuda nueva, aumenta",
+          "peso": 50,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta explicar por que la deuda nueva sube el FCFE."
+        },
+        {
+          "nombre": "La amortizacion consume caja del accionista",
+          "palabras_clave": "principal, salida, reduce, pago de capital",
+          "peso": 50,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta explicar por que la amortizacion baja el FCFE."
+        }
+      ],
+      "respuesta_modelo": "Variacion neta de deuda = 400.000 - 250.000 = USD 150.000. La deuda nueva aumenta el FCFE porque entra efectivo que queda disponible; la amortizacion lo reduce porque hay que devolver el principal y ese dinero ya no esta para el accionista.",
+      "retroalimentacion": "Este ano la empresa se endeudo neto: eso engorda el flujo del accionista, pero es prestado."
+    },
+    {
+      "numero": 3,
+      "titulo": "Paso 3 - FCFE desde la utilidad neta",
+      "situacion": "Arma el FCFE con todos sus componentes, partiendo de la utilidad neta.",
+      "instrucciones": "Siete componentes, cada uno con su signo. Escribe la operacion completa.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "FCFE = Utilidad neta + Depreciaciones + Amortizaciones - CAPEX - Delta CT + Deuda nueva - Amortizacion de deuda",
+        "tablas": [
+          {
+            "titulo": "Rompecabezas financiero",
+            "columnas": [
+              "Orden",
+              "Componente",
+              "Signo",
+              "Valor USD"
+            ],
+            "filas": [
+              [
+                "1",
+                "Utilidad neta",
+                "+",
+                "806.250"
+              ],
+              [
+                "2",
+                "Depreciaciones",
+                "+",
+                "180.000"
+              ],
+              [
+                "3",
+                "Amortizaciones",
+                "+",
+                "45.000"
+              ],
+              [
+                "4",
+                "CAPEX",
+                "-",
+                "520.000"
+              ],
+              [
+                "5",
+                "Delta Capital de Trabajo",
+                "-",
+                "80.000"
+              ],
+              [
+                "6",
+                "Deuda nueva",
+                "+",
+                "400.000"
+              ],
+              [
+                "7",
+                "Amortizacion de deuda",
+                "-",
+                "250.000"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "fcfe_un",
+          "etiqueta": "FCFE desde utilidad neta",
+          "tipo": "numero",
+          "objetivo": 581250,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Operacion completa",
+          "palabras_clave": "utilidad neta, depreciaciones, capex, capital de trabajo, deuda",
+          "peso": 100,
+          "si_cumple": "Bien.",
+          "si_falta": "Escribe la operacion con sus siete componentes."
+        }
+      ],
+      "respuesta_modelo": "FCFE = 806.250 + 180.000 + 45.000 - 520.000 - 80.000 + 400.000 - 250.000 = USD 581.250.",
+      "retroalimentacion": "Ese es el efectivo potencialmente disponible para los accionistas."
+    },
+    {
+      "numero": 4,
+      "titulo": "Paso 4 - Comprobar el FCFE desde el FCFF",
+      "situacion": "La segunda ruta parte del FCFF que ya calculaste (USD 543.750). Debe dar exactamente lo mismo.",
+      "instrucciones": "Al FCFF se le quita el costo de la deuda despues de impuestos y se le suma la variacion neta de deuda.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "FCFE = FCFF - Intereses x (1 - T) + Deuda nueva - Amortizacion de deuda",
+        "tablas": [
+          {
+            "titulo": "Datos para la comprobacion (USD)",
+            "columnas": [
+              "Concepto",
+              "Origen",
+              "Valor"
+            ],
+            "filas": [
+              [
+                "FCFF",
+                "Ejercicio anterior",
+                "543.750"
+              ],
+              [
+                "Intereses",
+                "Estado de Resultados",
+                "150.000"
+              ],
+              [
+                "Tasa de impuesto",
+                "Estado de Resultados",
+                "25%"
+              ],
+              [
+                "Variacion neta de deuda",
+                "Informe de tesoreria",
+                "150.000"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "intereses_dt",
+          "etiqueta": "Intereses despues de impuestos",
+          "tipo": "numero",
+          "objetivo": 112500,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        },
+        {
+          "clave": "fcfe_fcff",
+          "etiqueta": "FCFE desde FCFF",
+          "tipo": "numero",
+          "objetivo": 581250,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "El escudo fiscal de los intereses",
+          "palabras_clave": "escudo fiscal, despues de impuestos, 1-t, deducible",
+          "peso": 50,
+          "si_cumple": "Correcto: los intereses cuestan menos porque son deducibles.",
+          "si_falta": "Falta explicar por que los intereses se restan netos de impuesto."
+        },
+        {
+          "nombre": "Las dos rutas deben coincidir",
+          "palabras_clave": "coinciden, mismo resultado, comprobacion, consistencia",
+          "peso": 50,
+          "si_cumple": "Bien: si no coinciden, hay un error en algun paso.",
+          "si_falta": "Falta senalar que la coincidencia es la comprobacion del ejercicio."
+        }
+      ],
+      "respuesta_modelo": "Intereses despues de impuestos = 150.000 x (1 - 0,25) = USD 112.500. FCFE = 543.750 - 112.500 + 150.000 = USD 581.250. Coincide con la ruta desde la utilidad neta, que es justamente la comprobacion: los intereses se restan netos porque son deducibles y generan escudo fiscal.",
+      "retroalimentacion": "Si las dos rutas no coinciden, el error suele estar en el signo de la deuda o en olvidar el (1-T)."
+    },
+    {
+      "numero": 5,
+      "titulo": "Interpretacion - FCFE frente a FCFF",
+      "situacion": "El FCFE (581.250) supera al FCFF (543.750) pese a que la empresa paga intereses. Explicaselo a los accionistas.",
+      "instrucciones": "Responde: por que el FCFE es mayor, si eso es sostenible, y que pasaria el ano que viene si no hubiera deuda nueva.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "nota": "Sin deuda nueva y manteniendo la amortizacion de 250.000, el FCFE seria 543.750 - 112.500 - 250.000 = USD 181.250.",
+        "tablas": [
+          {
+            "titulo": "Comparacion",
+            "columnas": [
+              "Indicador",
+              "USD",
+              "Para quien"
+            ],
+            "filas": [
+              [
+                "FCFF",
+                "543.750",
+                "Acreedores y accionistas"
+              ],
+              [
+                "FCFE",
+                "581.250",
+                "Solo accionistas"
+              ],
+              [
+                "FCFE sin deuda nueva",
+                "181.250",
+                "Solo accionistas"
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "El origen del exceso",
+          "palabras_clave": "deuda nueva, endeudamiento, financiamiento, 400.000",
+          "peso": 40,
+          "si_cumple": "Exacto: el exceso viene del endeudamiento neto, no de la operacion.",
+          "si_falta": "Falta identificar de donde sale que el FCFE supere al FCFF."
+        },
+        {
+          "nombre": "Sostenibilidad",
+          "palabras_clave": "no es sostenible, temporal, prestado, depende del banco",
+          "peso": 30,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta juzgar si ese nivel de FCFE se puede repetir."
+        },
+        {
+          "nombre": "Escenario sin deuda nueva",
+          "palabras_clave": "sin deuda nueva, caeria, 181.250, amortizacion",
+          "peso": 30,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta el escenario del ano siguiente."
+        }
+      ],
+      "respuesta_modelo": "El FCFE supera al FCFF porque este ano la empresa recibio USD 400.000 de deuda nueva y solo amortizo 250.000: hay un endeudamiento neto de 150.000 que engorda el flujo del accionista. Ese exceso no viene de la operacion sino del banco, asi que no es sostenible: es dinero prestado que habra que devolver. Si el ano proximo no hubiera deuda nueva y se mantuviera la amortizacion, el FCFE caeria a USD 181.250. La conclusion para el accionista es que el reparto de dividendos deberia dimensionarse contra el flujo operativo, no contra un FCFE inflado por financiamiento.",
+      "retroalimentacion": "Un FCFE alto sostenido por deuda nueva es una senal a vigilar, no una buena noticia."
+    }
+  ]
+}

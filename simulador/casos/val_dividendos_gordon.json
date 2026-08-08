@@ -1,0 +1,404 @@
+{
+  "materia": {
+    "codigo": "AE-07-03",
+    "nombre": "Valoracion de Empresas",
+    "malla_codigo": "ADM-UTA-2026",
+    "carrera_codigo": "ADM-EMP",
+    "carrera": "Administracion de Empresas",
+    "malla": "Malla Administracion de Empresas UTA 2026",
+    "nivel": 7
+  },
+  "tema": "Unidad 4.2 - Valoracion de la accion",
+  "caso": {
+    "titulo": "Modelo de Descuento de Dividendos (Gordon) - Industria Tungurahua S.A.",
+    "modo": "CASO_INDEPENDIENTE",
+    "tema": "Valor intrinseco de la accion",
+    "dificultad": "MEDIA",
+    "tiempo_estimado": 35,
+    "rol_estudiante": "Analista de valoracion",
+    "contexto": "Industria Tungurahua S.A. es una empresa madura que reparte dividendos de forma regular. La Gerencia quiere estimar el valor intrinseco de su accion con el Modelo de Gordon y compararlo con el precio de mercado, para saber si la accion esta subvalorada o sobrevalorada.",
+    "objetivo": "Aplicar el Modelo de Descuento de Dividendos con crecimiento constante, comprobar su condicion de validez e interpretar el resultado frente al mercado.",
+    "resultado_aprendizaje": "Estima el valor intrinseco de una accion y lo contrasta con su cotizacion.",
+    "situacion_inicial": "Tienes el historial de dividendos 2022-2025, la politica de dividendos, el informe de costo del patrimonio y el precio de mercado.",
+    "guia_debriefing": "Mostrar la sensibilidad: con g = 6% el valor pasa a 74,20; con Ke = 14% cae a 49,00. El modelo es muy sensible al denominador.",
+    "retroalimentacion_base": "P0 = 4,41 / 0,07 = USD 63,00 frente a un precio de mercado de USD 60,00. La accion aparece subvalorada en un 5%.",
+    "sin_ia": true
+  },
+  "archivos": [
+    {
+      "tipo": "EXCEL",
+      "nombre": "Workbook Modelo de Dividendos (Gordon)",
+      "ruta": "adjuntos/dividendos_gordon_estudiante.xlsx",
+      "descripcion": "Hoja de trabajo con el historial de dividendos, el Modelo de Gordon y el analisis de sensibilidad."
+    }
+  ],
+  "criterios": [
+    {
+      "nombre": "Uso correcto de D1",
+      "peso": 25,
+      "descripcion": "Proyecta el dividendo, no usa D0."
+    },
+    {
+      "nombre": "Condicion de validez",
+      "peso": 25,
+      "descripcion": "Comprueba Ke > g antes de aplicar la formula."
+    },
+    {
+      "nombre": "Exactitud del calculo",
+      "peso": 25,
+      "descripcion": "Llega a USD 63,00."
+    },
+    {
+      "nombre": "Interpretacion frente al mercado",
+      "peso": 25,
+      "descripcion": "Concluye con prudencia, reconociendo la sensibilidad del modelo."
+    }
+  ],
+  "rondas": [
+    {
+      "numero": 1,
+      "titulo": "Paso 1 - Del dividendo pagado al dividendo esperado",
+      "situacion": "El historial muestra dividendos crecientes y estables. La Direccion Financiera proyecta un crecimiento sostenible del 5%. Determina el dividendo esperado D1.",
+      "instrucciones": "El Modelo de Gordon usa D1, el dividendo del proximo periodo, no D0. Proyectalo.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "D1 = D0 x (1 + g)",
+        "tablas": [
+          {
+            "titulo": "Historial de dividendos por accion (USD)",
+            "columnas": [
+              "Ano",
+              "Dividendo",
+              "Crecimiento",
+              "Observacion"
+            ],
+            "filas": [
+              [
+                "2022",
+                "3,60",
+                "-",
+                "Ano base"
+              ],
+              [
+                "2023",
+                "3,78",
+                "5,0%",
+                "Crecimiento moderado"
+              ],
+              [
+                "2024",
+                "3,99",
+                "5,6%",
+                "Crecimiento estable"
+              ],
+              [
+                "2025",
+                "4,20",
+                "5,3%",
+                "Ultimo dividendo pagado (D0)"
+              ]
+            ]
+          },
+          {
+            "titulo": "Politica de dividendos",
+            "columnas": [
+              "Concepto",
+              "Dato"
+            ],
+            "filas": [
+              [
+                "Dividendo actual D0",
+                "4,20"
+              ],
+              [
+                "Crecimiento esperado g",
+                "5%"
+              ],
+              [
+                "Politica",
+                "Estable, pagos periodicos"
+              ],
+              [
+                "Acciones en circulacion",
+                "100.000"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "d1",
+          "etiqueta": "Dividendo esperado D1",
+          "tipo": "numero",
+          "objetivo": 4.41,
+          "tolerancia": 0.005,
+          "unidad": "USD por accion",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Usa el dividendo proyectado",
+          "palabras_clave": "d1, proximo periodo, proyectado, futuro",
+          "peso": 100,
+          "si_cumple": "Correcto: valorar es descontar flujos futuros, no pasados.",
+          "si_falta": "Explica por que se usa D1 y no D0."
+        }
+      ],
+      "respuesta_modelo": "D1 = 4,20 x (1 + 0,05) = USD 4,41. Se usa el dividendo esperado porque valorar una accion es descontar los flujos que el accionista va a recibir hacia adelante, no el que ya cobro.",
+      "retroalimentacion": "El error mas comun del ejercicio es meter D0 en la formula."
+    },
+    {
+      "numero": 2,
+      "titulo": "Paso 2 - Comprobar la condicion de validez",
+      "situacion": "Antes de aplicar Gordon hay que verificar que el modelo se puede usar. El informe financiero fija Ke = 12% y g = 5%.",
+      "instrucciones": "Elige la afirmacion correcta sobre la validez del modelo y justificala.",
+      "tipo_respuesta": "OPCION_UNICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "Condicion: Ke > g. El denominador (Ke - g) debe ser positivo.",
+        "tablas": [
+          {
+            "titulo": "Informe financiero",
+            "columnas": [
+              "Concepto",
+              "Dato",
+              "Explicacion"
+            ],
+            "filas": [
+              [
+                "Costo del patrimonio Ke",
+                "12%",
+                "Rentabilidad minima exigida por los accionistas"
+              ],
+              [
+                "Tasa de crecimiento g",
+                "5%",
+                "Crecimiento esperado de los dividendos"
+              ],
+              [
+                "Precio de mercado por accion",
+                "USD 60,00",
+                "Cotizacion observada"
+              ]
+            ]
+          }
+        ]
+      },
+      "opciones": [
+        {
+          "texto": "Se cumple Ke > g: el modelo es aplicable y el diferencial es 0,07",
+          "descripcion": "12% > 5%, el denominador queda positivo.",
+          "puntaje": 100,
+          "retroalimentacion": "Correcto. Ke - g = 0,12 - 0,05 = 0,07."
+        },
+        {
+          "texto": "No se cumple Ke > g: el modelo no se puede aplicar",
+          "descripcion": "Se rechaza el modelo.",
+          "puntaje": 0,
+          "retroalimentacion": "Revisa los datos: 12% si es mayor que 5%."
+        },
+        {
+          "texto": "La condicion no importa, la formula funciona igual",
+          "descripcion": "Se aplica sin verificar.",
+          "puntaje": 0,
+          "retroalimentacion": "Si g fuera mayor o igual que Ke, el denominador seria cero o negativo y el valor no tendria sentido economico."
+        },
+        {
+          "texto": "Hay que comparar g con el precio de mercado, no con Ke",
+          "descripcion": "Se compara contra la cotizacion.",
+          "puntaje": 0,
+          "retroalimentacion": "La condicion del modelo es sobre las tasas, no sobre el precio."
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Explica el porque de la condicion",
+          "palabras_clave": "denominador, positivo, cero, infinito, sentido economico",
+          "peso": 100,
+          "si_cumple": "Bien: se ve que entendiste la matematica detras de la regla.",
+          "si_falta": "Falta explicar que pasaria si g fuera mayor o igual que Ke."
+        }
+      ],
+      "respuesta_modelo": "Se cumple Ke > g porque 12% > 5%, y el diferencial es 0,07. La condicion importa porque si g fuera igual a Ke el denominador seria cero y el valor tenderia a infinito, y si g fuera mayor el valor saldria negativo: ninguna de las dos cosas tiene sentido economico. En la practica significa que ninguna empresa puede crecer indefinidamente por encima de lo que sus accionistas le exigen.",
+      "retroalimentacion": "La condicion Ke > g no es un tramite: es lo que hace que el modelo tenga sentido."
+    },
+    {
+      "numero": 3,
+      "titulo": "Paso 3 - Aplicar el Modelo de Gordon",
+      "situacion": "Con D1 = 4,41, Ke = 12% y g = 5%, calcula el valor intrinseco de la accion.",
+      "instrucciones": "Sustituye en la formula y expresa el resultado en dolares por accion.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "P0 = D1 / (Ke - g)",
+        "tablas": [
+          {
+            "titulo": "Hoja de trabajo",
+            "columnas": [
+              "Concepto",
+              "Valor"
+            ],
+            "filas": [
+              [
+                "Dividendo esperado D1",
+                "4,41"
+              ],
+              [
+                "Costo del patrimonio Ke",
+                "0,12"
+              ],
+              [
+                "Crecimiento g",
+                "0,05"
+              ],
+              [
+                "Diferencial Ke - g",
+                "0,07"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "p0",
+          "etiqueta": "Valor intrinseco P0",
+          "tipo": "numero",
+          "objetivo": 63.0,
+          "tolerancia": 0.05,
+          "unidad": "USD por accion",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Sustitucion correcta",
+          "palabras_clave": "4,41, 0,07, division, valor intrinseco",
+          "peso": 100,
+          "si_cumple": "Bien.",
+          "si_falta": "Escribe la sustitucion completa."
+        }
+      ],
+      "respuesta_modelo": "P0 = 4,41 / (0,12 - 0,05) = 4,41 / 0,07 = USD 63,00 por accion. Es el valor presente de todos los dividendos futuros creciendo al 5% y descontados al 12%.",
+      "retroalimentacion": "63,00 es lo que la accion vale segun el modelo, no lo que cuesta en el mercado."
+    },
+    {
+      "numero": 4,
+      "titulo": "Paso 4 - Comparar con el mercado y decidir",
+      "situacion": "El valor intrinseco es USD 63,00 y la accion cotiza a USD 60,00. Un cliente te pregunta si deberia comprar.",
+      "instrucciones": "Elige la lectura correcta y justificala. Considera la sensibilidad del modelo antes de recomendar.",
+      "tipo_respuesta": "OPCION_UNICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "nota": "Sensibilidad: con g = 6% el valor sube a 74,20; con Ke = 14% baja a 49,00.",
+        "tablas": [
+          {
+            "titulo": "Comparacion",
+            "columnas": [
+              "Concepto",
+              "USD por accion"
+            ],
+            "filas": [
+              [
+                "Valor intrinseco P0",
+                "63,00"
+              ],
+              [
+                "Precio de mercado",
+                "60,00"
+              ],
+              [
+                "Diferencia",
+                "3,00"
+              ],
+              [
+                "Potencial",
+                "5,0%"
+              ]
+            ]
+          },
+          {
+            "titulo": "Escenarios",
+            "columnas": [
+              "Escenario",
+              "Ke",
+              "g",
+              "P0"
+            ],
+            "filas": [
+              [
+                "Base",
+                "12%",
+                "5%",
+                "63,00"
+              ],
+              [
+                "Crecimiento optimista",
+                "12%",
+                "6%",
+                "74,20"
+              ],
+              [
+                "Mayor exigencia de retorno",
+                "14%",
+                "5%",
+                "49,00"
+              ]
+            ]
+          }
+        ]
+      },
+      "opciones": [
+        {
+          "texto": "La accion aparece subvalorada, pero la conclusion depende de que g y Ke se sostengan",
+          "descripcion": "Compra condicionada a la solidez de los supuestos.",
+          "puntaje": 100,
+          "retroalimentacion": "Correcto: 63 > 60, hay un 5% de potencial, pero el escenario con Ke = 14% da 49,00 y daria vuelta la conclusion."
+        },
+        {
+          "texto": "La accion esta subvalorada, comprar sin mas analisis",
+          "descripcion": "Recomendacion directa de compra.",
+          "puntaje": 45,
+          "retroalimentacion": "La direccion es correcta, pero un margen del 5% es demasiado estrecho para ignorar la sensibilidad del modelo."
+        },
+        {
+          "texto": "La accion esta sobrevalorada, conviene vender",
+          "descripcion": "Recomendacion de venta.",
+          "puntaje": 0,
+          "retroalimentacion": "Al reves: el valor intrinseco (63) supera al precio (60)."
+        },
+        {
+          "texto": "El modelo no permite ninguna conclusion",
+          "descripcion": "Se descarta el analisis.",
+          "puntaje": 15,
+          "retroalimentacion": "Si permite una conclusion, siempre que se declare bajo que supuestos se sostiene."
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Cuantifica la diferencia",
+          "palabras_clave": "63, 60, diferencia, 5%, potencial",
+          "peso": 40,
+          "si_cumple": "Bien.",
+          "si_falta": "Pon numeros a la diferencia entre valor y precio."
+        },
+        {
+          "nombre": "Reconoce la sensibilidad",
+          "palabras_clave": "sensible, supuestos, ke, g, escenario, cambia",
+          "peso": 60,
+          "si_cumple": "Correcto: el modelo depende del denominador.",
+          "si_falta": "Falta advertir que el resultado es muy sensible a Ke y g."
+        }
+      ],
+      "respuesta_modelo": "El valor intrinseco (USD 63,00) supera al precio de mercado (USD 60,00) en USD 3,00, un 5% de potencial: la accion aparece subvalorada. Pero la conclusion es condicionada, porque el Modelo de Gordon es muy sensible al denominador: basta que los accionistas exijan un 14% en vez de un 12% para que el valor caiga a USD 49,00 y la accion pase a estar sobrevalorada. La recomendacion es comprar solo si se sostiene que el crecimiento del 5% es realista y que el riesgo de la empresa no va a subir.",
+      "retroalimentacion": "Con un margen del 5%, la calidad de los supuestos importa mas que la aritmetica."
+    }
+  ]
+}

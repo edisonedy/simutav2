@@ -1,0 +1,348 @@
+{
+  "materia": {
+    "codigo": "AE-07-03",
+    "nombre": "Valoracion de Empresas",
+    "malla_codigo": "ADM-UTA-2026",
+    "carrera_codigo": "ADM-EMP",
+    "carrera": "Administracion de Empresas",
+    "malla": "Malla Administracion de Empresas UTA 2026",
+    "nivel": 7
+  },
+  "tema": "Unidad 4.1 - Flujos de caja libres",
+  "caso": {
+    "titulo": "Flujo de Caja Residual - Industria Tungurahua S.A.",
+    "modo": "CASO_INDEPENDIENTE",
+    "tema": "Creacion o destruccion de valor economico",
+    "dificultad": "MEDIA",
+    "tiempo_estimado": 30,
+    "rol_estudiante": "Analista financiero de la Gerencia",
+    "contexto": "Industria Tungurahua S.A. ya calculo su FCFF: USD 543.750. La Gerencia quiere saber si ese flujo alcanza para remunerar el costo del capital aportado por acreedores y accionistas. Un flujo positivo no basta: hay que compararlo con lo que ese capital exige.",
+    "objetivo": "Determinar si la empresa crea o destruye valor economico calculando e interpretando el Flujo de Caja Residual.",
+    "resultado_aprendizaje": "Compara el flujo generado con el costo del capital para juzgar creacion de valor.",
+    "situacion_inicial": "Tienes el resultado del FCFF, el extracto del balance y el informe de la Direccion Financiera con el WACC.",
+    "guia_debriefing": "Discutir el caso limite: que pasaria con el residual si el WACC subiera al 12% o si la empresa financiara la expansion con mas deuda.",
+    "retroalimentacion_base": "Flujo Residual = 543.750 - 450.000 = USD 93.750. Positivo: la empresa crea valor, aunque con un margen estrecho.",
+    "sin_ia": true
+  },
+  "archivos": [
+    {
+      "tipo": "EXCEL",
+      "nombre": "Workbook Flujo de Caja Residual",
+      "ruta": "adjuntos/flujo_residual_estudiante.xlsx",
+      "descripcion": "Hoja de trabajo con capital invertido, cargo por capital y analisis de escenarios."
+    }
+  ],
+  "criterios": [
+    {
+      "nombre": "Delimitacion del capital invertido",
+      "peso": 30,
+      "descripcion": "Separa deuda financiera permanente de financiacion operativa."
+    },
+    {
+      "nombre": "Exactitud del calculo",
+      "peso": 35,
+      "descripcion": "Cargo por capital y flujo residual correctos."
+    },
+    {
+      "nombre": "Interpretacion de valor",
+      "peso": 35,
+      "descripcion": "Concluye sobre creacion o destruccion de valor y su fragilidad."
+    }
+  ],
+  "rondas": [
+    {
+      "numero": 1,
+      "titulo": "Paso 1 - Calcular el capital invertido",
+      "situacion": "El extracto del balance lista las cuentas de patrimonio y deuda. Determina el capital invertido en el negocio.",
+      "instrucciones": "Se suman patrimonio y deuda financiera de largo plazo. No entran proveedores, impuestos por pagar ni otras obligaciones operativas de corto plazo.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "Capital Invertido = Patrimonio + Deuda Financiera LP",
+        "tablas": [
+          {
+            "titulo": "Patrimonio (USD)",
+            "columnas": [
+              "Cuenta",
+              "Valor",
+              "Justificacion"
+            ],
+            "filas": [
+              [
+                "Capital social",
+                "2.700.000",
+                "Aporte permanente de los accionistas"
+              ],
+              [
+                "Reserva legal",
+                "300.000",
+                "Forma parte del patrimonio"
+              ],
+              [
+                "Utilidades retenidas",
+                "0",
+                "Reinversion acumulada"
+              ]
+            ]
+          },
+          {
+            "titulo": "Deuda financiera de largo plazo (USD)",
+            "columnas": [
+              "Cuenta",
+              "Valor",
+              "Justificacion"
+            ],
+            "filas": [
+              [
+                "Prestamos bancarios LP",
+                "1.200.000",
+                "Deuda financiera de largo plazo"
+              ],
+              [
+                "Obligaciones financieras LP",
+                "300.000",
+                "Financiamiento permanente"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "patrimonio",
+          "etiqueta": "Total patrimonio",
+          "tipo": "numero",
+          "objetivo": 3000000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        },
+        {
+          "clave": "deuda_lp",
+          "etiqueta": "Total deuda financiera LP",
+          "tipo": "numero",
+          "objetivo": 1500000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        },
+        {
+          "clave": "capital_invertido",
+          "etiqueta": "Capital invertido",
+          "tipo": "numero",
+          "objetivo": 4500000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Ambas fuentes financian los activos",
+          "palabras_clave": "deuda y patrimonio, financian los activos, recursos permanentes",
+          "peso": 50,
+          "si_cumple": "Correcto.",
+          "si_falta": "Explica por que se suman deuda y patrimonio."
+        },
+        {
+          "nombre": "Excluye financiacion operativa",
+          "palabras_clave": "proveedores, corto plazo, operativa, no financiera",
+          "peso": 50,
+          "si_cumple": "Bien: los proveedores no son capital exigido a una tasa.",
+          "si_falta": "Falto decir por que quedan fuera los proveedores."
+        }
+      ],
+      "respuesta_modelo": "Patrimonio = 2.700.000 + 300.000 + 0 = USD 3.000.000. Deuda financiera LP = 1.200.000 + 300.000 = USD 1.500.000. Capital invertido = USD 4.500.000. Se suman porque ambas fuentes financian los activos del negocio. Los proveedores no entran: son financiacion operativa espontanea, no capital permanente al que se le exige una rentabilidad.",
+      "retroalimentacion": "El capital invertido son los recursos permanentes comprometidos en el negocio."
+    },
+    {
+      "numero": 2,
+      "titulo": "Paso 2 - Calcular el cargo por costo del capital",
+      "situacion": "La Direccion Financiera informa un WACC anual del 10%. Traduce esa exigencia a dolares.",
+      "instrucciones": "El cargo por capital expresa en dolares la rentabilidad minima que exigen quienes financian la empresa.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "Cargo por Capital = Capital Invertido x WACC",
+        "tablas": [
+          {
+            "titulo": "Informe de la Direccion Financiera",
+            "columnas": [
+              "Concepto",
+              "Dato",
+              "Explicacion"
+            ],
+            "filas": [
+              [
+                "WACC anual",
+                "10%",
+                "Costo promedio ponderado del capital"
+              ],
+              [
+                "Capital invertido",
+                "4.500.000",
+                "Resultado del paso 1"
+              ],
+              [
+                "Interpretacion",
+                "Rentabilidad minima exigida",
+                "La empresa debe superarla para crear valor"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "cargo_capital",
+          "etiqueta": "Cargo por capital",
+          "tipo": "numero",
+          "objetivo": 450000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Es un piso, no un costo contable",
+          "palabras_clave": "rentabilidad minima, exigida, piso, costo de oportunidad",
+          "peso": 100,
+          "si_cumple": "Correcto: no aparece en el estado de resultados, pero existe.",
+          "si_falta": "Explica que representa el cargo por capital."
+        }
+      ],
+      "respuesta_modelo": "Cargo por capital = 4.500.000 x 0,10 = USD 450.000. Es el rendimiento minimo anual que la empresa debe generar solo para dejar conformes a acreedores y accionistas. Si sube el WACC o sube el capital invertido, el cargo aumenta y el listo se pone mas alto.",
+      "retroalimentacion": "El cargo por capital es el costo de oportunidad del dinero comprometido."
+    },
+    {
+      "numero": 3,
+      "titulo": "Paso 3 - Calcular el flujo de caja residual",
+      "situacion": "Ya tienes el FCFF y el cargo por capital. Determina si la empresa crea o destruye valor.",
+      "instrucciones": "Positivo: crea valor. Cero: remunera exactamente el capital. Negativo: destruye valor.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "Flujo de Caja Residual = FCFF - Cargo por Capital",
+        "tablas": [
+          {
+            "titulo": "Rompecabezas financiero",
+            "columnas": [
+              "Orden",
+              "Componente",
+              "Signo",
+              "Valor USD"
+            ],
+            "filas": [
+              [
+                "1",
+                "FCFF",
+                "+",
+                "543.750"
+              ],
+              [
+                "2",
+                "Cargo por capital",
+                "-",
+                "450.000"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "flujo_residual",
+          "etiqueta": "Flujo de caja residual",
+          "tipo": "numero",
+          "objetivo": 93750,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Concluye sobre el valor",
+          "palabras_clave": "crea valor, positivo, supera el costo del capital",
+          "peso": 100,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta la conclusion: crea o destruye valor."
+        }
+      ],
+      "respuesta_modelo": "Flujo de Caja Residual = 543.750 - 450.000 = USD 93.750. Positivo: la empresa genera mas efectivo del que le exige su capital, es decir, crea valor economico.",
+      "retroalimentacion": "Un FCFF positivo no garantiza creacion de valor: hay que compararlo con el cargo por capital."
+    },
+    {
+      "numero": 4,
+      "titulo": "Escenarios e interpretacion",
+      "situacion": "El margen es de apenas USD 93.750 sobre un cargo de 450.000: cualquier cambio lo puede dar vuelta. La Gerencia te pide una lectura de riesgo antes de aprobar la expansion.",
+      "instrucciones": "Analiza que pasaria si el WACC subiera al 12%, y si el capital invertido creciera a USD 5.500.000 manteniendo el mismo FCFF. Cierra con una recomendacion.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "nota": "Con WACC 12%: cargo = 540.000, residual = 3.750. Con capital 5.500.000 al 10%: cargo = 550.000, residual = -6.250.",
+        "tablas": [
+          {
+            "titulo": "Escenarios",
+            "columnas": [
+              "Escenario",
+              "Cargo por capital",
+              "Flujo residual",
+              "Lectura"
+            ],
+            "filas": [
+              [
+                "Base: capital 4.500.000, WACC 10%",
+                "450.000",
+                "93.750",
+                "Crea valor"
+              ],
+              [
+                "WACC sube a 12%",
+                "540.000",
+                "3.750",
+                "Al limite"
+              ],
+              [
+                "Capital sube a 5.500.000, WACC 10%",
+                "550.000",
+                "-6.250",
+                "Destruye valor"
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "Sensibilidad al WACC",
+          "palabras_clave": "wacc, sube, cargo aumenta, riesgo, tasa",
+          "peso": 35,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta el efecto de un WACC mayor."
+        },
+        {
+          "nombre": "Sensibilidad al capital invertido",
+          "palabras_clave": "capital invertido, crece, destruye valor, expansion",
+          "peso": 35,
+          "si_cumple": "Correcto: crecer sin aumentar el flujo destruye valor.",
+          "si_falta": "Falta el efecto de invertir mas capital."
+        },
+        {
+          "nombre": "Recomendacion accionable",
+          "palabras_clave": "recomiendo, condicion, solo si, aumentar el flujo",
+          "peso": 30,
+          "si_cumple": "Bien: la recomendacion tiene condicion, no es un si o un no suelto.",
+          "si_falta": "Cierra con una recomendacion concreta."
+        }
+      ],
+      "respuesta_modelo": "El margen actual es fragil. Con un WACC del 12% el cargo sube a USD 540.000 y el residual cae a USD 3.750: la empresa quedaria practicamente en el punto de equilibrio economico. Si ademas el capital invertido creciera a USD 5.500.000 sin que suba el FCFF, el cargo seria de USD 550.000 y el residual pasaria a USD -6.250, es decir, destruccion de valor. La recomendacion es aprobar la expansion solo si viene acompanada de un aumento comprobable del FCFF: crecer en activos sin crecer en flujo empeora la posicion economica aunque las ventas suban.",
+      "retroalimentacion": "Crecer no es lo mismo que crear valor. Este caso lo muestra con numeros."
+    }
+  ]
+}

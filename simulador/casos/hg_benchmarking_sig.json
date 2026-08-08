@@ -1,0 +1,301 @@
+{
+  "materia": {
+    "codigo": "AE-06-05",
+    "nombre": "Habilidades Gerenciales",
+    "malla_codigo": "ADM-UTA-2026",
+    "carrera_codigo": "ADM-EMP",
+    "carrera": "Administracion de Empresas",
+    "malla": "Malla Administracion de Empresas UTA 2026",
+    "nivel": 6
+  },
+  "tema": "Modelo 4 - Benchmarking",
+  "caso": {
+    "titulo": "Reto de benchmarking - Textiles Andinos S.A.",
+    "modo": "CASO_INDEPENDIENTE",
+    "tema": "Benchmarking por niveles",
+    "dificultad": "BASICA",
+    "tiempo_estimado": 25,
+    "rol_estudiante": "Consultor junior que debe superar los seis niveles del reto",
+    "contexto": "Textiles Andinos S.A. tiene baja productividad, retrasos en las entregas y reclamos de clientes. Entrega sus pedidos en 10 dias. Una organizacion lider del sector entrega en 6 dias, reduce desperdicios y mide sus indicadores todas las semanas. Tu mision es aplicar las seis etapas del benchmarking para cerrar esa distancia.",
+    "objetivo": "Superar los seis niveles del reto aplicando planificacion, recopilacion, analisis, adaptacion, implementacion y evaluacion.",
+    "resultado_aprendizaje": "Reconoce las etapas del benchmarking y propone mejoras viables.",
+    "situacion_inicial": "Cada nivel es una etapa del benchmarking. Se supera respondiendo bien; al final compararas tu desarrollo con el modelo del docente.",
+    "guia_debriefing": "Cerrar preguntando cual de los seis niveles costo mas y por que: en la practica el nivel 3, el analisis de brechas, es el que separa al que compara del que solo describe.",
+    "retroalimentacion_base": "La brecha de entrega es de 4 dias. El benchmarking permite aprender de los mejores y adaptar buenas practicas al contexto real de la empresa.",
+    "sin_ia": true
+  },
+  "criterios": [
+    {
+      "nombre": "Comprension del modelo",
+      "peso": 25,
+      "descripcion": "Identifica correctamente las etapas del benchmarking."
+    },
+    {
+      "nombre": "Analisis gerencial",
+      "peso": 30,
+      "descripcion": "Reconoce brechas y propone mejoras viables."
+    },
+    {
+      "nombre": "Aplicacion practica",
+      "peso": 25,
+      "descripcion": "Relaciona indicadores, recursos y acciones."
+    },
+    {
+      "nombre": "Conclusion",
+      "peso": 20,
+      "descripcion": "Integra aprendizaje, mejora continua y competitividad."
+    }
+  ],
+  "rondas": [
+    {
+      "numero": 1,
+      "titulo": "Nivel 1 - Planificacion",
+      "situacion": "Textiles Andinos quiere mejorar, pero no sabe por donde empezar. Define el proceso que sera comparado y tres indicadores para medirlo.",
+      "instrucciones": "Nombra el proceso y los tres indicadores. Piensa en cosas que se puedan contar.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Situacion de Textiles Andinos S.A.",
+            "columnas": [
+              "Sintoma",
+              "Detalle"
+            ],
+            "filas": [
+              [
+                "Baja productividad",
+                "El taller no cumple el programa semanal"
+              ],
+              [
+                "Retrasos en entregas",
+                "10 dias frente a 6 del lider"
+              ],
+              [
+                "Reclamos de clientes",
+                "Aumentaron en los ultimos tres meses"
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "Proceso definido",
+          "palabras_clave": "produccion, entrega de pedidos, proceso",
+          "peso": 50,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta nombrar el proceso que se va a comparar."
+        },
+        {
+          "nombre": "Tres indicadores",
+          "palabras_clave": "tiempo de entrega, desperdicio, satisfaccion, indicador",
+          "peso": 50,
+          "si_cumple": "Correcto.",
+          "si_falta": "Faltan los tres indicadores."
+        }
+      ],
+      "respuesta_modelo": "Se compara el proceso de produccion y entrega de pedidos, con tres indicadores: tiempo de entrega, porcentaje de desperdicio y satisfaccion del cliente.",
+      "retroalimentacion": "Con estos tres indicadores ya se puede medir el antes y el despues."
+    },
+    {
+      "numero": 2,
+      "titulo": "Nivel 2 - Recopilacion de informacion",
+      "situacion": "Necesitas datos propios y datos del referente. De donde los sacas?",
+      "instrucciones": "Di que fuentes usarias dentro de la empresa y que le pedirias a la empresa referente.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "conceptos": [
+        {
+          "nombre": "Fuentes propias",
+          "palabras_clave": "observar, entrevistar, informes de produccion, reclamos",
+          "peso": 50,
+          "si_cumple": "Bien.",
+          "si_falta": "Faltan las fuentes internas."
+        },
+        {
+          "nombre": "Datos del referente",
+          "palabras_clave": "empresa referente, comparar datos, lider, practicas",
+          "peso": 50,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta que le pedirias al referente."
+        }
+      ],
+      "respuesta_modelo": "Observar los procesos, entrevistar al personal, revisar informes de produccion y analizar reclamos; y comparar esos datos con los de la empresa referente: sus tiempos de entrega, su programacion de produccion y como controla los desperdicios.",
+      "retroalimentacion": "Observar el proceso en el taller suele revelar mas que el informe mensual."
+    },
+    {
+      "numero": 3,
+      "titulo": "Nivel 3 - Analisis de brechas",
+      "situacion": "Textiles Andinos entrega en 10 dias. La empresa lider entrega en 6 dias. Cual es la brecha?",
+      "instrucciones": "Calcula la brecha en dias y despues interpreta que significa.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "Brecha = Tiempo de la empresa - Tiempo del referente",
+        "tablas": [
+          {
+            "titulo": "Tiempo de entrega",
+            "columnas": [
+              "Empresa",
+              "Dias"
+            ],
+            "filas": [
+              [
+                "Textiles Andinos S.A.",
+                "10"
+              ],
+              [
+                "Empresa lider del sector",
+                "6"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "brecha_dias",
+          "etiqueta": "Brecha de entrega",
+          "tipo": "numero",
+          "objetivo": 4,
+          "tolerancia": 0.1,
+          "unidad": "dias",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Interpreta la brecha",
+          "palabras_clave": "menor eficiencia, planificacion, inventarios, coordinacion",
+          "peso": 100,
+          "si_cumple": "Bien: la brecha apunta a causas concretas.",
+          "si_falta": "Falta interpretar la brecha: que dice de la empresa."
+        }
+      ],
+      "respuesta_modelo": "La brecha es de 4 dias (10 - 6). Evidencia menor eficiencia operativa y necesidad de mejorar la planificacion, el control de inventarios y la coordinacion interna.",
+      "retroalimentacion": "Cuatro dias de brecha no es un numero: son pedidos perdidos y clientes que reclaman."
+    },
+    {
+      "numero": 4,
+      "titulo": "Nivel 4 - Adaptacion de mejores practicas",
+      "situacion": "Ya sabes cuanto tienes que mejorar. Propon tres acciones para adaptar las mejores practicas del lider a Textiles Andinos.",
+      "instrucciones": "Tres acciones concretas y los recursos que necesitas para ejecutarlas.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "conceptos": [
+        {
+          "nombre": "Acciones concretas",
+          "palabras_clave": "programacion semanal, control de desperdicios, indicadores visibles, capacitacion, seguimiento",
+          "peso": 60,
+          "si_cumple": "Bien.",
+          "si_falta": "Faltan acciones concretas."
+        },
+        {
+          "nombre": "Recursos necesarios",
+          "palabras_clave": "recursos, personal, capacitacion, tiempo, herramientas",
+          "peso": 40,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta decir con que recursos se ejecutan."
+        }
+      ],
+      "respuesta_modelo": "Implementar programacion semanal de produccion, control de desperdicios con registro diario e indicadores visibles en el taller; ademas capacitar al personal y hacer seguimiento de pedidos. Recursos: tiempo del jefe de produccion, un tablero de indicadores, capacitacion corta al equipo y un registro simple de avance por pedido.",
+      "retroalimentacion": "Indicadores visibles en el taller es la practica mas barata y la que mas rapido cambia el comportamiento."
+    },
+    {
+      "numero": 5,
+      "titulo": "Nivel 5 - Implementacion",
+      "situacion": "Disena el plan: quien, cuando y que. Y anticipa que puede salir mal.",
+      "instrucciones": "Define responsable, tiempo y actividad. Despues identifica un riesgo y como lo controlarias.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "conceptos": [
+        {
+          "nombre": "Responsable, tiempo y actividad",
+          "palabras_clave": "responsable, cronograma, dias, area, actividad",
+          "peso": 60,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta el quien y el cuando."
+        },
+        {
+          "nombre": "Riesgo y control",
+          "palabras_clave": "riesgo, resistencia, control, monitoreo, mitigar",
+          "peso": 40,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta anticipar un riesgo."
+        }
+      ],
+      "respuesta_modelo": "Asignar responsables por area, establecer un cronograma de 30 a 60 dias, capacitar al equipo y monitorear avances semanalmente. El riesgo principal es que el personal vea la medicion como control sobre las personas; se maneja midiendo el proceso y no a los individuos, y compartiendo los resultados del equipo.",
+      "retroalimentacion": "Un plan sin responsable con nombre no se ejecuta."
+    },
+    {
+      "numero": 6,
+      "titulo": "Nivel 6 - Evaluacion",
+      "situacion": "Ultimo nivel. Que indicadores revisarias despues de implementar el benchmarking, y cual es tu conclusion gerencial del caso?",
+      "instrucciones": "Nombra los indicadores que volverias a medir y redacta la conclusion.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "conceptos": [
+        {
+          "nombre": "Vuelve a medir",
+          "palabras_clave": "tiempo de entrega, desperdicio, reclamos, satisfaccion, productividad",
+          "peso": 50,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta decir que indicadores se vuelven a medir."
+        },
+        {
+          "nombre": "Conclusion gerencial",
+          "palabras_clave": "aprender de los mejores, adaptar, mejora continua, competitividad",
+          "peso": 50,
+          "si_cumple": "Buen cierre.",
+          "si_falta": "Falta la conclusion gerencial."
+        }
+      ],
+      "respuesta_modelo": "Se vuelven a medir tiempo de entrega, desperdicio, reclamos, satisfaccion del cliente y productividad. Conclusion: el benchmarking permite aprender de los mejores y adaptar buenas practicas al contexto real de la empresa; no se trata de copiar al lider, sino de entender por que entrega en 6 dias y traducir eso a la capacidad de Textiles Andinos.",
+      "retroalimentacion": "Reto completado. Compara tu desarrollo con el modelo del docente: no tiene que ser identico, pero si coherente."
+    }
+  ],
+  "juegos": [
+    {
+      "motor": "relacionar",
+      "titulo": "Etapa del benchmarking y su pregunta clave",
+      "instrucciones": "Une cada etapa con la pregunta que responde.",
+      "exigir_antes_del_caso": false,
+      "publicada": true,
+      "configuracion": {
+        "pares": [
+          {
+            "izquierda": "Planificacion",
+            "derecha": "Que proceso comparo y con que indicadores?"
+          },
+          {
+            "izquierda": "Recopilacion",
+            "derecha": "De donde saco los datos, dentro y fuera?"
+          },
+          {
+            "izquierda": "Analisis de brechas",
+            "derecha": "Cuanta distancia hay frente al referente?"
+          },
+          {
+            "izquierda": "Adaptacion",
+            "derecha": "Como traduzco esa practica a mi realidad?"
+          },
+          {
+            "izquierda": "Implementacion",
+            "derecha": "Quien lo hace, cuando y con que recursos?"
+          },
+          {
+            "izquierda": "Evaluacion",
+            "derecha": "Mejoro de verdad? Lo mantengo o lo ajusto?"
+          }
+        ]
+      }
+    }
+  ]
+}

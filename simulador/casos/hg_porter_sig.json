@@ -1,0 +1,555 @@
+{
+  "materia": {
+    "codigo": "AE-06-05",
+    "nombre": "Habilidades Gerenciales",
+    "malla_codigo": "ADM-UTA-2026",
+    "carrera_codigo": "ADM-EMP",
+    "carrera": "Administracion de Empresas",
+    "malla": "Malla Administracion de Empresas UTA 2026",
+    "nivel": 6
+  },
+  "tema": "Modelo 3 - Michael Porter",
+  "caso": {
+    "titulo": "Reto competitivo de Porter - Empresa Textil Andina",
+    "modo": "CASO_INDEPENDIENTE",
+    "tema": "Las Cinco Fuerzas aplicadas paso a paso",
+    "dificultad": "MEDIA",
+    "tiempo_estimado": 35,
+    "rol_estudiante": "Consultor estrategico en formacion",
+    "contexto": "Empresa Textil Andina compite en la industria textil local. Entrega prendas de calidad, con disenos actuales, precio accesible y atencion personalizada. Antes de decidir como competir, hay que evaluar una por una las fuerzas que presionan su rentabilidad.",
+    "objetivo": "Evaluar las cinco fuerzas competitivas, identificar actividades de valor, seleccionar una estrategia generica y formular acciones de mejora.",
+    "resultado_aprendizaje": "Aplica el modelo de Porter para diagnosticar la posicion competitiva de una organizacion.",
+    "situacion_inicial": "Toda ventaja competitiva empieza por comprender la industria. Cada ronda evalua una fuerza o una herramienta del modelo.",
+    "guia_debriefing": "Preguntar cual fuerza resulto mas dificil de evaluar. Normalmente es la de sustitutos, porque obliga a mirar fuera de la propia industria.",
+    "retroalimentacion_base": "El diagnostico apunta a una diferenciacion del producto y del servicio, acompanada de optimizacion de costos operativos: competir por precio en textil local es una carrera perdida.",
+    "sin_ia": true
+  },
+  "criterios": [
+    {
+      "nombre": "Propuesta de valor",
+      "peso": 20,
+      "descripcion": "Explica por que el cliente elige a esta empresa y no a otra."
+    },
+    {
+      "nombre": "Evaluacion de fuerzas",
+      "peso": 35,
+      "descripcion": "Asigna nivel con justificacion, no por intuicion."
+    },
+    {
+      "nombre": "Estrategia coherente",
+      "peso": 25,
+      "descripcion": "La estrategia elegida responde al diagnostico."
+    },
+    {
+      "nombre": "Plan de accion",
+      "peso": 20,
+      "descripcion": "Traduce la estrategia en acciones con responsable, tiempo e indicador."
+    }
+  ],
+  "rondas": [
+    {
+      "numero": 1,
+      "titulo": "Industria y propuesta de valor",
+      "situacion": "Antes de evaluar fuerzas, define en que industria compite la organizacion y que valor entrega al cliente.",
+      "instrucciones": "La propuesta de valor explica por que el cliente prefiere una organizacion frente a otras: precio, calidad, rapidez, diferenciacion, servicio, innovacion o cercania. Indica industria, clientes principales y propuesta de valor.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "nota": "Ejemplo: Empresa Textil Andina compite en la industria textil local y entrega prendas de calidad, disenos actuales, precio accesible y atencion personalizada."
+      },
+      "conceptos": [
+        {
+          "nombre": "Industria definida",
+          "palabras_clave": "industria textil, sector, local, confeccion",
+          "peso": 35,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta definir la industria."
+        },
+        {
+          "nombre": "Clientes identificados",
+          "palabras_clave": "clientes, minoristas, consumidor final, distribuidores",
+          "peso": 30,
+          "si_cumple": "Bien.",
+          "si_falta": "Faltan los clientes principales."
+        },
+        {
+          "nombre": "Propuesta de valor explicita",
+          "palabras_clave": "calidad, diseno, precio accesible, atencion personalizada, prefiere",
+          "peso": 35,
+          "si_cumple": "Correcto: se entiende por que el cliente la elige.",
+          "si_falta": "La propuesta de valor no explica por que el cliente prefiere a esta empresa."
+        }
+      ],
+      "respuesta_modelo": "Empresa Textil Andina compite en la industria textil local, atendiendo a consumidores finales y a comercios minoristas de la zona. Su propuesta de valor combina prendas de calidad, disenos actuales, precio accesible y atencion personalizada: el cliente la prefiere porque encuentra un producto actualizado con trato cercano, algo que las cadenas grandes no ofrecen y los talleres pequenos no sostienen.",
+      "retroalimentacion": "Si la propuesta de valor sirve para cualquier empresa del sector, no es una propuesta de valor."
+    },
+    {
+      "numero": 2,
+      "titulo": "Fuerza 1 - Amenaza de nuevos entrantes",
+      "situacion": "Los nuevos entrantes presionan precios, clientes y rentabilidad cuando las barreras de entrada son bajas. Evalua esta fuerza.",
+      "instrucciones": "Considera inversion inicial, permisos, tecnologia, acceso a proveedores, marca, experiencia, economias de escala y lealtad del cliente. Elige el nivel y justifica.",
+      "tipo_respuesta": "OPCION_UNICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "nota": "Si abrir negocios similares es facil y barato, la amenaza de nuevos entrantes es alta."
+      },
+      "opciones": [
+        {
+          "texto": "Media: se puede entrar, pero sostenerse exige marca, escala y clientes fieles",
+          "descripcion": "Barreras moderadas.",
+          "puntaje": 100,
+          "retroalimentacion": "Correcto para el textil local: montar un taller es accesible, competir de verdad no lo es."
+        },
+        {
+          "texto": "Alta: cualquiera monta un taller manana",
+          "descripcion": "Barreras muy bajas.",
+          "puntaje": 50,
+          "retroalimentacion": "Parcialmente cierto en la entrada, pero ignora que sostener calidad y clientes si es una barrera."
+        },
+        {
+          "texto": "Baja: es practicamente imposible entrar a la industria textil",
+          "descripcion": "Barreras muy altas.",
+          "puntaje": 10,
+          "retroalimentacion": "En textil local la inversion inicial es moderada; la entrada no esta cerrada."
+        },
+        {
+          "texto": "No aplica: la amenaza de entrantes no afecta la rentabilidad",
+          "descripcion": "Se descarta la fuerza.",
+          "puntaje": 0,
+          "retroalimentacion": "Si afecta: mas oferta presiona precios y margen."
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Nombra barreras concretas",
+          "palabras_clave": "inversion, marca, experiencia, escala, lealtad, proveedores",
+          "peso": 100,
+          "si_cumple": "Bien: la justificacion se apoya en barreras concretas.",
+          "si_falta": "Justifica con barreras de entrada concretas, no con impresiones."
+        }
+      ],
+      "respuesta_modelo": "Amenaza media. La inversion inicial para montar un taller textil pequeno es accesible y los permisos no son prohibitivos, asi que entrar es posible. Pero sostenerse exige marca reconocida, acceso estable a proveedores, experiencia en confeccion y una cartera de clientes fieles, y eso si funciona como barrera. La consecuencia es que aparecen competidores nuevos con frecuencia, pero pocos duran.",
+      "retroalimentacion": "La barrera de entrada real en textil no es abrir: es durar."
+    },
+    {
+      "numero": 3,
+      "titulo": "Fuerza 2 - Poder de negociacion de proveedores",
+      "situacion": "Los proveedores tienen mas poder cuando son pocos, dificiles de reemplazar o controlan insumos clave. Evalua esta fuerza.",
+      "instrucciones": "Analiza cantidad de proveedores, dependencia de insumos, precios, calidad, tiempos de entrega y facilidad para cambiar de proveedor.",
+      "tipo_respuesta": "OPCION_UNICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "opciones": [
+        {
+          "texto": "Medio: hay varios proveedores de tela, pero los insumos especializados dependen de pocos",
+          "descripcion": "Poder moderado.",
+          "puntaje": 100,
+          "retroalimentacion": "Correcto: es la situacion tipica del textil local."
+        },
+        {
+          "texto": "Alto: la empresa depende totalmente de un unico proveedor",
+          "descripcion": "Poder muy alto.",
+          "puntaje": 40,
+          "retroalimentacion": "Solo seria asi si el insumo principal no tuviera sustituto, cosa que no ocurre con la tela comun."
+        },
+        {
+          "texto": "Bajo: hay tantos proveedores que ninguno tiene poder",
+          "descripcion": "Poder muy bajo.",
+          "puntaje": 40,
+          "retroalimentacion": "Ignora que los insumos de calidad o especializados si concentran poder."
+        },
+        {
+          "texto": "Si hay muchos proveedores, siempre baja la amenaza de nuevos entrantes",
+          "descripcion": "Se mezclan dos fuerzas.",
+          "puntaje": 0,
+          "retroalimentacion": "Son fuerzas distintas: el numero de proveedores no determina la entrada de competidores."
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Analiza la dependencia",
+          "palabras_clave": "cambiar de proveedor, dependencia, insumo critico, alternativas",
+          "peso": 60,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta analizar que tan facil es cambiar de proveedor."
+        },
+        {
+          "nombre": "Propone reducir la dependencia",
+          "palabras_clave": "diversificar, varios proveedores, alianzas, contratos",
+          "peso": 40,
+          "si_cumple": "Correcto: el diagnostico ya trae la accion.",
+          "si_falta": "Falta una estrategia para reducir la dependencia."
+        }
+      ],
+      "respuesta_modelo": "Poder medio. Para la tela comun y los avios hay varios proveedores locales, lo que permite negociar precio y plazo. Pero para insumos especializados (telas tecnicas, tintes especificos) las alternativas se reducen y el proveedor gana poder sobre precio y tiempo de entrega. Estrategia para reducir dependencia: diversificar proveedores por tipo de insumo, negociar contratos con volumen y mantener siempre una segunda opcion homologada.",
+      "retroalimentacion": "El poder del proveedor no se mide por cuantos hay, sino por cuanto cuesta cambiarlos."
+    },
+    {
+      "numero": 4,
+      "titulo": "Fuerza 3 - Poder de negociacion de clientes",
+      "situacion": "Los clientes presionan cuando tienen muchas opciones, comparan precios o compran grandes volumenes. Evalua esta fuerza.",
+      "instrucciones": "Considera sensibilidad al precio, disponibilidad de alternativas, concentracion de clientes, exigencia de calidad y facilidad para cambiar de proveedor.",
+      "tipo_respuesta": "OPCION_UNICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "opciones": [
+        {
+          "texto": "Alto: comparan precio y calidad y cambian sin costo",
+          "descripcion": "El cliente manda.",
+          "puntaje": 100,
+          "retroalimentacion": "Correcto: en textil local el costo de cambio para el cliente es practicamente cero."
+        },
+        {
+          "texto": "Medio: algunos comparan, otros son fieles",
+          "descripcion": "Poder intermedio.",
+          "puntaje": 60,
+          "retroalimentacion": "Razonable, pero sin un programa de fidelizacion la fidelidad es circunstancial."
+        },
+        {
+          "texto": "Bajo: los clientes siempre vuelven",
+          "descripcion": "El cliente no tiene poder.",
+          "puntaje": 10,
+          "retroalimentacion": "Sin costos de cambio ni contratos, esa fidelidad no esta asegurada."
+        },
+        {
+          "texto": "No aplica porque la empresa vende a consumidor final",
+          "descripcion": "Se descarta la fuerza.",
+          "puntaje": 0,
+          "retroalimentacion": "Vender a consumidor final suele aumentar el poder del cliente, no eliminarlo."
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Costo de cambio",
+          "palabras_clave": "cambiar, sin costo, alternativas, comparan",
+          "peso": 50,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta analizar que tan facil le resulta al cliente irse."
+        },
+        {
+          "nombre": "Estrategia de fidelizacion",
+          "palabras_clave": "fidelizar, experiencia, servicio, relacion, programa",
+          "peso": 50,
+          "si_cumple": "Correcto: es la forma de bajar el poder del cliente.",
+          "si_falta": "Falta la estrategia para reducir el poder del cliente."
+        }
+      ],
+      "respuesta_modelo": "Poder alto. Los clientes comparan precio, calidad, diseno y atencion, y pueden cambiar de proveedor sin ningun costo. Ademas hay oferta abundante en el sector. Para reducir ese poder la empresa debe fidelizar: atencion personalizada, servicio posventa, disenos exclusivos por temporada y una relacion sostenida que haga que irse tenga un costo, aunque sea solo de confianza.",
+      "retroalimentacion": "Cuando el cliente no tiene costo de cambio, la fidelizacion deja de ser un lujo."
+    },
+    {
+      "numero": 5,
+      "titulo": "Fuerza 4 - Amenaza de productos sustitutos",
+      "situacion": "Los sustitutos satisfacen la misma necesidad con otra solucion y limitan el precio que la empresa puede cobrar. Identificalos y evalua la amenaza.",
+      "instrucciones": "Un sustituto puede venir de otra industria. Nombra al menos dos y di el nivel de amenaza.",
+      "tipo_respuesta": "OPCION_UNICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "opciones": [
+        {
+          "texto": "Alta: ropa importada barata, ropa de segunda mano y comercio electronico",
+          "descripcion": "Varias soluciones alternativas y accesibles.",
+          "puntaje": 100,
+          "retroalimentacion": "Correcto: son opciones de otras industrias o canales que cubren la misma necesidad."
+        },
+        {
+          "texto": "Media: solo la ropa importada compite realmente",
+          "descripcion": "Un solo sustituto relevante.",
+          "puntaje": 55,
+          "retroalimentacion": "La importada es el mas visible, pero el comercio electronico y la segunda mano tambien desvian demanda."
+        },
+        {
+          "texto": "Baja: la ropa no tiene sustituto, todos necesitan vestirse",
+          "descripcion": "Se confunde necesidad con producto.",
+          "puntaje": 5,
+          "retroalimentacion": "El sustituto no reemplaza la necesidad, reemplaza la forma de cubrirla."
+        },
+        {
+          "texto": "Los sustitutos son las otras textileras locales",
+          "descripcion": "Se confunde sustituto con competidor.",
+          "puntaje": 0,
+          "retroalimentacion": "Esas son competencia directa, no sustitutos."
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Distingue sustituto de competidor",
+          "palabras_clave": "otra industria, misma necesidad, alternativa, canal distinto",
+          "peso": 50,
+          "si_cumple": "Muy bien: es el error mas comun del modelo.",
+          "si_falta": "Cuidado: un sustituto no es un competidor de la misma industria."
+        },
+        {
+          "nombre": "Estrategia frente a sustitutos",
+          "palabras_clave": "diferenciar, experiencia, calidad, dificil de reemplazar, cercania",
+          "peso": 50,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta como enfrentar a los sustitutos."
+        }
+      ],
+      "respuesta_modelo": "Amenaza alta. Los sustitutos son la ropa importada de bajo costo, la ropa de segunda mano y la compra por comercio electronico desde el exterior: cubren la misma necesidad con otra solucion y limitan el precio que la empresa puede cobrar. La estrategia no puede ser bajar el precio hasta igualarlos, porque esa carrera la gana el importador; hay que ofrecer algo que el sustituto no da: calidad verificable, ajuste y arreglos, disenos propios, entrega rapida y cercania.",
+      "retroalimentacion": "Contra un sustituto mas barato no se compite por precio: se compite por lo que el sustituto no puede dar."
+    },
+    {
+      "numero": 6,
+      "titulo": "Fuerza 5 - Rivalidad entre competidores",
+      "situacion": "La rivalidad aumenta cuando hay muchos competidores, poca diferenciacion, guerra de precios o crecimiento lento del mercado. Evaluala.",
+      "instrucciones": "Indica el nivel y describe quienes son los principales competidores y en que compiten.",
+      "tipo_respuesta": "OPCION_UNICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "opciones": [
+        {
+          "texto": "Alta: muchos talleres locales con productos parecidos compitiendo por precio",
+          "descripcion": "Poca diferenciacion y guerra de precios.",
+          "puntaje": 100,
+          "retroalimentacion": "Correcto: es la situacion del textil de Ambato y Pelileo."
+        },
+        {
+          "texto": "Media: hay competencia pero cada uno tiene su nicho",
+          "descripcion": "Rivalidad moderada.",
+          "puntaje": 50,
+          "retroalimentacion": "Seria asi si los productos estuvieran diferenciados, pero en el caso son similares."
+        },
+        {
+          "texto": "Baja: la empresa practicamente no tiene competencia",
+          "descripcion": "Sector tranquilo.",
+          "puntaje": 5,
+          "retroalimentacion": "La evidencia del sector dice lo contrario."
+        },
+        {
+          "texto": "Depende solo del tamano de la empresa",
+          "descripcion": "Se reduce a un factor.",
+          "puntaje": 10,
+          "retroalimentacion": "La rivalidad depende del numero de competidores, la diferenciacion y el crecimiento del mercado, no solo del tamano."
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Identifica en que compiten",
+          "palabras_clave": "precio, calidad, diseno, plazo de entrega, atencion",
+          "peso": 50,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta decir en que compiten realmente los rivales."
+        },
+        {
+          "nombre": "Deduce la presion sobre el margen",
+          "palabras_clave": "guerra de precios, margen, rentabilidad, erosiona",
+          "peso": 50,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta el efecto de la rivalidad sobre la rentabilidad."
+        }
+      ],
+      "respuesta_modelo": "Rivalidad alta. Los principales competidores son talleres y fabricas textiles de la zona con productos muy parecidos, que compiten sobre todo por precio y plazo de entrega, y en menor medida por diseno. Como los productos estan poco diferenciados y el mercado crece lento, la competencia deriva en guerra de precios y erosiona el margen de todos. Esta es la fuerza que mas empuja a Textil Andina a diferenciarse.",
+      "retroalimentacion": "Con rivalidad alta y poca diferenciacion, el sector entero pierde rentabilidad. Salir de ahi es el objetivo."
+    },
+    {
+      "numero": 7,
+      "titulo": "Cadena de valor y estrategia generica",
+      "situacion": "Con las cinco fuerzas diagnosticadas, identifica donde se genera valor y elige como competir.",
+      "instrucciones": "Recorre logistica interna, operaciones, marketing y ventas, servicio posventa y apoyo (tecnologia y talento humano). Despues elige entre liderazgo en costos, diferenciacion o enfoque, y justifica.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Actividades a revisar",
+            "columnas": [
+              "Actividad",
+              "Situacion actual",
+              "Mejora propuesta"
+            ],
+            "filas": [
+              [
+                "Logistica interna",
+                "...",
+                "..."
+              ],
+              [
+                "Operaciones",
+                "...",
+                "..."
+              ],
+              [
+                "Marketing y ventas",
+                "...",
+                "..."
+              ],
+              [
+                "Servicio posventa",
+                "...",
+                "..."
+              ],
+              [
+                "Apoyo: tecnologia / talento humano",
+                "...",
+                "..."
+              ]
+            ]
+          }
+        ],
+        "nota": "Liderazgo en costos busca operar con menor costo; diferenciacion busca atributos unicos; enfoque atiende un segmento especifico."
+      },
+      "conceptos": [
+        {
+          "nombre": "Recorre la cadena de valor",
+          "palabras_clave": "logistica, operaciones, marketing, posventa, talento humano",
+          "peso": 40,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta recorrer las actividades de la cadena de valor."
+        },
+        {
+          "nombre": "Elige y justifica la estrategia",
+          "palabras_clave": "diferenciacion, enfoque, liderazgo en costos, porque, coherente",
+          "peso": 35,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta elegir la estrategia generica y justificarla."
+        },
+        {
+          "nombre": "Coherencia con las fuerzas",
+          "palabras_clave": "rivalidad alta, sustitutos, poder del cliente, responde a",
+          "peso": 25,
+          "si_cumple": "Muy bien: la estrategia responde al diagnostico.",
+          "si_falta": "La estrategia elegida no se conecta con las fuerzas diagnosticadas."
+        }
+      ],
+      "respuesta_modelo": "Cadena de valor: en logistica interna, controlar inventarios y negociar con proveedores; en operaciones, estandarizar la confeccion y reducir desperdicios; en marketing y ventas, comunicar el valor diferencial en vez de anunciar precio; en servicio posventa, ofrecer ajustes y garantia; en apoyo, capacitar al personal y usar tecnologia simple de control de pedidos. Estrategia generica: diferenciacion. Se descarta el liderazgo en costos porque la ropa importada siempre sera mas barata y esa carrera la pierde el productor local; se elige diferenciacion por diseno, calidad y atencion, complementada con optimizacion de costos operativos para proteger el margen sin trasladarlo al precio.",
+      "retroalimentacion": "Optimizar costos no es lo mismo que competir por precio: lo primero protege el margen, lo segundo lo regala."
+    },
+    {
+      "numero": 8,
+      "titulo": "Plan de accion y evaluacion competitiva",
+      "situacion": "Traduce la estrategia en un plan y define como se va a medir.",
+      "instrucciones": "Al menos dos lineas de accion con responsable, tiempo e indicador, y dos indicadores de control con meta y accion correctiva.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Referencia del modelo docente",
+            "columnas": [
+              "Estrategia",
+              "Acciones",
+              "Responsable",
+              "Tiempo",
+              "Indicador"
+            ],
+            "filas": [
+              [
+                "Diferenciacion del producto/servicio",
+                "Mejorar diseno, calidad, atencion y comunicacion del valor diferencial",
+                "Gerencia / Marketing",
+                "3 meses",
+                "Satisfaccion y recompra"
+              ],
+              [
+                "Optimizacion de costos",
+                "Revisar proveedores, inventarios, procesos y tiempos de entrega",
+                "Operaciones",
+                "4 meses",
+                "Reduccion de costos operativos"
+              ]
+            ]
+          },
+          {
+            "titulo": "Control competitivo",
+            "columnas": [
+              "Indicador",
+              "Meta",
+              "Resultado esperado",
+              "Accion correctiva"
+            ],
+            "filas": [
+              [
+                "Participacion de mercado",
+                "Incrementar 10% en seis meses",
+                "Mayor posicionamiento competitivo",
+                "Ajustar precios, promocion y propuesta de valor"
+              ],
+              [
+                "Satisfaccion del cliente",
+                "Alcanzar 85%",
+                "Mayor fidelizacion",
+                "Mejorar atencion, calidad y tiempos de respuesta"
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "Acciones con responsable y plazo",
+          "palabras_clave": "responsable, gerencia, operaciones, meses, plazo",
+          "peso": 35,
+          "si_cumple": "Bien.",
+          "si_falta": "Faltan responsable y plazo."
+        },
+        {
+          "nombre": "Indicadores con meta",
+          "palabras_clave": "participacion de mercado, satisfaccion, 85%, 10%, meta",
+          "peso": 35,
+          "si_cumple": "Correcto.",
+          "si_falta": "Faltan indicadores con meta."
+        },
+        {
+          "nombre": "Accion correctiva",
+          "palabras_clave": "si no se cumple, ajustar, mejorar, correctiva, revisar",
+          "peso": 30,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta que hacer si la meta no se cumple."
+        }
+      ],
+      "respuesta_modelo": "Plan de accion. Linea 1, diferenciacion del producto y servicio: mejorar diseno, calidad, atencion y comunicacion del valor diferencial. Responsable: gerencia y marketing. Tiempo: 3 meses. Indicador: satisfaccion y recompra. Linea 2, optimizacion de costos: revisar proveedores, inventarios, procesos y tiempos de entrega. Responsable: operaciones. Tiempo: 4 meses. Indicador: reduccion de costos operativos. Evaluacion competitiva: participacion de mercado, meta incrementar 10% en seis meses, resultado esperado mayor posicionamiento, accion correctiva ajustar precios, promocion y propuesta de valor. Satisfaccion del cliente, meta 85%, resultado esperado mayor fidelizacion, accion correctiva mejorar atencion, calidad y tiempos de respuesta.",
+      "retroalimentacion": "La ventaja competitiva debe medirse; de lo contrario la estrategia queda solo como intencion."
+    }
+  ],
+  "juegos": [
+    {
+      "motor": "clasificar",
+      "titulo": "Competidor o sustituto?",
+      "instrucciones": "Clasifica cada opcion segun si compite en la misma industria o si es un sustituto que cubre la misma necesidad desde otro lado.",
+      "exigir_antes_del_caso": true,
+      "publicada": true,
+      "configuracion": {
+        "categorias": [
+          {
+            "nombre": "Competidor directo"
+          },
+          {
+            "nombre": "Producto sustituto"
+          }
+        ],
+        "elementos": [
+          {
+            "texto": "Otro taller textil de Pelileo",
+            "categoria": 1
+          },
+          {
+            "texto": "Fabrica de confecciones de Ambato",
+            "categoria": 1
+          },
+          {
+            "texto": "Marca local de ropa deportiva",
+            "categoria": 1
+          },
+          {
+            "texto": "Ropa importada de bajo costo",
+            "categoria": 2
+          },
+          {
+            "texto": "Ropa de segunda mano",
+            "categoria": 2
+          },
+          {
+            "texto": "Compra directa por comercio electronico del exterior",
+            "categoria": 2
+          }
+        ]
+      }
+    }
+  ]
+}

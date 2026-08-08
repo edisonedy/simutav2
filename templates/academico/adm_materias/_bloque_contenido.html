@@ -1,0 +1,67 @@
+{% comment %}
+El contenido de un tema (o el general de la materia), con la MISMA division que
+ve el estudiante: jugar para aprender, practicar para decidir.
+
+Solo se dibuja lo que existe. Antes se pintaban las dos columnas siempre, asi
+que un tema con dos juegos cargados decia "Sin actividades de refuerzo" y
+parecia vacio. Los botones de "+" viven en la barra de arriba, no dentro de
+listas vacias.
+
+Espera en el contexto: `bloque`, `materia_malla` y `tema_pk` ('' si es general).
+{% endcomment %}
+
+{% if bloque.vacio %}
+    <div class="text-muted small p-3">
+        Todavia no hay contenido aqui. Usa los botones de arriba para agregarlo.
+    </div>
+{% else %}
+<div class="row g-3 p-3">
+    {% if bloque.juegos %}
+    <div class="col-lg-4">
+        <h3 class="h6">&#127918; Juegos</h3>
+        <div class="text-muted small mb-2">Aprender y reforzar.</div>
+        {% for juego in bloque.juegos %}
+        <div class="decision-item mb-2">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="min-w-0">
+                    <div class="fw-semibold">{{ juego.titulo }}</div>
+                    <div class="small text-muted">{{ juego.motor_nombre }}</div>
+                    <div class="mt-1">
+                        {% if juego.publicada %}
+                            <span class="chip chip-basica">Publicado</span>
+                        {% else %}
+                            <span class="chip chip-soft">Borrador</span>
+                        {% endif %}
+                        {% if juego.obligatoria and juego.simulacion_id %}
+                            <span class="chip chip-avanzada" title="{{ juego.simulacion.titulo }}">Candado del caso</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="text-nowrap">
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'interactivo:editar' juego.pk %}">Editar</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'interactivo:estadisticas' juego.pk %}">Resultados</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if bloque.refuerzo %}
+    <div class="col-lg-4">
+        <h3 class="h6">Practicar y reforzar</h3>
+        <div class="text-muted small mb-2">Material de apoyo.</div>
+        {% for actividad in bloque.refuerzo %}{% include "academico/adm_materias/_actividad.html" %}{% endfor %}
+    </div>
+    {% endif %}
+
+    {% if bloque.evaluacion or bloque.simulaciones %}
+    <div class="col-lg-4">
+        <h3 class="h6">&#129514; Evaluar y aplicar</h3>
+        <div class="text-muted small mb-2">Casos y trabajos evaluables.</div>
+        {% for simulacion in bloque.simulaciones %}{% include "academico/adm_materias/_simulacion.html" %}{% endfor %}
+        {% for actividad in bloque.evaluacion %}{% include "academico/adm_materias/_actividad.html" %}{% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}

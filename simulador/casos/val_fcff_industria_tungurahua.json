@@ -1,0 +1,603 @@
+{
+  "materia": {
+    "codigo": "AE-07-03",
+    "nombre": "Valoracion de Empresas",
+    "malla_codigo": "ADM-UTA-2026",
+    "carrera_codigo": "ADM-EMP",
+    "carrera": "Administracion de Empresas",
+    "malla": "Malla Administracion de Empresas UTA 2026",
+    "nivel": 7
+  },
+  "tema": "Unidad 4.1 - Flujos de caja libres",
+  "caso": {
+    "titulo": "Flujo de Caja Libre de la Empresa (FCFF) - Industria Tungurahua S.A.",
+    "modo": "CASO_INDEPENDIENTE",
+    "tema": "FCFF paso a paso",
+    "dificultad": "MEDIA",
+    "tiempo_estimado": 45,
+    "rol_estudiante": "Analista financiero del equipo que evalua la empresa",
+    "contexto": "Industria Tungurahua S.A. fabrica mobiliario metalico. Un grupo de inversionistas quiere saber cuanto efectivo genera realmente la empresa, mas alla de su utilidad contable. Contabilidad, Tributacion, Activos Fijos y Finanzas ya entregaron sus informes; con ellos hay que construir el FCFF.",
+    "objetivo": "Construir el Flujo de Caja Libre de la Empresa justificando el origen de cada dato y explicando su efecto sobre el efectivo disponible.",
+    "resultado_aprendizaje": "Calcula e interpreta el FCFF a partir de los estados financieros de una empresa real.",
+    "situacion_inicial": "Tienes sobre la mesa el Estado de Resultados 2025, el informe tributario, el memorando de activos fijos y el informe de capital de trabajo. Cada ronda resuelve un paso del calculo.",
+    "guia_debriefing": "Cerrar comparando FCFF y utilidad neta: por que el efectivo disponible no es la utilidad, y que decision cambia si el CAPEX fuera de mantenimiento en vez de crecimiento.",
+    "retroalimentacion_base": "El FCFF de Industria Tungurahua S.A. es USD 543.750. Es positivo: la empresa cubre impuestos operativos, inversiones y capital de trabajo, y todavia deja efectivo para acreedores y accionistas.",
+    "sin_ia": true
+  },
+  "archivos": [
+    {
+      "tipo": "EXCEL",
+      "nombre": "Workbook FCFF para el estudiante",
+      "ruta": "adjuntos/fcff_estudiante.xlsx",
+      "descripcion": "Hoja de trabajo con los ocho pasos del FCFF. Se descarga, se completa y se compara con lo resuelto en el simulador."
+    }
+  ],
+  "criterios": [
+    {
+      "nombre": "Identificacion de partidas",
+      "peso": 25,
+      "descripcion": "Reconoce que entra y que no entra en cada componente del FCFF."
+    },
+    {
+      "nombre": "Exactitud del calculo",
+      "peso": 40,
+      "descripcion": "Los valores calculados coinciden con el resultado tecnico."
+    },
+    {
+      "nombre": "Justificacion tecnica",
+      "peso": 20,
+      "descripcion": "Explica el porque de cada ajuste, no solo el resultado."
+    },
+    {
+      "nombre": "Interpretacion financiera",
+      "peso": 15,
+      "descripcion": "Lee el resultado en clave de decision, no como un numero suelto."
+    }
+  ],
+  "rondas": [
+    {
+      "numero": 1,
+      "titulo": "Paso 1 y 2 - Obtener el EBIT",
+      "situacion": "El Estado de Resultados 2025 esta sobre la mesa. Para el FCFF se necesita el EBIT: la utilidad operativa antes de intereses e impuestos. Identificalo.",
+      "instrucciones": "Suma ventas y resta los costos y gastos operativos. Ojo: las depreciaciones y amortizaciones SI son gastos operativos y entran en el EBIT; los intereses y el impuesto a la renta NO.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "EBIT = Ventas netas - Costo de ventas - Gastos administrativos - Gastos de ventas - Depreciaciones - Amortizaciones",
+        "tablas": [
+          {
+            "titulo": "Estado de Resultados 2025 (USD)",
+            "columnas": [
+              "Concepto",
+              "Valor",
+              "Forma parte del EBIT"
+            ],
+            "filas": [
+              [
+                "Ventas netas",
+                "5.800.000",
+                "Si"
+              ],
+              [
+                "(-) Costo de ventas",
+                "-3.620.000",
+                "Si"
+              ],
+              [
+                "(-) Gastos administrativos",
+                "-420.000",
+                "Si"
+              ],
+              [
+                "(-) Gastos de ventas",
+                "-310.000",
+                "Si"
+              ],
+              [
+                "(-) Depreciaciones",
+                "-180.000",
+                "Si"
+              ],
+              [
+                "(-) Amortizaciones",
+                "-45.000",
+                "Si"
+              ],
+              [
+                "(-) Gastos financieros (intereses)",
+                "-150.000",
+                "No"
+              ],
+              [
+                "(-) Impuesto a la renta",
+                "-258.750",
+                "No"
+              ]
+            ]
+          }
+        ],
+        "nota": "El EBIT excluye decisiones de financiamiento. Por eso se calcula antes de intereses."
+      },
+      "campos": [
+        {
+          "clave": "ebit",
+          "etiqueta": "EBIT 2025",
+          "tipo": "numero",
+          "objetivo": 1225000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Excluye el financiamiento",
+          "palabras_clave": "intereses, financiamiento, antes de intereses, gastos financieros",
+          "peso": 50,
+          "si_cumple": "Correcto: el EBIT se mide antes de decidir como se financia la empresa.",
+          "si_falta": "Falto decir por que los intereses quedan fuera del EBIT."
+        },
+        {
+          "nombre": "Incluye depreciaciones",
+          "palabras_clave": "depreciacion, amortizacion, gasto operativo",
+          "peso": 50,
+          "si_cumple": "Bien: son gastos operativos, aunque despues se vuelvan a sumar.",
+          "si_falta": "No explicaste que las depreciaciones si forman parte del EBIT."
+        }
+      ],
+      "respuesta_modelo": "EBIT = 5.800.000 - 3.620.000 - 420.000 - 310.000 - 180.000 - 45.000 = USD 1.225.000. No se restan los intereses (150.000) ni el impuesto a la renta (258.750) porque el EBIT mide el resultado de la operacion, antes de como se financia la empresa y antes de tributar.",
+      "retroalimentacion": "El EBIT es el punto de partida del FCFF precisamente porque no depende de la estructura de deuda."
+    },
+    {
+      "numero": 2,
+      "titulo": "Paso 3 - Aplicar impuestos y obtener el NOPAT",
+      "situacion": "El informe tributario fija la tasa efectiva del impuesto en 25%. Calcula el impuesto operativo y el NOPAT.",
+      "instrucciones": "El impuesto se aplica sobre el EBIT, no sobre la utilidad neta: el FCFF elimina el efecto del financiamiento, asi que se grava la operacion completa.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "NOPAT = EBIT x (1 - T)",
+        "tablas": [
+          {
+            "titulo": "Informe tributario",
+            "columnas": [
+              "Concepto",
+              "Dato",
+              "Fuente"
+            ],
+            "filas": [
+              [
+                "EBIT",
+                "1.225.000",
+                "Estado de Resultados"
+              ],
+              [
+                "Tasa efectiva del impuesto (T)",
+                "25%",
+                "Informe Tributario"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "impuesto_operativo",
+          "etiqueta": "Impuesto operativo",
+          "tipo": "numero",
+          "objetivo": 306250,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        },
+        {
+          "clave": "nopat",
+          "etiqueta": "NOPAT",
+          "tipo": "numero",
+          "objetivo": 918750,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Grava la operacion, no la utilidad neta",
+          "palabras_clave": "sobre el ebit, no sobre la utilidad neta, operacion, escudo fiscal",
+          "peso": 100,
+          "si_cumple": "Exacto: el FCFF no reconoce el escudo fiscal de la deuda en este punto.",
+          "si_falta": "Explica por que la tasa se aplica sobre el EBIT y no sobre la utilidad neta."
+        }
+      ],
+      "respuesta_modelo": "Impuesto operativo = 1.225.000 x 0,25 = USD 306.250. NOPAT = 1.225.000 x (1 - 0,25) = USD 918.750. Se aplica sobre el EBIT porque el FCFF mide el efectivo de la operacion antes de repartirlo entre acreedores y accionistas.",
+      "retroalimentacion": "El NOPAT es la utilidad operativa despues de impuestos: lo que la operacion deja, sin contar como se financio."
+    },
+    {
+      "numero": 3,
+      "titulo": "Paso 4 - Devolver lo que no salio de caja",
+      "situacion": "El informe contable lista varias partidas. Solo algunas se vuelven a sumar al FCFF. Determina el total.",
+      "instrucciones": "Se devuelven las partidas que redujeron la utilidad pero NO representaron salida de efectivo. Los gastos que si se pagaron no se devuelven.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "Ajuste sin salida de efectivo = Depreciaciones + Amortizaciones",
+        "tablas": [
+          {
+            "titulo": "Informe contable",
+            "columnas": [
+              "Partida",
+              "Valor USD",
+              "Se suma nuevamente"
+            ],
+            "filas": [
+              [
+                "Depreciacion de maquinaria",
+                "120.000",
+                "Si"
+              ],
+              [
+                "Depreciacion de edificios",
+                "60.000",
+                "Si"
+              ],
+              [
+                "Amortizacion de software",
+                "45.000",
+                "Si"
+              ],
+              [
+                "Gasto de energia electrica",
+                "95.000",
+                "No"
+              ],
+              [
+                "Sueldos administrativos",
+                "210.000",
+                "No"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "depreciaciones",
+          "etiqueta": "Depreciaciones totales",
+          "tipo": "numero",
+          "objetivo": 180000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        },
+        {
+          "clave": "amortizaciones",
+          "etiqueta": "Amortizaciones totales",
+          "tipo": "numero",
+          "objetivo": 45000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        },
+        {
+          "clave": "ajuste_total",
+          "etiqueta": "Total que vuelve a sumarse",
+          "tipo": "numero",
+          "objetivo": 225000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Distingue gasto contable de salida de caja",
+          "palabras_clave": "no representa salida de efectivo, gasto contable, no es desembolso, no salio dinero",
+          "peso": 100,
+          "si_cumple": "Correcto: energia y sueldos si se pagaron, por eso no se devuelven.",
+          "si_falta": "Falta el criterio: se devuelve lo que redujo la utilidad sin salir de caja."
+        }
+      ],
+      "respuesta_modelo": "Depreciaciones = 120.000 + 60.000 = USD 180.000. Amortizaciones = USD 45.000. Total que vuelve a sumarse = USD 225.000. La energia electrica y los sueldos administrativos si fueron salidas reales de efectivo, por eso no se devuelven.",
+      "retroalimentacion": "Se devuelven porque el FCFF sigue el efectivo, no la utilidad contable."
+    },
+    {
+      "numero": 4,
+      "titulo": "Paso 5 - Determinar el CAPEX",
+      "situacion": "El departamento de Activos Fijos envio el memorando de inversiones del ejercicio. Determina el CAPEX total.",
+      "instrucciones": "El CAPEX son inversiones en activos de largo plazo destinadas a mantener o ampliar la capacidad operativa. Los gastos operativos no son CAPEX.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "CAPEX = Suma de inversiones en activos de largo plazo",
+        "tablas": [
+          {
+            "titulo": "Memorando de Activos Fijos",
+            "columnas": [
+              "Proyecto",
+              "Justificacion financiera",
+              "Valor USD"
+            ],
+            "filas": [
+              [
+                "Linea automatizada de produccion",
+                "Incrementar capacidad y reducir tiempos",
+                "280.000"
+              ],
+              [
+                "Modernizacion de maquinaria CNC",
+                "Mejorar precision y reducir desperdicios",
+                "150.000"
+              ],
+              [
+                "Software ERP de produccion",
+                "Integrar produccion, inventarios y calidad",
+                "90.000"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "capex",
+          "etiqueta": "CAPEX total",
+          "tipo": "numero",
+          "objetivo": 520000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "El CAPEX es salida real de efectivo",
+          "palabras_clave": "salida real de efectivo, desembolso, inversion, resta",
+          "peso": 50,
+          "si_cumple": "Bien: por eso se resta del FCFF.",
+          "si_falta": "Explica por que el CAPEX se resta del FCFF."
+        },
+        {
+          "nombre": "Un CAPEX alto puede ser buena noticia",
+          "palabras_clave": "crecimiento, capacidad futura, flujos futuros, expansion",
+          "peso": 50,
+          "si_cumple": "Correcto: si es inversion de crecimiento, comprime el FCFF de hoy para agrandar el de manana.",
+          "si_falta": "Falta matizar: un CAPEX alto no es automaticamente malo."
+        }
+      ],
+      "respuesta_modelo": "CAPEX = 280.000 + 150.000 + 90.000 = USD 520.000. Se resta porque es una salida real de efectivo. Un CAPEX alto puede ser positivo cuando genera capacidad y flujos futuros; es distinto de un CAPEX de simple mantenimiento.",
+      "retroalimentacion": "El ERP tambien es CAPEX: es un activo intangible de largo plazo, no un gasto del periodo."
+    },
+    {
+      "numero": 5,
+      "titulo": "Paso 6 - Variacion del capital de trabajo",
+      "situacion": "El informe de capital de trabajo compara 2024 y 2025. Calcula cuanto efectivo consumio (o libero) la operacion diaria.",
+      "instrucciones": "Cuentas por cobrar e inventarios que suben consumen efectivo. Proveedores que suben lo liberan. Si el resultado es positivo, se resta del FCFF.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "Delta CT = Delta Cuentas por cobrar + Delta Inventarios - Delta Proveedores",
+        "tablas": [
+          {
+            "titulo": "Informe de Capital de Trabajo (USD)",
+            "columnas": [
+              "Cuenta operativa",
+              "2024",
+              "2025"
+            ],
+            "filas": [
+              [
+                "Cuentas por cobrar",
+                "480.000",
+                "520.000"
+              ],
+              [
+                "Inventarios",
+                "710.000",
+                "780.000"
+              ],
+              [
+                "Proveedores",
+                "490.000",
+                "520.000"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "d_cxc",
+          "etiqueta": "Variacion de cuentas por cobrar",
+          "tipo": "numero",
+          "objetivo": 40000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        },
+        {
+          "clave": "d_inv",
+          "etiqueta": "Variacion de inventarios",
+          "tipo": "numero",
+          "objetivo": 70000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        },
+        {
+          "clave": "d_prov",
+          "etiqueta": "Variacion de proveedores",
+          "tipo": "numero",
+          "objetivo": 30000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        },
+        {
+          "clave": "d_ct",
+          "etiqueta": "Variacion del capital de trabajo",
+          "tipo": "numero",
+          "objetivo": 80000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Consume o libera efectivo",
+          "palabras_clave": "consume efectivo, positivo, se resta, inmoviliza",
+          "peso": 100,
+          "si_cumple": "Correcto: la variacion es positiva, asi que consume efectivo y se resta.",
+          "si_falta": "Falta decir si la variacion consume o libera efectivo, y por que."
+        }
+      ],
+      "respuesta_modelo": "Delta CxC = 520.000 - 480.000 = 40.000. Delta Inventarios = 780.000 - 710.000 = 70.000. Delta Proveedores = 520.000 - 490.000 = 30.000. Delta CT = 40.000 + 70.000 - 30.000 = USD 80.000. Es positivo, o sea que la operacion inmovilizo efectivo, y por eso se resta del FCFF. Si bajaran las cuentas por cobrar se liberaria efectivo y el FCFF subiria.",
+      "retroalimentacion": "Vender mas a credito no siempre mejora la caja: primero la consume."
+    },
+    {
+      "numero": 6,
+      "titulo": "Paso 7 - Construir el FCFF",
+      "situacion": "Ya tienes las cinco piezas. Arma el Flujo de Caja Libre de la Empresa.",
+      "instrucciones": "Cada componente entra con su signo. Escribe la operacion completa, no solo el resultado.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "FCFF = NOPAT + Depreciaciones + Amortizaciones - CAPEX - Delta Capital de Trabajo",
+        "tablas": [
+          {
+            "titulo": "Rompecabezas financiero",
+            "columnas": [
+              "Orden",
+              "Componente",
+              "Signo",
+              "Valor USD"
+            ],
+            "filas": [
+              [
+                "1",
+                "NOPAT",
+                "+",
+                "918.750"
+              ],
+              [
+                "2",
+                "Depreciaciones",
+                "+",
+                "180.000"
+              ],
+              [
+                "3",
+                "Amortizaciones",
+                "+",
+                "45.000"
+              ],
+              [
+                "4",
+                "CAPEX",
+                "-",
+                "520.000"
+              ],
+              [
+                "5",
+                "Delta Capital de Trabajo",
+                "-",
+                "80.000"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "fcff",
+          "etiqueta": "FCFF 2025",
+          "tipo": "numero",
+          "objetivo": 543750,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Operacion completa",
+          "palabras_clave": "nopat, depreciaciones, amortizaciones, capex, capital de trabajo",
+          "peso": 100,
+          "si_cumple": "Bien: se ve la operacion, no solo el numero.",
+          "si_falta": "Escribe la operacion con todos sus componentes."
+        }
+      ],
+      "respuesta_modelo": "FCFF = 918.750 + 180.000 + 45.000 - 520.000 - 80.000 = USD 543.750.",
+      "retroalimentacion": "543.750 es el efectivo que queda disponible para acreedores y accionistas."
+    },
+    {
+      "numero": 7,
+      "titulo": "Paso 8 - Interpretar el resultado",
+      "situacion": "El FCFF de Industria Tungurahua S.A. es USD 543.750. Un inversionista te pregunta que significa. Responde como analista, no como calculadora.",
+      "instrucciones": "Responde tres cosas: que significa que sea positivo, que pasaria si el CAPEX subiera y por que el FCFF puede ser mas util que la utilidad neta.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Resultado del caso",
+            "columnas": [
+              "Concepto",
+              "USD",
+              "Lectura financiera"
+            ],
+            "filas": [
+              [
+                "NOPAT",
+                "918.750",
+                "Utilidad operativa despues de impuestos"
+              ],
+              [
+                "CAPEX",
+                "520.000",
+                "Inversion ejecutada para modernizar la empresa"
+              ],
+              [
+                "FCFF",
+                "543.750",
+                "Efectivo disponible para acreedores y accionistas"
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "Lee el signo del flujo",
+          "palabras_clave": "positivo, genera efectivo, cubre inversiones, sostenible",
+          "peso": 35,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta decir que implica un FCFF positivo."
+        },
+        {
+          "nombre": "Sensibilidad al CAPEX",
+          "palabras_clave": "capex, reduce el flujo, inversion, crecimiento, mantenimiento",
+          "peso": 35,
+          "si_cumple": "Bien: distingue inversion de crecimiento de la de mantenimiento.",
+          "si_falta": "No analizaste el efecto de un CAPEX mayor."
+        },
+        {
+          "nombre": "FCFF frente a utilidad neta",
+          "palabras_clave": "utilidad neta, efectivo real, devengado, caja",
+          "peso": 30,
+          "si_cumple": "Exacto: la utilidad se devenga, el flujo se cobra.",
+          "si_falta": "Falta comparar el FCFF con la utilidad neta."
+        }
+      ],
+      "respuesta_modelo": "Un FCFF positivo de USD 543.750 significa que la empresa genera efectivo despues de cubrir impuestos operativos, inversiones y necesidades de capital de trabajo: puede pagar deuda, repartir dividendos o reinvertir sin pedir financiamiento nuevo. Si el CAPEX subiera, el FCFF bajaria en la misma cuantia; eso no es necesariamente malo si la inversion es de crecimiento y va a generar flujos futuros, pero si es de puro mantenimiento significa que la operacion necesita mucho capital para sostenerse. El FCFF es mas util que la utilidad neta porque la utilidad se devenga y puede quedarse en cuentas por cobrar, mientras el flujo mide el efectivo que realmente esta disponible.",
+      "retroalimentacion": "Un buen analista lee el FCFF junto con el tipo de CAPEX que lo produjo."
+    }
+  ]
+}

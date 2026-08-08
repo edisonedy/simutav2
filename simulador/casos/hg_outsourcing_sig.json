@@ -1,0 +1,374 @@
+{
+  "materia": {
+    "codigo": "AE-06-05",
+    "nombre": "Habilidades Gerenciales",
+    "malla_codigo": "ADM-UTA-2026",
+    "carrera_codigo": "ADM-EMP",
+    "carrera": "Administracion de Empresas",
+    "malla": "Malla Administracion de Empresas UTA 2026",
+    "nivel": 6
+  },
+  "tema": "Modelo 5 - Outsourcing",
+  "caso": {
+    "titulo": "Misiones de Outsourcing estrategico - Textiles Ambato S.A.",
+    "modo": "CASO_INDEPENDIENTE",
+    "tema": "Outsourcing por misiones",
+    "dificultad": "BASICA",
+    "tiempo_estimado": 25,
+    "rol_estudiante": "Asesor que debe completar cinco misiones gerenciales",
+    "contexto": "Textiles Ambato S.A. quiere decidir si aplica Outsourcing en su area tecnologica sin perder control, calidad ni confidencialidad. Cada mision resuelve una parte de la decision: clasificar procesos, evaluar el costo-beneficio, medir riesgos, elegir proveedor y armar el contrato.",
+    "objetivo": "Construir una propuesta completa de Outsourcing y compararla con el modelo del docente.",
+    "resultado_aprendizaje": "Aplica planeacion, toma de decisiones, negociacion y control en una decision de externalizacion.",
+    "situacion_inicial": "Cinco misiones. Cada una deja una pieza de la propuesta final.",
+    "guia_debriefing": "El enfoque es de habilidades gerenciales: planeacion, comunicacion, toma de decisiones, trabajo en equipo y control. Preguntar cual de esas cinco habilidades pesa mas en cada mision.",
+    "retroalimentacion_base": "La propuesta cierra en: externalizar soporte y mantenimiento, ahorro de USD 60.000 (33,3%), proveedor con mejor equilibrio integral, contrato con SLA y confidencialidad, e implementacion gradual.",
+    "sin_ia": true
+  },
+  "criterios": [
+    {
+      "nombre": "Analisis",
+      "peso": 25,
+      "descripcion": "Separa core business de procesos de apoyo con criterio."
+    },
+    {
+      "nombre": "Decision",
+      "peso": 25,
+      "descripcion": "Decide con datos, no por intuicion."
+    },
+    {
+      "nombre": "Negociacion",
+      "peso": 25,
+      "descripcion": "Define lo que debe quedar por escrito con el proveedor."
+    },
+    {
+      "nombre": "Control",
+      "peso": 25,
+      "descripcion": "Propone como se va a supervisar el servicio."
+    }
+  ],
+  "rondas": [
+    {
+      "numero": 1,
+      "titulo": "Mision 1 - Clasificar procesos",
+      "situacion": "Antes de externalizar hay que saber que se puede soltar. Cual de estos procesos NO deberia externalizar Textiles Ambato S.A.?",
+      "instrucciones": "El core business se mantiene internamente; los procesos de apoyo pueden evaluarse para Outsourcing.",
+      "tipo_respuesta": "OPCION_UNICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Actividades de la empresa",
+            "columnas": [
+              "Actividad"
+            ],
+            "filas": [
+              [
+                "Diseno de prendas deportivas"
+              ],
+              [
+                "Soporte tecnico de computadoras"
+              ],
+              [
+                "Mantenimiento de servidores"
+              ],
+              [
+                "Limpieza institucional"
+              ]
+            ]
+          }
+        ]
+      },
+      "opciones": [
+        {
+          "texto": "Diseno de prendas deportivas",
+          "descripcion": "Define el producto que la empresa vende.",
+          "puntaje": 100,
+          "retroalimentacion": "Correcto: es core business. Entregarlo seria entregar la ventaja competitiva."
+        },
+        {
+          "texto": "Soporte tecnico de computadoras",
+          "descripcion": "Proceso de apoyo con alta especializacion.",
+          "puntaje": 0,
+          "retroalimentacion": "Este si es externalizable: es apoyo, no actividad central."
+        },
+        {
+          "texto": "Mantenimiento de servidores",
+          "descripcion": "Proceso de apoyo tecnico.",
+          "puntaje": 0,
+          "retroalimentacion": "Este si es externalizable."
+        },
+        {
+          "texto": "Limpieza institucional",
+          "descripcion": "Servicio general.",
+          "puntaje": 0,
+          "retroalimentacion": "Este es el ejemplo clasico de proceso externalizable."
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Criterio de clasificacion",
+          "palabras_clave": "core business, ventaja competitiva, actividad central, apoyo",
+          "peso": 100,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta el criterio con el que separaste una cosa de la otra."
+        }
+      ],
+      "respuesta_modelo": "No debe externalizarse el diseno de prendas deportivas, porque es el core business: define el producto y sostiene la ventaja competitiva. Soporte tecnico, mantenimiento de servidores y limpieza son procesos de apoyo, necesarios para operar pero no distintivos.",
+      "retroalimentacion": "Regla practica: si al delegarlo la empresa deja de ser lo que es, no se delega."
+    },
+    {
+      "numero": 2,
+      "titulo": "Mision 2 - Decision costo-beneficio",
+      "situacion": "El departamento interno cuesta USD 180.000 al ano. El proveedor pide USD 120.000. Calcula el ahorro y el porcentaje.",
+      "instrucciones": "El porcentaje se calcula sobre el costo interno.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "Ahorro = Costo interno - Costo proveedor. Porcentaje = Ahorro / Costo interno x 100",
+        "tablas": [
+          {
+            "titulo": "Comparacion de alternativas",
+            "columnas": [
+              "Alternativa",
+              "Costo anual USD"
+            ],
+            "filas": [
+              [
+                "Mantener el departamento interno de TI",
+                "180.000"
+              ],
+              [
+                "Contratar proveedor especializado",
+                "120.000"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "ahorro",
+          "etiqueta": "Ahorro anual",
+          "tipo": "numero",
+          "objetivo": 60000,
+          "tolerancia": 1,
+          "unidad": "USD",
+          "obligatorio": true
+        },
+        {
+          "clave": "porcentaje",
+          "etiqueta": "Porcentaje de ahorro",
+          "tipo": "numero",
+          "objetivo": 33.3,
+          "tolerancia": 0.2,
+          "unidad": "%",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Condiciona la decision",
+          "palabras_clave": "evaluar proveedor, siempre que, calidad, seguridad",
+          "peso": 100,
+          "si_cumple": "Bien: el ahorro abre la puerta, no cierra la decision.",
+          "si_falta": "Falta condicionar la decision a algo mas que el ahorro."
+        }
+      ],
+      "respuesta_modelo": "Ahorro anual = USD 60.000. Porcentaje = 33,3%. La decision sugerida es evaluar al proveedor externo: el ahorro justifica seguir adelante, pero la decision final depende de que el servicio garantice calidad, seguridad y continuidad.",
+      "retroalimentacion": "Un 33% de ahorro es mucho, pero no es la decision: es el motivo para seguir analizando."
+    },
+    {
+      "numero": 3,
+      "titulo": "Mision 3 - Matriz de riesgos",
+      "situacion": "Externalizar trae riesgos. Identifica los tres principales y propon un control gerencial para cada uno.",
+      "instrucciones": "Cada riesgo con su control. Un riesgo sin control no sirve de nada en un informe.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Riesgos tipicos del Outsourcing",
+            "columnas": [
+              "Riesgo",
+              "Que puede pasar"
+            ],
+            "filas": [
+              [
+                "Dependencia del proveedor",
+                "La empresa pierde la capacidad de operar sola"
+              ],
+              [
+                "Confidencialidad",
+                "El proveedor accede a informacion sensible"
+              ],
+              [
+                "Incumplimiento de SLA",
+                "El servicio se degrada y no hay consecuencia"
+              ],
+              [
+                "Perdida de control",
+                "Nadie dentro sabe como funciona el sistema"
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "Riesgos identificados",
+          "palabras_clave": "dependencia, confidencialidad, sla, perdida de control, incumplimiento",
+          "peso": 50,
+          "si_cumple": "Bien.",
+          "si_falta": "Faltan los riesgos principales."
+        },
+        {
+          "nombre": "Cada riesgo con su control",
+          "palabras_clave": "contrato, clausulas, reportes, penalizaciones, contingencia, documentacion",
+          "peso": 50,
+          "si_cumple": "Correcto: asi se controla sin dejar de externalizar.",
+          "si_falta": "Falta el control de cada riesgo."
+        }
+      ],
+      "respuesta_modelo": "Dependencia del proveedor: se controla documentando los procesos, manteniendo la supervision dentro de la empresa y teniendo un plan de contingencia con un proveedor alterno. Confidencialidad: clausulas de seguridad y acuerdos de no divulgacion, con accesos limitados a lo estrictamente necesario. Incumplimiento de SLA: reportes mensuales medidos contra indicadores y penalizaciones contractuales. La perdida de control se evita conservando internamente la estrategia tecnologica.",
+      "retroalimentacion": "El control gerencial no desaparece al externalizar: cambia de forma."
+    },
+    {
+      "numero": 4,
+      "titulo": "Mision 4 - Seleccion del proveedor",
+      "situacion": "Tres proveedores, cinco criterios. Elige y justifica.",
+      "instrucciones": "Pondera experiencia, calidad, costo, seguridad y soporte. La mejor opcion es la que ofrece mayor equilibrio.",
+      "tipo_respuesta": "OPCION_UNICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Evaluacion de proveedores (1 a 5)",
+            "columnas": [
+              "Criterio",
+              "Proveedor A",
+              "Proveedor B",
+              "Proveedor C"
+            ],
+            "filas": [
+              [
+                "Experiencia",
+                "5",
+                "2",
+                "5"
+              ],
+              [
+                "Calidad",
+                "4",
+                "3",
+                "5"
+              ],
+              [
+                "Costo",
+                "4",
+                "5",
+                "2"
+              ],
+              [
+                "Seguridad",
+                "5",
+                "3",
+                "4"
+              ],
+              [
+                "Soporte",
+                "5",
+                "2",
+                "4"
+              ],
+              [
+                "Total",
+                "23",
+                "15",
+                "20"
+              ]
+            ]
+          }
+        ]
+      },
+      "opciones": [
+        {
+          "texto": "Proveedor A - mejor equilibrio integral",
+          "descripcion": "23 puntos: alto en experiencia, seguridad y soporte, costo razonable.",
+          "puntaje": 100,
+          "retroalimentacion": "Correcto: gana por equilibrio, que es lo que sostiene un contrato a largo plazo."
+        },
+        {
+          "texto": "Proveedor B - el mas barato",
+          "descripcion": "15 puntos: gana en costo y pierde en todo lo demas.",
+          "puntaje": 20,
+          "retroalimentacion": "El precio bajo no compensa soporte 2 y experiencia 2 en un servicio critico."
+        },
+        {
+          "texto": "Proveedor C - el mas tecnico",
+          "descripcion": "20 puntos: excelente calidad, costo alto.",
+          "puntaje": 60,
+          "retroalimentacion": "Buena opcion tecnica, pero el costo reduce el ahorro que motivo la decision."
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Justifica con la ponderacion",
+          "palabras_clave": "equilibrio, criterios, puntaje, no solo costo, seguridad, soporte",
+          "peso": 100,
+          "si_cumple": "Bien.",
+          "si_falta": "Justifica con los criterios, no solo con el nombre del proveedor."
+        }
+      ],
+      "respuesta_modelo": "Proveedor A, con 23 puntos. Gana porque combina experiencia, seguridad y soporte altos con un costo razonable. El Proveedor B es mas barato pero su soporte y experiencia bajos ponen en riesgo la continuidad; el Proveedor C es tecnicamente el mejor, pero su costo se come el ahorro que justificaba externalizar.",
+      "retroalimentacion": "En servicios criticos, el soporte pesa mas que el precio."
+    },
+    {
+      "numero": 5,
+      "titulo": "Mision 5 - Tu modelo propuesto",
+      "situacion": "Ultima mision. Arma la propuesta final completa y despues comparala con el modelo del docente.",
+      "instrucciones": "Cubre seis puntos: procesos a externalizar, tipo de Outsourcing, beneficios esperados, riesgos y controles, indicadores de seguimiento y decision final.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "nota": "Tipos de Outsourcing por ubicacion: onshore (proveedor nacional), nearshore (pais cercano) y offshore (pais lejano)."
+      },
+      "conceptos": [
+        {
+          "nombre": "Procesos y tipo",
+          "palabras_clave": "soporte tecnico, servidores, ciberseguridad, mesa de ayuda, onshore, tecnologico",
+          "peso": 25,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta definir que se externaliza y de que tipo."
+        },
+        {
+          "nombre": "Beneficios cuantificados",
+          "palabras_clave": "60.000, 33,3, ahorro, disponibilidad, actualizacion",
+          "peso": 25,
+          "si_cumple": "Correcto: con numeros.",
+          "si_falta": "Los beneficios estan sin cuantificar."
+        },
+        {
+          "nombre": "Riesgos y controles",
+          "palabras_clave": "dependencia, confidencialidad, sla, contrato, penalizaciones, contingencia",
+          "peso": 25,
+          "si_cumple": "Bien.",
+          "si_falta": "Faltan los riesgos con su control."
+        },
+        {
+          "nombre": "Indicadores y decision",
+          "palabras_clave": "tiempo de respuesta, disponibilidad, incidentes, satisfaccion, gradual",
+          "peso": 25,
+          "si_cumple": "Buen cierre.",
+          "si_falta": "Faltan los indicadores o la decision final."
+        }
+      ],
+      "respuesta_modelo": "Procesos a externalizar: soporte tecnico, mantenimiento de servidores, ciberseguridad y mesa de ayuda, porque son procesos de apoyo que requieren especializacion tecnologica. Tipo: Outsourcing tecnologico onshore, con proveedor nacional, para facilitar comunicacion, control y cumplimiento legal. Beneficios: ahorro aproximado de USD 60.000 anuales, una reduccion del 33,3%, mejor disponibilidad del sistema, soporte especializado y actualizacion tecnologica. Riesgos: dependencia, confidencialidad e incumplimiento de SLA; controles: contrato con clausulas de seguridad, reportes mensuales, penalizaciones y plan de contingencia. Indicadores: tiempo promedio de respuesta, disponibilidad del sistema, numero de incidentes resueltos, satisfaccion del usuario interno y cumplimiento del SLA. Decision final: implementar el Outsourcing de forma gradual, iniciando con soporte y mantenimiento, y manteniendo internamente la estrategia tecnologica y la supervision.",
+      "retroalimentacion": "Compara tu propuesta con la del docente: no tiene que ser identica, pero si cubrir los seis puntos."
+    }
+  ]
+}

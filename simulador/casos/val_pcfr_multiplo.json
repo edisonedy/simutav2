@@ -1,0 +1,446 @@
+{
+  "materia": {
+    "codigo": "AE-07-03",
+    "nombre": "Valoracion de Empresas",
+    "malla_codigo": "ADM-UTA-2026",
+    "carrera_codigo": "ADM-EMP",
+    "carrera": "Administracion de Empresas",
+    "malla": "Malla Administracion de Empresas UTA 2026",
+    "nivel": 7
+  },
+  "tema": "Unidad 4.2 - Valoracion de la accion",
+  "caso": {
+    "titulo": "Multiplo PCFR y precio implicito - Industria Tungurahua S.A.",
+    "modo": "CASO_INDEPENDIENTE",
+    "tema": "Valoracion relativa por multiplos",
+    "dificultad": "MEDIA",
+    "tiempo_estimado": 35,
+    "rol_estudiante": "Analista de valoracion relativa",
+    "contexto": "Industria Tungurahua S.A. quiere saber cuanto esta pagando el mercado por cada dolar de flujo de caja operativo que genera por accion. Se la comparara con tres companias similares del sector para juzgar si su valoracion parece alta, baja o razonable.",
+    "objetivo": "Calcular e interpretar el multiplo PCFR, compararlo con referentes sectoriales y estimar un precio implicito por accion.",
+    "resultado_aprendizaje": "Aplica valoracion relativa por multiplos e interpreta sus limites.",
+    "situacion_inicial": "Tienes el Estado de Flujo de Efectivo 2025, la informacion accionaria y los multiplos de tres empresas comparables.",
+    "guia_debriefing": "Insistir en que un multiplo bajo no es automaticamente una oportunidad: puede reflejar mas riesgo, menos crecimiento o peor calidad del flujo.",
+    "retroalimentacion_base": "CFPS = USD 6,00; PCFR = 8,00x frente a un promedio sectorial de 8,32x. El precio implicito con el promedio es USD 49,90 frente a un mercado de USD 48,00.",
+    "sin_ia": true
+  },
+  "archivos": [
+    {
+      "tipo": "EXCEL",
+      "nombre": "Workbook PCFR",
+      "ruta": "adjuntos/pcfr_estudiante.xlsx",
+      "descripcion": "Hoja de trabajo con CFPS, multiplo PCFR, comparables y precio implicito."
+    }
+  ],
+  "criterios": [
+    {
+      "nombre": "Eleccion del flujo correcto",
+      "peso": 20,
+      "descripcion": "Usa el flujo de caja operativo, no el FCFF ni el FCFE."
+    },
+    {
+      "nombre": "Exactitud del calculo",
+      "peso": 35,
+      "descripcion": "CFPS, PCFR y precio implicito correctos."
+    },
+    {
+      "nombre": "Comparacion sectorial",
+      "peso": 20,
+      "descripcion": "Usa promedio y mediana, y explica para que sirve cada uno."
+    },
+    {
+      "nombre": "Prudencia interpretativa",
+      "peso": 25,
+      "descripcion": "No concluye subvaloracion de forma automatica."
+    }
+  ],
+  "rondas": [
+    {
+      "numero": 1,
+      "titulo": "Paso 1 - Elegir el flujo y calcular el CFPS",
+      "situacion": "El Estado de Flujo de Efectivo trae partidas de operacion, inversion y financiamiento. Para el PCFR solo sirve una. Calcula el flujo de caja por accion.",
+      "instrucciones": "Se usa el Flujo de Caja Operativo, no el FCFF ni el FCFE: representa el efectivo de la actividad ordinaria antes de inversiones y financiamiento.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "CFPS = Flujo de Caja Operativo / Numero de acciones",
+        "tablas": [
+          {
+            "titulo": "Estado de Flujo de Efectivo 2025 (USD)",
+            "columnas": [
+              "Concepto",
+              "Valor",
+              "Clasificacion",
+              "Uso en PCFR"
+            ],
+            "filas": [
+              [
+                "Flujo de caja operativo",
+                "3.600.000",
+                "Operacion",
+                "Base del calculo"
+              ],
+              [
+                "Compra de maquinaria",
+                "-520.000",
+                "Inversion",
+                "No se usa directamente"
+              ],
+              [
+                "Nueva deuda recibida",
+                "400.000",
+                "Financiamiento",
+                "No se usa directamente"
+              ],
+              [
+                "Amortizacion de deuda",
+                "-250.000",
+                "Financiamiento",
+                "No se usa directamente"
+              ]
+            ]
+          },
+          {
+            "titulo": "Informe de mercado",
+            "columnas": [
+              "Concepto",
+              "Dato"
+            ],
+            "filas": [
+              [
+                "Acciones en circulacion",
+                "600.000"
+              ],
+              [
+                "Precio de mercado por accion",
+                "USD 48,00"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "cfps",
+          "etiqueta": "Flujo de caja por accion (CFPS)",
+          "tipo": "numero",
+          "objetivo": 6.0,
+          "tolerancia": 0.01,
+          "unidad": "USD por accion",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Distingue el flujo operativo",
+          "palabras_clave": "operativo, actividad ordinaria, no fcff, no fcfe, antes de inversiones",
+          "peso": 100,
+          "si_cumple": "Correcto.",
+          "si_falta": "Explica por que se usa el flujo operativo y no el FCFF."
+        }
+      ],
+      "respuesta_modelo": "CFPS = 3.600.000 / 600.000 = USD 6,00 por accion. Se usa el flujo de caja operativo porque el PCFR mide cuanto paga el mercado por el efectivo que genera la actividad ordinaria; el FCFF y el FCFE ya descuentan inversiones y financiamiento, que responden a decisiones distintas.",
+      "retroalimentacion": "Cambiar el flujo del numerador cambia el multiplo y lo vuelve incomparable con el sector."
+    },
+    {
+      "numero": 2,
+      "titulo": "Paso 2 - Calcular el multiplo PCFR",
+      "situacion": "Con el CFPS y el precio de mercado, calcula cuantas veces paga el mercado por cada dolar de flujo por accion.",
+      "instrucciones": "El resultado se expresa como multiplo (veces), no en dolares.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "PCFR = Precio de mercado por accion / CFPS",
+        "tablas": [
+          {
+            "titulo": "Hoja de trabajo",
+            "columnas": [
+              "Concepto",
+              "Valor"
+            ],
+            "filas": [
+              [
+                "Precio de mercado",
+                "USD 48,00"
+              ],
+              [
+                "CFPS",
+                "USD 6,00"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "pcfr",
+          "etiqueta": "PCFR",
+          "tipo": "numero",
+          "objetivo": 8.0,
+          "tolerancia": 0.01,
+          "unidad": "veces",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Lee el multiplo",
+          "palabras_clave": "ocho veces, paga, multiplo, relativa",
+          "peso": 50,
+          "si_cumple": "Correcto.",
+          "si_falta": "Explica en palabras que significa 8,00x."
+        },
+        {
+          "nombre": "No concluye aislado",
+          "palabras_clave": "comparar, referentes, sector, aislado, no basta",
+          "peso": 50,
+          "si_cumple": "Bien: un multiplo solo no dice si es alto o bajo.",
+          "si_falta": "Falta senalar que hace falta comparar."
+        }
+      ],
+      "respuesta_modelo": "PCFR = 48,00 / 6,00 = 8,00 veces. Significa que el mercado paga ocho dolares por cada dolar de flujo de caja operativo por accion. Por si solo no dice si es alto o bajo: el PCFR es un multiplo de valoracion relativa y necesita referentes sectoriales.",
+      "retroalimentacion": "El PCFR no mide rentabilidad absoluta; mide cuanto paga el mercado."
+    },
+    {
+      "numero": 3,
+      "titulo": "Paso 3 - Comparar con el sector",
+      "situacion": "Tres empresas comparables cotizan en el mismo sector. Calcula el promedio y la mediana de sus multiplos.",
+      "instrucciones": "El promedio se ve afectado por valores extremos; la mediana no. Por eso se calculan los dos.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Multiplos comparables",
+            "columnas": [
+              "Empresa",
+              "Precio USD",
+              "CFPS USD",
+              "PCFR"
+            ],
+            "filas": [
+              [
+                "Empresa A",
+                "52,00",
+                "6,20",
+                "8,39"
+              ],
+              [
+                "Empresa B",
+                "45,00",
+                "5,50",
+                "8,18"
+              ],
+              [
+                "Empresa C",
+                "57,00",
+                "6,80",
+                "8,38"
+              ],
+              [
+                "Industria Tungurahua S.A.",
+                "48,00",
+                "6,00",
+                "8,00"
+              ]
+            ]
+          }
+        ],
+        "nota": "El promedio y la mediana se calculan solo con las tres comparables, sin incluir a la empresa objetivo."
+      },
+      "campos": [
+        {
+          "clave": "pcfr_promedio",
+          "etiqueta": "PCFR promedio del sector",
+          "tipo": "numero",
+          "objetivo": 8.317,
+          "tolerancia": 0.02,
+          "unidad": "veces",
+          "obligatorio": true
+        },
+        {
+          "clave": "pcfr_mediana",
+          "etiqueta": "PCFR mediana del sector",
+          "tipo": "numero",
+          "objetivo": 8.382,
+          "tolerancia": 0.02,
+          "unidad": "veces",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Para que sirve la mediana",
+          "palabras_clave": "mediana, valores extremos, atipicos, robusta",
+          "peso": 50,
+          "si_cumple": "Correcto.",
+          "si_falta": "Explica por que conviene mirar tambien la mediana."
+        },
+        {
+          "nombre": "Posicion de la empresa objetivo",
+          "palabras_clave": "menor, por debajo, ligeramente, 8,00",
+          "peso": 50,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta ubicar a la empresa frente al sector."
+        }
+      ],
+      "respuesta_modelo": "PCFR promedio = (8,39 + 8,18 + 8,38) / 3 = 8,32 veces. Mediana = 8,38 veces. La empresa objetivo cotiza a 8,00x, ligeramente por debajo de ambos referentes. Conviene mirar tambien la mediana porque reduce el efecto de una empresa con un multiplo atipico, que en una muestra de solo tres companias podria distorsionar el promedio.",
+      "retroalimentacion": "Con tres comparables, promedio y mediana casi coinciden; con muestras mas grandes la diferencia importa."
+    },
+    {
+      "numero": 4,
+      "titulo": "Paso 4 - Estimar el precio implicito",
+      "situacion": "Si el mercado le pagara a Industria Tungurahua S.A. el mismo multiplo que al sector, cuanto valdria su accion?",
+      "instrucciones": "Calcula el precio implicito con el promedio y con la mediana, y compara con el precio observado.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "Precio Implicito = CFPS de la empresa objetivo x PCFR de referencia",
+        "tablas": [
+          {
+            "titulo": "Datos",
+            "columnas": [
+              "Concepto",
+              "Valor"
+            ],
+            "filas": [
+              [
+                "CFPS empresa objetivo",
+                "USD 6,00"
+              ],
+              [
+                "PCFR promedio sector",
+                "8,32x"
+              ],
+              [
+                "PCFR mediana sector",
+                "8,38x"
+              ],
+              [
+                "Precio de mercado observado",
+                "USD 48,00"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "precio_promedio",
+          "etiqueta": "Precio implicito con el promedio",
+          "tipo": "numero",
+          "objetivo": 49.9,
+          "tolerancia": 0.15,
+          "unidad": "USD por accion",
+          "obligatorio": true
+        },
+        {
+          "clave": "precio_mediana",
+          "etiqueta": "Precio implicito con la mediana",
+          "tipo": "numero",
+          "objetivo": 50.29,
+          "tolerancia": 0.15,
+          "unidad": "USD por accion",
+          "obligatorio": true
+        },
+        {
+          "clave": "diferencia",
+          "etiqueta": "Diferencia frente al mercado (con el promedio)",
+          "tipo": "numero",
+          "objetivo": 1.9,
+          "tolerancia": 0.15,
+          "unidad": "USD",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Interpreta la diferencia",
+          "palabras_clave": "diferencia, potencial, por debajo, descuento",
+          "peso": 100,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta leer la diferencia entre precio implicito y mercado."
+        }
+      ],
+      "respuesta_modelo": "Precio implicito con el promedio = 6,00 x 8,32 = USD 49,90. Con la mediana = 6,00 x 8,38 = USD 50,29. Frente a un precio de mercado de USD 48,00, la diferencia es de USD 1,90 (unos 4%) con el promedio y de USD 2,29 con la mediana. La accion cotiza con un pequeno descuento respecto de sus comparables.",
+      "retroalimentacion": "El precio implicito no es una prediccion: es lo que valdria la accion si el mercado la tratara como al resto del sector."
+    },
+    {
+      "numero": 5,
+      "titulo": "Paso 5 - Concluir sin exagerar",
+      "situacion": "El multiplo esta por debajo del sector y el precio implicito supera al de mercado. Tu jefe quiere una recomendacion, pero te advierte que no acepta la respuesta facil.",
+      "instrucciones": "Responde: que puede explicar un multiplo mas bajo ademas de la subvaloracion, y bajo que condiciones recomendarias comprar.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Resultados del caso",
+            "columnas": [
+              "Indicador",
+              "Valor",
+              "Lectura"
+            ],
+            "filas": [
+              [
+                "Flujo de caja operativo",
+                "USD 3.600.000",
+                "Efectivo generado por la operacion"
+              ],
+              [
+                "CFPS",
+                "USD 6,00",
+                "Flujo por cada accion"
+              ],
+              [
+                "PCFR empresa",
+                "8,00x",
+                "Veces que paga el mercado"
+              ],
+              [
+                "PCFR promedio sector",
+                "8,32x",
+                "Referencia comparativa"
+              ],
+              [
+                "Precio implicito (promedio)",
+                "USD 49,90",
+                "Frente a USD 48,00 de mercado"
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "Explicaciones alternativas",
+          "palabras_clave": "riesgo, menor crecimiento, calidad del flujo, liquidez, tamano",
+          "peso": 45,
+          "si_cumple": "Muy bien: un descuento tambien puede ser un castigo justificado.",
+          "si_falta": "Falta considerar por que el mercado podria estar pagando menos con razon."
+        },
+        {
+          "nombre": "Limites de los multiplos",
+          "palabras_clave": "comparables, muestra pequena, tres empresas, no sustituye, flujo descontado",
+          "peso": 25,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta reconocer los limites de valorar con tres comparables."
+        },
+        {
+          "nombre": "Recomendacion condicionada",
+          "palabras_clave": "recomiendo, siempre que, condicion, verificar",
+          "peso": 30,
+          "si_cumple": "Correcto.",
+          "si_falta": "Cierra con una recomendacion que declare sus condiciones."
+        }
+      ],
+      "respuesta_modelo": "El descuento del 4% frente al sector es real pero pequeno, y un multiplo mas bajo no significa automaticamente que la accion este barata: tambien puede reflejar mayor riesgo percibido, menor crecimiento esperado, peor calidad o menor estabilidad del flujo de caja, o simplemente menor liquidez del titulo. Ademas la referencia sectorial se construyo con solo tres comparables, lo que la hace fragil. La recomendacion es tratar el resultado como una senal para investigar, no como una conclusion: comprar solo si al revisar el riesgo operativo y la sostenibilidad del flujo de caja de Industria Tungurahua S.A. se confirma que es equiparable a sus comparables. Si aparece mas riesgo o menos crecimiento, el descuento esta justificado y no hay oportunidad.",
+      "retroalimentacion": "La valoracion relativa abre preguntas; la valoracion por flujos descontados las cierra."
+    }
+  ]
+}

@@ -1,0 +1,472 @@
+{
+  "materia": {
+    "codigo": "AE-06-05",
+    "nombre": "Habilidades Gerenciales",
+    "malla_codigo": "ADM-UTA-2026",
+    "carrera_codigo": "ADM-EMP",
+    "carrera": "Administracion de Empresas",
+    "malla": "Malla Administracion de Empresas UTA 2026",
+    "nivel": 6
+  },
+  "tema": "Modelo 4 - Benchmarking",
+  "caso": {
+    "titulo": "Benchmarking guiado - Comercial Andina S.A.",
+    "modo": "CASO_INDEPENDIENTE",
+    "tema": "Las seis etapas del benchmarking",
+    "dificultad": "MEDIA",
+    "tiempo_estimado": 40,
+    "rol_estudiante": "Consultor de mejora de procesos",
+    "contexto": "Comercial Andina S.A. vende productos de consumo masivo y arrastra demoras en la atencion al cliente y baja satisfaccion. Sus indicadores: 18 minutos de atencion promedio, 72% de satisfaccion, 46 reclamos mensuales y 120 clientes atendidos por dia. La referencia del sector, Empresa Lider Beta, atiende en 10 minutos, tiene 91% de satisfaccion, 18 reclamos y 165 clientes diarios.",
+    "objetivo": "Aplicar las seis etapas del benchmarking para comparar el proceso de atencion al cliente con una organizacion lider, medir las brechas y proponer mejoras adaptadas a la realidad de la empresa.",
+    "resultado_aprendizaje": "Disena un proceso de benchmarking completo, desde la planificacion hasta la evaluacion de resultados.",
+    "situacion_inicial": "El gerente te contrata para que compares su proceso de atencion con el del lider del sector. Vas a recorrer las seis etapas, una por ronda.",
+    "guia_debriefing": "La idea central del cierre: el benchmarking no consiste en copiar, sino en aprender de las mejores practicas para mejorar el desempeno propio. Preguntar que pasaria si Comercial Andina copiara literalmente el proceso de Beta.",
+    "retroalimentacion_base": "Las brechas del caso son: 8 minutos de atencion, 19 puntos de satisfaccion, 28 reclamos mensuales y 45 clientes diarios de productividad.",
+    "sin_ia": true
+  },
+  "criterios": [
+    {
+      "nombre": "Planificacion",
+      "peso": 20,
+      "descripcion": "Delimita el proceso a comparar y elige indicadores medibles."
+    },
+    {
+      "nombre": "Recopilacion de informacion",
+      "peso": 15,
+      "descripcion": "Propone fuentes internas y externas concretas."
+    },
+    {
+      "nombre": "Analisis de brechas",
+      "peso": 25,
+      "descripcion": "Calcula las brechas correctamente y las interpreta."
+    },
+    {
+      "nombre": "Adaptacion",
+      "peso": 15,
+      "descripcion": "Adapta las mejores practicas al contexto, sin copiarlas."
+    },
+    {
+      "nombre": "Implementacion",
+      "peso": 15,
+      "descripcion": "Define responsables, plazos y recursos."
+    },
+    {
+      "nombre": "Evaluacion",
+      "peso": 10,
+      "descripcion": "Propone como medir si el cambio funciono."
+    }
+  ],
+  "rondas": [
+    {
+      "numero": 1,
+      "titulo": "Etapa 1 - Planificacion",
+      "situacion": "Comercial Andina tiene varios procesos con problemas, pero un benchmarking mal delimitado no sirve. Define que proceso vas a comparar y con que indicadores lo vas a medir.",
+      "instrucciones": "Nombra el proceso y elige tres indicadores. Un indicador sirve si se puede medir hoy y volver a medir despues del cambio.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Indicadores disponibles",
+            "columnas": [
+              "Indicador",
+              "Comercial Andina",
+              "Empresa Lider Beta"
+            ],
+            "filas": [
+              [
+                "Tiempo promedio de atencion",
+                "18 minutos",
+                "10 minutos"
+              ],
+              [
+                "Satisfaccion del cliente",
+                "72%",
+                "91%"
+              ],
+              [
+                "Reclamos mensuales",
+                "46",
+                "18"
+              ],
+              [
+                "Clientes atendidos por dia",
+                "120",
+                "165"
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "Delimita el proceso",
+          "palabras_clave": "atencion al cliente, proceso, delimitar, alcance",
+          "peso": 40,
+          "si_cumple": "Bien: el proceso queda acotado.",
+          "si_falta": "Falta nombrar con claridad que proceso se va a comparar."
+        },
+        {
+          "nombre": "Elige indicadores medibles",
+          "palabras_clave": "tiempo de atencion, satisfaccion, reclamos, productividad, indicador",
+          "peso": 40,
+          "si_cumple": "Correcto: son medibles antes y despues.",
+          "si_falta": "Faltan los tres indicadores con los que se va a medir."
+        },
+        {
+          "nombre": "Justifica la eleccion",
+          "palabras_clave": "porque, evidencia, demoras, inferior al estandar",
+          "peso": 20,
+          "si_cumple": "Bien.",
+          "si_falta": "Explica por que elegiste ese proceso y no otro."
+        }
+      ],
+      "respuesta_modelo": "Se evaluara el proceso de atencion al cliente, porque los indicadores actuales evidencian demoras, reclamos frecuentes y una satisfaccion inferior al estandar del sector. Los tres indicadores seleccionados son: tiempo promedio de atencion, porcentaje de satisfaccion del cliente y numero de reclamos mensuales. Los tres se miden hoy y se pueden volver a medir despues del cambio, que es lo que permite comprobar si el benchmarking sirvio.",
+      "retroalimentacion": "Un benchmarking sin indicadores medibles termina siendo una opinion."
+    },
+    {
+      "numero": 2,
+      "titulo": "Etapa 2 - Recopilacion de informacion",
+      "situacion": "Ya sabes que vas a comparar. Ahora hay que conseguir los datos, dentro y fuera de la empresa.",
+      "instrucciones": "Indica que fuentes internas usarias y que informacion pedirias a la empresa referente. Se concreto: nombra instrumentos, no categorias.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "nota": "Fuentes tipicas: observacion directa, entrevistas al personal, encuestas a clientes, informes de produccion, registro de reclamos, datos publicados por el referente, visitas tecnicas y asociaciones sectoriales."
+      },
+      "conceptos": [
+        {
+          "nombre": "Fuentes internas",
+          "palabras_clave": "observacion, entrevistas, encuestas, informes internos, registro de reclamos",
+          "peso": 50,
+          "si_cumple": "Bien.",
+          "si_falta": "Faltan las fuentes internas de informacion."
+        },
+        {
+          "nombre": "Fuentes externas",
+          "palabras_clave": "empresa referente, datos publicados, visita, sector, comparacion",
+          "peso": 50,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta decir que le pedirias al referente."
+        }
+      ],
+      "respuesta_modelo": "Internamente se revisan los informes de atencion, los tiempos registrados, las encuestas de satisfaccion, el registro de reclamos y entrevistas al personal de mostrador, ademas de observacion directa del proceso en horario pico. Externamente se solicitan a Empresa Lider Beta sus tiempos estandar de atencion, su protocolo de servicio, como organiza los turnos, que herramientas usa y como mide la satisfaccion; se complementa con datos publicados del sector.",
+      "retroalimentacion": "Sin datos comparables, la brecha que calcules no significa nada."
+    },
+    {
+      "numero": 3,
+      "titulo": "Etapa 3 - Analisis de brechas",
+      "situacion": "Con los datos de ambas empresas sobre la mesa, calcula las cuatro brechas.",
+      "instrucciones": "En tiempo y reclamos, menos es mejor. En satisfaccion y productividad, mas es mejor. Registra el tamano de cada brecha en valor absoluto.",
+      "tipo_respuesta": "NUMERICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "formula": "Brecha = |valor del referente - valor de la empresa|",
+        "tablas": [
+          {
+            "titulo": "Comparacion de indicadores",
+            "columnas": [
+              "Indicador",
+              "Comercial Andina",
+              "Empresa Lider Beta",
+              "Direccion deseada"
+            ],
+            "filas": [
+              [
+                "Tiempo promedio de atencion",
+                "18 min",
+                "10 min",
+                "Menos es mejor"
+              ],
+              [
+                "Satisfaccion del cliente",
+                "72%",
+                "91%",
+                "Mas es mejor"
+              ],
+              [
+                "Reclamos mensuales",
+                "46",
+                "18",
+                "Menos es mejor"
+              ],
+              [
+                "Clientes atendidos por dia",
+                "120",
+                "165",
+                "Mas es mejor"
+              ]
+            ]
+          }
+        ]
+      },
+      "campos": [
+        {
+          "clave": "brecha_tiempo",
+          "etiqueta": "Brecha de tiempo de atencion",
+          "tipo": "numero",
+          "objetivo": 8,
+          "tolerancia": 0.1,
+          "unidad": "minutos",
+          "obligatorio": true
+        },
+        {
+          "clave": "brecha_satisfaccion",
+          "etiqueta": "Brecha de satisfaccion",
+          "tipo": "numero",
+          "objetivo": 19,
+          "tolerancia": 0.1,
+          "unidad": "puntos porcentuales",
+          "obligatorio": true
+        },
+        {
+          "clave": "brecha_reclamos",
+          "etiqueta": "Brecha de reclamos mensuales",
+          "tipo": "numero",
+          "objetivo": 28,
+          "tolerancia": 0.1,
+          "unidad": "reclamos",
+          "obligatorio": true
+        },
+        {
+          "clave": "brecha_productividad",
+          "etiqueta": "Brecha de productividad diaria",
+          "tipo": "numero",
+          "objetivo": 45,
+          "tolerancia": 0.1,
+          "unidad": "clientes",
+          "obligatorio": true
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Interpreta la brecha",
+          "palabras_clave": "menos eficiente, cuanto debe mejorar, distancia, magnitud",
+          "peso": 60,
+          "si_cumple": "Bien: la brecha dice cuanto hay que mejorar, no solo que se esta peor.",
+          "si_falta": "Falta interpretar que significan esas brechas."
+        },
+        {
+          "nombre": "Relaciona las brechas entre si",
+          "palabras_clave": "tiempo explica, reclamos, satisfaccion, causa, relacion",
+          "peso": 40,
+          "si_cumple": "Muy bien: las cuatro brechas cuentan la misma historia.",
+          "si_falta": "Falta conectar las brechas: el tiempo de atencion explica buena parte de las demas."
+        }
+      ],
+      "respuesta_modelo": "Brecha de tiempo: 18 - 10 = 8 minutos. Brecha de satisfaccion: 91 - 72 = 19 puntos porcentuales. Brecha de reclamos: 46 - 18 = 28 reclamos mensuales. Brecha de productividad: 165 - 120 = 45 clientes diarios. Las cuatro cuentan la misma historia: el proceso es mas lento, y esa lentitud explica buena parte de los reclamos, de la insatisfaccion y de la menor cantidad de clientes atendidos. La brecha no dice solo que la empresa esta peor: dice exactamente cuanto tiene que mejorar.",
+      "retroalimentacion": "Con la brecha cuantificada, la meta deja de ser 'mejorar la atencion' y pasa a ser 'bajar 8 minutos'."
+    },
+    {
+      "numero": 4,
+      "titulo": "Etapa 4 - Adaptacion de las mejores practicas",
+      "situacion": "Empresa Lider Beta usa turnos digitales, protocolo de respuesta rapida y CRM. Comercial Andina no tiene ese presupuesto ni ese tamano. Adapta, no copies.",
+      "instrucciones": "Propon tres acciones concretas y di que recursos necesita cada una. Cada accion debe atacar una brecha identificada.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Practicas observadas en Empresa Lider Beta",
+            "columnas": [
+              "Practica",
+              "Efecto en el lider"
+            ],
+            "filas": [
+              [
+                "Sistema de turnos digitales",
+                "Ordena la fila y mide tiempos reales"
+              ],
+              [
+                "Protocolo de respuesta rapida",
+                "Estandariza la atencion y evita improvisar"
+              ],
+              [
+                "Capacitacion continua en servicio",
+                "Menos errores, mejor trato"
+              ],
+              [
+                "Seguimiento sistematico de reclamos",
+                "Los reclamos se cierran, no se acumulan"
+              ],
+              [
+                "Uso basico de CRM",
+                "El historial del cliente esta a mano"
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "Acciones concretas",
+          "palabras_clave": "turnos, capacitacion, protocolo, seguimiento de reclamos, crm",
+          "peso": 40,
+          "si_cumple": "Bien.",
+          "si_falta": "Faltan acciones concretas: no basta con decir 'mejorar la atencion'."
+        },
+        {
+          "nombre": "Adapta al contexto",
+          "palabras_clave": "adaptar, realidad, tamano, presupuesto, no copiar",
+          "peso": 40,
+          "si_cumple": "Muy bien: esa es la idea central del benchmarking.",
+          "si_falta": "Falta adaptar: copiar literalmente al lider no es benchmarking."
+        },
+        {
+          "nombre": "Nombra los recursos",
+          "palabras_clave": "recursos, software, presupuesto, personal, tiempo",
+          "peso": 20,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta decir que recursos hace falta para ejecutar las acciones."
+        }
+      ],
+      "respuesta_modelo": "Tres acciones adaptadas: (1) implementar un sistema de turnos sencillo, que puede ser una aplicacion basica o incluso un tablero con numeracion, para ordenar la fila y empezar a medir tiempos reales; (2) capacitar al personal en un protocolo corto de atencion, con pasos definidos para los tres tramites mas frecuentes, que es lo que mas rapido baja el tiempo promedio; (3) llevar un seguimiento de reclamos con responsable y fecha de cierre, para que dejen de acumularse. Recursos: un software basico de turnos, entre 8 y 12 horas de capacitacion y una planilla o CRM sencillo. No se copia el CRM completo del lider porque el tamano y el presupuesto de Comercial Andina no lo justifican todavia.",
+      "retroalimentacion": "Benchmarking no es copiar: es entender por que al lider le funciona y traducirlo a tu escala."
+    },
+    {
+      "numero": 5,
+      "titulo": "Etapa 5 - Implementacion",
+      "situacion": "Las acciones estan definidas. Ahora hay que hacerlas pasar. Disena el plan.",
+      "instrucciones": "Define responsable, plazo y actividad para cada accion. Ademas, identifica un riesgo probable y como lo controlarias.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "nota": "Un plan piloto de 30 dias permite corregir antes de extender el cambio a toda la empresa."
+      },
+      "conceptos": [
+        {
+          "nombre": "Responsable y plazo",
+          "palabras_clave": "responsable, jefe, plazo, dias, cronograma",
+          "peso": 40,
+          "si_cumple": "Bien: sin responsable y fecha, el plan no se ejecuta.",
+          "si_falta": "Falta asignar responsable y plazo."
+        },
+        {
+          "nombre": "Piloto antes de extender",
+          "palabras_clave": "piloto, prueba, 30 dias, gradual",
+          "peso": 30,
+          "si_cumple": "Correcto.",
+          "si_falta": "Considera empezar con un piloto en vez de cambiar todo de golpe."
+        },
+        {
+          "nombre": "Riesgo y control",
+          "palabras_clave": "riesgo, resistencia, control, mitigar, plan b",
+          "peso": 30,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta identificar un riesgo y como lo controlarias."
+        }
+      ],
+      "respuesta_modelo": "Plan piloto de 30 dias. Responsable: jefe de atencion al cliente. Actividades: semana 1, instalar el sistema de turnos y definir el protocolo; semana 2, capacitar al equipo; semanas 3 y 4, operar midiendo el tiempo de atencion todos los dias. Recursos: software de turnos, capacitacion y control diario de indicadores. El riesgo mas probable es la resistencia del personal, que puede ver el registro de tiempos como una vigilancia; se controla explicando que la medicion es del proceso y no de las personas, involucrando al equipo en el diseno del protocolo y publicando los resultados del grupo, no individuales.",
+      "retroalimentacion": "El riesgo mas frecuente en benchmarking no es tecnico: es que el equipo lo viva como un control."
+    },
+    {
+      "numero": 6,
+      "titulo": "Etapa 6 - Evaluacion",
+      "situacion": "Pasaron los 30 dias del piloto. Define como vas a saber si funciono y que decides con ese resultado.",
+      "instrucciones": "Indica que indicadores revisarias, con que metas, y cierra con una conclusion gerencial del caso.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Metas esperadas del caso",
+            "columnas": [
+              "Indicador",
+              "Antes",
+              "Meta a 30 dias",
+              "Referente"
+            ],
+            "filas": [
+              [
+                "Tiempo promedio de atencion",
+                "18 min",
+                "12 min",
+                "10 min"
+              ],
+              [
+                "Satisfaccion del cliente",
+                "72%",
+                "85%",
+                "91%"
+              ],
+              [
+                "Reclamos mensuales",
+                "46",
+                "25",
+                "18"
+              ],
+              [
+                "Clientes atendidos por dia",
+                "120",
+                "150",
+                "165"
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "Vuelve a medir lo mismo",
+          "palabras_clave": "medir nuevamente, mismos indicadores, comparar, antes y despues",
+          "peso": 40,
+          "si_cumple": "Correcto: se cierra el ciclo con los mismos indicadores del inicio.",
+          "si_falta": "Falta decir que se vuelve a medir lo mismo que se midio al comenzar."
+        },
+        {
+          "nombre": "Decision segun el resultado",
+          "palabras_clave": "institucionalizar, mantener, ajustar, si no se cumple",
+          "peso": 30,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta decir que se hace si la meta no se cumple."
+        },
+        {
+          "nombre": "Conclusion gerencial",
+          "palabras_clave": "mejora continua, aprender de los mejores, competitividad, adaptar",
+          "peso": 30,
+          "si_cumple": "Bien cerrado.",
+          "si_falta": "Falta la conclusion gerencial del caso."
+        }
+      ],
+      "respuesta_modelo": "Se vuelven a medir los mismos cuatro indicadores del inicio: tiempo de atencion, satisfaccion, reclamos y clientes atendidos por dia. Las metas del piloto son bajar el tiempo de 18 a 12 minutos, subir la satisfaccion de 72% a 85%, reducir los reclamos de 46 a 25 y llegar a 150 clientes diarios. Si se cumplen, el cambio se institucionaliza y se fija una nueva meta acercandose al referente; si no se cumplen, se revisa que parte del protocolo esta fallando antes de descartar la practica. Conclusion gerencial: el benchmarking permitio convertir una queja difusa sobre la atencion en cuatro brechas medidas y en un plan con responsable y plazo. Lo valioso no fue copiar a Empresa Lider Beta, sino entender por que su proceso es mas rapido y traducirlo a la escala de Comercial Andina.",
+      "retroalimentacion": "Sin volver a medir, el benchmarking se queda en una buena intencion."
+    }
+  ],
+  "juegos": [
+    {
+      "motor": "ordenar",
+      "titulo": "Las seis etapas del benchmarking, en orden",
+      "instrucciones": "Ordena las etapas del proceso de benchmarking tal como se aplican.",
+      "exigir_antes_del_caso": true,
+      "publicada": true,
+      "configuracion": {
+        "elementos": [
+          {
+            "texto": "Planificacion: definir el proceso y los indicadores"
+          },
+          {
+            "texto": "Recopilacion de informacion interna y externa"
+          },
+          {
+            "texto": "Analisis de brechas frente al referente"
+          },
+          {
+            "texto": "Adaptacion de las mejores practicas al contexto"
+          },
+          {
+            "texto": "Implementacion con responsables y plazos"
+          },
+          {
+            "texto": "Evaluacion: volver a medir y decidir"
+          }
+        ]
+      }
+    }
+  ]
+}

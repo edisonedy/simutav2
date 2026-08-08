@@ -1,0 +1,587 @@
+{
+  "materia": {
+    "codigo": "AE-06-05",
+    "nombre": "Habilidades Gerenciales",
+    "malla_codigo": "ADM-UTA-2026",
+    "carrera_codigo": "ADM-EMP",
+    "carrera": "Administracion de Empresas",
+    "malla": "Malla Administracion de Empresas UTA 2026",
+    "nivel": 6
+  },
+  "tema": "Modelo 3 - Michael Porter",
+  "caso": {
+    "titulo": "Analisis competitivo de Porter - Cafeteria Aroma Andino",
+    "modo": "CASO_INDEPENDIENTE",
+    "tema": "Cinco Fuerzas, Cadena de Valor, Estrategias Genericas y Diamante",
+    "dificultad": "AVANZADA",
+    "tiempo_estimado": 60,
+    "rol_estudiante": "Consultor estrategico",
+    "contexto": "La Cafeteria Aroma Andino compite en el sector de cafeterias y alimentos preparados en Ambato. Atiende a estudiantes, docentes, profesionales y familias que buscan cafe, postres artesanales, atencion rapida y un ambiente comodo para conversar, estudiar o trabajar. El dueno quiere saber como competir sin bajar precios.",
+    "objetivo": "Diagnosticar la posicion competitiva de la organizacion aplicando las Cinco Fuerzas, la Cadena de Valor, las Estrategias Genericas y el Diamante, y formular una estrategia coherente con acciones e indicadores.",
+    "resultado_aprendizaje": "Formula una estrategia competitiva sustentada en el analisis sectorial y en las fuentes de ventaja competitiva.",
+    "situacion_inicial": "Secuencia del analisis: identificar el sector, evaluar las cinco fuerzas, revisar la cadena de valor, elegir la estrategia generica, complementar con el Diamante, decidir e implementar, y finalmente evaluar.",
+    "guia_debriefing": "Cerrar preguntando por que el liderazgo en costos no era la opcion adecuada para Aroma Andino. La respuesta obliga a conectar la estrategia con el tamano y los recursos de la empresa.",
+    "retroalimentacion_base": "La estrategia recomendada es enfoque en diferenciacion: cafe de especialidad, productos artesanales, ambiente academico, atencion personalizada y fidelizacion digital. Responde a la rivalidad alta, reduce el poder del cliente y crea barreras frente a nuevos entrantes.",
+    "sin_ia": true
+  },
+  "criterios": [
+    {
+      "nombre": "Delimitacion del sector",
+      "peso": 15,
+      "descripcion": "Define industria, clientes, competidores y sustitutos."
+    },
+    {
+      "nombre": "Evaluacion de las cinco fuerzas",
+      "peso": 25,
+      "descripcion": "Asigna nivel a cada fuerza y lo justifica con evidencia del caso."
+    },
+    {
+      "nombre": "Cadena de valor",
+      "peso": 20,
+      "descripcion": "Identifica donde se genera valor y propone mejoras."
+    },
+    {
+      "nombre": "Coherencia de la estrategia",
+      "peso": 25,
+      "descripcion": "La estrategia elegida responde a las fuerzas diagnosticadas."
+    },
+    {
+      "nombre": "Implementacion y control",
+      "peso": 15,
+      "descripcion": "Traduce la estrategia en acciones, responsables e indicadores."
+    }
+  ],
+  "matriz": [
+    {
+      "criterio": "Rivalidad entre competidores",
+      "peso": 25,
+      "evalua": "Cuantos competidores hay y como compiten."
+    },
+    {
+      "criterio": "Poder de proveedores",
+      "peso": 15,
+      "evalua": "Cuantas alternativas de abastecimiento existen."
+    },
+    {
+      "criterio": "Poder de clientes",
+      "peso": 25,
+      "evalua": "Que tan facil es que el cliente se cambie."
+    },
+    {
+      "criterio": "Amenaza de sustitutos",
+      "peso": 20,
+      "evalua": "Que otras soluciones cubren la misma necesidad."
+    },
+    {
+      "criterio": "Amenaza de nuevos entrantes",
+      "peso": 15,
+      "evalua": "Que tan bajas son las barreras de entrada."
+    }
+  ],
+  "rondas": [
+    {
+      "numero": 1,
+      "titulo": "Etapa 1 - Identificacion del sector competitivo",
+      "situacion": "Antes de aplicar Porter hay que delimitar el terreno de juego. Describe el sector en el que compite Aroma Andino, sus competidores, sus clientes y sus sustitutos.",
+      "instrucciones": "Un sector mal delimitado hace que todo el analisis posterior sea inutil. Se concreto: nombra tipos de competidor y de cliente.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "nota": "Un sustituto no es un competidor: es una solucion distinta que cubre la misma necesidad. El cafe preparado en casa es un sustituto, no un competidor."
+      },
+      "conceptos": [
+        {
+          "nombre": "Sector delimitado",
+          "palabras_clave": "cafeterias, alimentos preparados, sector, industria local",
+          "peso": 30,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta delimitar el sector."
+        },
+        {
+          "nombre": "Competidores identificados",
+          "palabras_clave": "cafeterias locales, panaderias, comida rapida, cadenas",
+          "peso": 25,
+          "si_cumple": "Correcto.",
+          "si_falta": "Faltan los competidores."
+        },
+        {
+          "nombre": "Clientes identificados",
+          "palabras_clave": "estudiantes, docentes, profesionales, familias",
+          "peso": 25,
+          "si_cumple": "Correcto.",
+          "si_falta": "Faltan los clientes principales."
+        },
+        {
+          "nombre": "Sustitutos, no competidores",
+          "palabras_clave": "cafe en casa, bebidas embotelladas, tiendas de conveniencia, restaurantes",
+          "peso": 20,
+          "si_cumple": "Muy bien: distingue sustituto de competidor.",
+          "si_falta": "Faltan los sustitutos, que no son lo mismo que los competidores."
+        }
+      ],
+      "respuesta_modelo": "Aroma Andino participa en el sector de cafeterias y alimentos preparados de Ambato. Sus competidores directos son otras cafeterias locales, panaderias con servicio de cafeteria y cadenas de comida rapida. Sus clientes principales son estudiantes, docentes, profesionales y familias que buscan cafe, postres y un lugar comodo. Sus sustitutos son el cafe preparado en casa, las bebidas embotelladas, las tiendas de conveniencia y los restaurantes: cubren la misma necesidad con otra solucion.",
+      "retroalimentacion": "Confundir sustituto con competidor lleva a estrategias equivocadas: contra el cafe de casa no se compite bajando el precio."
+    },
+    {
+      "numero": 2,
+      "titulo": "Etapa 2 - Las Cinco Fuerzas",
+      "situacion": "Evalua la intensidad competitiva del sector. Cual es el diagnostico global?",
+      "instrucciones": "Asigna mentalmente un nivel (alta, media o baja) a cada fuerza y elige la conclusion que mejor resume la presion competitiva. Justifica con evidencia del caso.",
+      "tipo_respuesta": "OPCION_UNICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Evidencia del caso por fuerza",
+            "columnas": [
+              "Fuerza",
+              "Evidencia"
+            ],
+            "filas": [
+              [
+                "Rivalidad entre competidores",
+                "Varias cafeterias, panaderias y locales de comida rapida cerca, compitiendo por precio, ubicacion y experiencia"
+              ],
+              [
+                "Poder de proveedores",
+                "Hay varios proveedores de insumos, pero el cafe de especialidad depende de productores especificos"
+              ],
+              [
+                "Poder de clientes",
+                "Los clientes comparan precio, sabor, ambiente y servicio, y cambian de local con facilidad"
+              ],
+              [
+                "Amenaza de sustitutos",
+                "Cafe en casa, bebidas embotelladas y tiendas de conveniencia sustituyen parcialmente el servicio"
+              ],
+              [
+                "Amenaza de nuevos entrantes",
+                "Abrir una cafeteria pequena es posible, pero sostener calidad, ubicacion y clientes fieles exige gestion"
+              ]
+            ]
+          }
+        ]
+      },
+      "opciones": [
+        {
+          "texto": "Intensidad media-alta: rivalidad, clientes y sustitutos altos; proveedores y entrantes medios",
+          "descripcion": "Presion fuerte que empuja a diferenciarse en vez de competir por precio.",
+          "puntaje": 100,
+          "retroalimentacion": "Correcto. Con tres fuerzas altas, competir solo por precio destruiria el margen."
+        },
+        {
+          "texto": "Intensidad baja: el sector es comodo y hay espacio para todos",
+          "descripcion": "Poca presion competitiva.",
+          "puntaje": 0,
+          "retroalimentacion": "La evidencia dice lo contrario: muchos competidores y clientes que cambian facil."
+        },
+        {
+          "texto": "Intensidad alta en las cinco fuerzas por igual",
+          "descripcion": "Todas las fuerzas al maximo.",
+          "puntaje": 40,
+          "retroalimentacion": "La direccion es correcta, pero proveedores y nuevos entrantes son medios, no altos. Ese matiz cambia la estrategia."
+        },
+        {
+          "texto": "Lo unico relevante es la rivalidad; las otras cuatro fuerzas no aplican a una cafeteria",
+          "descripcion": "Analisis reducido a un solo factor.",
+          "puntaje": 10,
+          "retroalimentacion": "El poder del cliente y los sustitutos son justamente las fuerzas que mas condicionan a una cafeteria."
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Justifica cada nivel",
+          "palabras_clave": "porque, varios competidores, comparan, cambian facil, cafe en casa, barreras",
+          "peso": 60,
+          "si_cumple": "Bien: el nivel esta sostenido en evidencia.",
+          "si_falta": "Falta justificar los niveles con evidencia del caso."
+        },
+        {
+          "nombre": "Extrae la implicacion",
+          "palabras_clave": "no competir por precio, diferenciarse, fidelizar, margen",
+          "peso": 40,
+          "si_cumple": "Correcto: el diagnostico ya apunta a la estrategia.",
+          "si_falta": "Falta decir que implica ese diagnostico para la estrategia."
+        }
+      ],
+      "respuesta_modelo": "Rivalidad alta: existen varias cafeterias, panaderias y locales de comida rapida que compiten por precio, ubicacion y experiencia. Poder de proveedores medio: hay varios proveedores de insumos, aunque el cafe de especialidad puede depender de productores especificos. Poder de clientes alto: comparan precio, sabor, ambiente y servicio, y cambian de local facilmente. Sustitutos altos: el cafe en casa y las bebidas embotelladas reemplazan parcialmente el servicio. Nuevos entrantes medios: abrir es posible, sostener es dificil. Interpretacion: la industria presenta intensidad competitiva media-alta, por lo que la empresa debe diferenciarse y fidelizar en vez de competir unicamente por precio.",
+      "retroalimentacion": "Las cinco fuerzas no se puntuan por puntuar: sirven para saber por donde NO conviene competir."
+    },
+    {
+      "numero": 3,
+      "titulo": "Etapa 3 - Cadena de Valor",
+      "situacion": "Identifica en que actividades Aroma Andino genera valor para el cliente y donde puede mejorar.",
+      "instrucciones": "Recorre logistica interna, operaciones, marketing y ventas, servicio, y las actividades de apoyo. Para cada una, di si genera costo o diferenciacion y que mejorarias.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Actividades a revisar",
+            "columnas": [
+              "Actividad",
+              "En una cafeteria"
+            ],
+            "filas": [
+              [
+                "Logistica interna",
+                "Seleccion de cafe, leche, postres e insumos frescos"
+              ],
+              [
+                "Operaciones",
+                "Preparacion de bebidas y alimentos, presentacion del producto"
+              ],
+              [
+                "Marketing y ventas",
+                "Promocion en redes, combos, experiencias"
+              ],
+              [
+                "Servicio",
+                "Atencion personalizada, rapidez, ambiente"
+              ],
+              [
+                "Apoyo: tecnologia y talento humano",
+                "Pagos digitales, redes, capacitacion"
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "Identifica las actividades criticas",
+          "palabras_clave": "operaciones, servicio, marketing, criticas, experiencia de consumo",
+          "peso": 50,
+          "si_cumple": "Correcto: son las que tocan directamente la experiencia del cliente.",
+          "si_falta": "Falta senalar cuales son las actividades criticas y por que."
+        },
+        {
+          "nombre": "Propone mejoras concretas",
+          "palabras_clave": "estandarizar, capacitar, negociar proveedores, fidelizacion, medir satisfaccion",
+          "peso": 50,
+          "si_cumple": "Bien.",
+          "si_falta": "Faltan mejoras concretas por actividad."
+        }
+      ],
+      "respuesta_modelo": "Logistica interna: seleccion de cafe, leche, postres e insumos frescos; mejora propuesta, negociar con proveedores locales y controlar inventarios. Operaciones: preparacion de bebidas y presentacion; mejora, estandarizar recetas y capacitar al personal. Marketing y ventas: promocion en redes, combos y experiencias; mejora, campanas digitales dirigidas a estudiantes y profesionales. Servicio: atencion personalizada, rapidez y ambiente; mejora, medir satisfaccion y crear un programa de fidelizacion. Tecnologia y talento humano: pagos digitales, redes y capacitacion; mejora, implementar un sistema simple de pedidos y control de clientes. Las actividades criticas son operaciones, servicio y marketing, porque inciden directamente en la experiencia de consumo, que es donde se construye la ventaja competitiva.",
+      "retroalimentacion": "En servicios, la ventaja competitiva casi siempre esta en operaciones y servicio, no en la logistica."
+    },
+    {
+      "numero": 4,
+      "titulo": "Etapa 4 - Estrategia generica",
+      "situacion": "Porter plantea tres posiciones: liderazgo en costos, diferenciacion y enfoque. Elige una para Aroma Andino y justificala.",
+      "instrucciones": "La estrategia tiene que ser coherente con las fuerzas que diagnosticaste y con los recursos de la empresa.",
+      "tipo_respuesta": "OPCION_UNICA",
+      "requiere_justificacion": true,
+      "puntaje_maximo": 100,
+      "datos": {
+        "nota": "Liderazgo en costos: operar con menor costo que todos. Diferenciacion: atributos unicos por los que el cliente paga mas. Enfoque: atender muy bien a un segmento especifico, en costos o en diferenciacion."
+      },
+      "opciones": [
+        {
+          "texto": "Enfoque en diferenciacion",
+          "descripcion": "Atender muy bien a un segmento concreto (estudiantes, docentes y profesionales de la zona) con cafe de especialidad, productos locales y ambiente academico.",
+          "puntaje": 100,
+          "retroalimentacion": "Correcto: es la unica coherente con rivalidad alta, clientes con mucho poder y recursos limitados."
+        },
+        {
+          "texto": "Liderazgo en costos",
+          "descripcion": "Competir siendo el mas barato del sector.",
+          "puntaje": 15,
+          "retroalimentacion": "Con rivalidad alta y margen estrecho, competir por precio erosiona la rentabilidad y una cafeteria pequena no tiene escala para ganarla."
+        },
+        {
+          "texto": "Diferenciacion amplia",
+          "descripcion": "Diferenciarse frente a todo el mercado, sin segmentar.",
+          "puntaje": 55,
+          "retroalimentacion": "La direccion es correcta, pero diferenciarse ante todo el mercado exige una inversion que la empresa no tiene. Mejor enfocar."
+        },
+        {
+          "texto": "Enfoque en costos",
+          "descripcion": "Ser el mas barato para un segmento especifico.",
+          "puntaje": 30,
+          "retroalimentacion": "Sigue apoyandose en el precio, que es justo la variable donde los sustitutos (cafe en casa) siempre ganan."
+        }
+      ],
+      "conceptos": [
+        {
+          "nombre": "Descarta las alternativas",
+          "palabras_clave": "liderazgo en costos, margen, inversion, no conviene, descarta",
+          "peso": 50,
+          "si_cumple": "Muy bien: elegir bien incluye explicar por que las otras no.",
+          "si_falta": "Falta explicar por que descartas las otras estrategias."
+        },
+        {
+          "nombre": "Conecta con el diagnostico",
+          "palabras_clave": "rivalidad alta, poder del cliente, sustitutos, segmento, fidelizar",
+          "peso": 50,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta conectar la estrategia con las fuerzas que diagnosticaste."
+        }
+      ],
+      "respuesta_modelo": "La estrategia mas adecuada es el enfoque en diferenciacion. Se comparan las tres opciones: el liderazgo en costos no es adecuado porque competir por precios bajos reduce el margen y una cafeteria pequena no tiene escala para sostenerlo; la diferenciacion amplia requeriria una inversion mayor a la disponible. Por eso se selecciona enfoque en diferenciacion, atendiendo mejor a estudiantes, docentes y profesionales cercanos mediante cafe de especialidad, productos locales, ambiente comodo para estudiar y atencion personalizada. Es coherente con el diagnostico: responde a la rivalidad alta, reduce el poder del cliente mediante fidelizacion y enfrenta a los sustitutos con una experiencia que no se replica en casa.",
+      "retroalimentacion": "Porter insiste en que quedarse en el medio, sin elegir, es la peor posicion."
+    },
+    {
+      "numero": 5,
+      "titulo": "Etapa 5 - Diamante de la competitividad",
+      "situacion": "El Diamante analiza si el entorno favorece a la empresa. Evalua los cuatro determinantes para Aroma Andino en Ambato.",
+      "instrucciones": "Condiciones de los factores, condiciones de la demanda, sectores relacionados y de apoyo, y estrategia-estructura-rivalidad. Para cada uno, di que encuentras y que oportunidad abre.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "nota": "Ambato ofrece estudiantes, universidades, proveedores locales, cultura de consumo de cafe y competencia que impulsa la mejora continua."
+      },
+      "conceptos": [
+        {
+          "nombre": "Condiciones de los factores",
+          "palabras_clave": "talento joven, proveedores locales, espacios comerciales, insumos",
+          "peso": 25,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta el analisis de las condiciones de los factores."
+        },
+        {
+          "nombre": "Condiciones de la demanda",
+          "palabras_clave": "clientes exigentes, calidad, ambiente, conectividad, atencion rapida",
+          "peso": 25,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta el analisis de la demanda."
+        },
+        {
+          "nombre": "Sectores relacionados",
+          "palabras_clave": "productores de cafe, panaderias, reposteria, plataformas, empaque",
+          "peso": 25,
+          "si_cumple": "Bien.",
+          "si_falta": "Faltan los sectores relacionados y de apoyo."
+        },
+        {
+          "nombre": "Estrategia, estructura y rivalidad",
+          "palabras_clave": "competencia obliga, mejorar servicio, innovacion, comunicacion digital",
+          "peso": 25,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta el cuarto determinante."
+        }
+      ],
+      "respuesta_modelo": "Condiciones de los factores: disponibilidad de talento joven, proveedores locales y espacios comerciales; oportunidad, contratar y capacitar baristas de la zona. Condiciones de la demanda: clientes cada vez mas exigentes en calidad, ambiente, conectividad y atencion rapida; oportunidad, esa exigencia empuja a mejorar y premia la diferenciacion. Sectores relacionados y de apoyo: productores de cafe, panaderias, reposteria, plataformas digitales y proveedores de empaque; oportunidad, alianzas con productores locales que refuerzan el relato del producto. Estrategia, estructura y rivalidad: la competencia obliga a mejorar servicio, presentacion, innovacion y comunicacion digital. Conclusion: el entorno es favorable y refuerza la decision de diferenciarse con productos locales, experiencia y servicio.",
+      "retroalimentacion": "El Diamante no cambia la estrategia; confirma si el entorno la sostiene."
+    },
+    {
+      "numero": 6,
+      "titulo": "Etapa 6 - Decision competitiva",
+      "situacion": "Integra todo el analisis en una decision. Cual es el problema competitivo principal, cual es la ventaja propuesta y cual es la estrategia final?",
+      "instrucciones": "Tres respuestas cortas y conectadas entre si. La estrategia final tiene que resolver el problema que identificaste.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "conceptos": [
+        {
+          "nombre": "Problema competitivo nombrado",
+          "palabras_clave": "rivalidad, competir por precio, clientes cambian, sin diferenciacion",
+          "peso": 35,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta nombrar el problema competitivo principal."
+        },
+        {
+          "nombre": "Ventaja competitiva concreta",
+          "palabras_clave": "cafe de especialidad, experiencia, ambiente, atencion personalizada, dificil de imitar",
+          "peso": 35,
+          "si_cumple": "Correcto: la ventaja tiene que ser dificil de copiar.",
+          "si_falta": "La ventaja propuesta es demasiado generica."
+        },
+        {
+          "nombre": "Estrategia coherente",
+          "palabras_clave": "diferenciacion enfocada, fidelizacion, comunicacion digital, alianzas",
+          "peso": 30,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta la estrategia final."
+        }
+      ],
+      "respuesta_modelo": "Problema competitivo principal: la empresa esta expuesta a competir por precio en un sector con rivalidad alta y clientes que cambian de local con facilidad. Ventaja competitiva propuesta: una experiencia de consumo dificil de imitar, basada en cafe de especialidad, productos artesanales locales, ambiente comodo para estudiar o trabajar y atencion personalizada. Estrategia competitiva final: diferenciacion enfocada en estudiantes, docentes y profesionales de la zona, reforzada con un programa de fidelizacion, comunicacion digital permanente y alianzas con proveedores locales.",
+      "retroalimentacion": "Si la ventaja se puede copiar en un mes, no es ventaja competitiva."
+    },
+    {
+      "numero": 7,
+      "titulo": "Etapa 7 - Implementacion",
+      "situacion": "Una estrategia sin acciones es una intencion. Traducela en un plan con responsables, tiempos e indicadores.",
+      "instrucciones": "Al menos dos lineas de accion. Cada una con acciones, responsable, tiempo e indicador.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Formato esperado",
+            "columnas": [
+              "Estrategia",
+              "Acciones",
+              "Responsable",
+              "Tiempo",
+              "Indicador"
+            ],
+            "filas": [
+              [
+                "...",
+                "...",
+                "...",
+                "...",
+                "..."
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "Acciones concretas",
+          "palabras_clave": "carta de cafe, capacitar, ambiente, redes sociales, tarjeta de puntos",
+          "peso": 35,
+          "si_cumple": "Bien.",
+          "si_falta": "Faltan acciones concretas."
+        },
+        {
+          "nombre": "Responsable y tiempo",
+          "palabras_clave": "administrador, area comercial, meses, plazo",
+          "peso": 35,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta el responsable y el plazo de cada accion."
+        },
+        {
+          "nombre": "Indicador por accion",
+          "palabras_clave": "satisfaccion, ventas mensuales, clientes recurrentes, indicador",
+          "peso": 30,
+          "si_cumple": "Bien.",
+          "si_falta": "Falta el indicador con el que se mide cada accion."
+        }
+      ],
+      "respuesta_modelo": "Linea 1, diferenciacion enfocada: disenar una carta de cafe de especialidad, capacitar baristas, mejorar el ambiente y activar redes sociales. Responsable: administrador. Tiempo: 3 meses. Indicador: satisfaccion del cliente y ventas mensuales. Linea 2, fidelizacion: crear tarjeta de puntos, descuentos por frecuencia y base de datos de clientes. Responsable: area comercial. Tiempo: 2 meses. Indicador: clientes recurrentes.",
+      "retroalimentacion": "Sin responsable con nombre y fecha, la estrategia se queda en la presentacion."
+    },
+    {
+      "numero": 8,
+      "titulo": "Etapa 8 - Evaluacion y control",
+      "situacion": "Define como vas a saber si la estrategia funciono, y que haras si no se cumple la meta.",
+      "instrucciones": "Al menos tres indicadores, cada uno con meta, resultado esperado y accion correctiva.",
+      "tipo_respuesta": "TEXTO",
+      "requiere_justificacion": false,
+      "puntaje_maximo": 100,
+      "datos": {
+        "tablas": [
+          {
+            "titulo": "Formato esperado",
+            "columnas": [
+              "Indicador",
+              "Meta",
+              "Resultado esperado",
+              "Accion correctiva"
+            ],
+            "filas": [
+              [
+                "...",
+                "...",
+                "...",
+                "..."
+              ]
+            ]
+          }
+        ]
+      },
+      "conceptos": [
+        {
+          "nombre": "Metas con numero y plazo",
+          "palabras_clave": "90%, tres meses, 20%, cuatro meses, 15%, meta",
+          "peso": 40,
+          "si_cumple": "Bien: las metas se pueden verificar.",
+          "si_falta": "Las metas no tienen numero ni plazo."
+        },
+        {
+          "nombre": "Accion correctiva",
+          "palabras_clave": "si no se cumple, ajustar, reforzar, mejorar, correctiva",
+          "peso": 35,
+          "si_cumple": "Correcto.",
+          "si_falta": "Falta que haras si la meta no se cumple."
+        },
+        {
+          "nombre": "Cierre del ciclo",
+          "palabras_clave": "medir, controlar, revisar, ventaja competitiva, sostenible",
+          "peso": 25,
+          "si_cumple": "Buen cierre.",
+          "si_falta": "Falta cerrar el ciclo: por que hay que medir la estrategia."
+        }
+      ],
+      "respuesta_modelo": "Satisfaccion del cliente: meta 90% en tres meses; resultado esperado, mayor fidelizacion; accion correctiva, mejorar atencion, tiempos y calidad. Clientes recurrentes: meta aumentar 20% en cuatro meses; resultado esperado, mayor estabilidad de ventas; accion correctiva, reforzar promociones y el programa de puntos. Ventas mensuales: meta aumentar 15% en cuatro meses; resultado esperado, mayor rentabilidad; accion correctiva, ajustar precios, combos y campanas digitales. Conclusion: la ventaja competitiva debe medirse; de lo contrario la estrategia queda solo como intencion.",
+      "retroalimentacion": "El control cierra el ciclo de Porter: sin medicion, no se sabe si la posicion competitiva mejoro."
+    }
+  ],
+  "juegos": [
+    {
+      "motor": "ordenar",
+      "titulo": "La secuencia del analisis de Porter",
+      "instrucciones": "La estrategia competitiva requiere una secuencia logica: primero entender la industria, luego identificar el valor y despues elegir como competir. Ordenala.",
+      "exigir_antes_del_caso": true,
+      "publicada": true,
+      "configuracion": {
+        "elementos": [
+          {
+            "texto": "Identificar el sector competitivo"
+          },
+          {
+            "texto": "Evaluar las Cinco Fuerzas"
+          },
+          {
+            "texto": "Analizar la Cadena de Valor"
+          },
+          {
+            "texto": "Elegir la Estrategia Generica"
+          },
+          {
+            "texto": "Complementar con el Diamante de competitividad"
+          },
+          {
+            "texto": "Formular la decision competitiva"
+          },
+          {
+            "texto": "Implementar con acciones e indicadores"
+          },
+          {
+            "texto": "Evaluar y controlar los resultados"
+          }
+        ]
+      }
+    },
+    {
+      "motor": "relacionar",
+      "titulo": "Cada fuerza con lo que mide",
+      "instrucciones": "Une cada una de las Cinco Fuerzas con la pregunta que responde.",
+      "exigir_antes_del_caso": false,
+      "publicada": true,
+      "configuracion": {
+        "pares": [
+          {
+            "izquierda": "Rivalidad entre competidores",
+            "derecha": "Cuantos compiten y con que armas?"
+          },
+          {
+            "izquierda": "Poder de proveedores",
+            "derecha": "Puedo cambiar de proveedor sin sufrir?"
+          },
+          {
+            "izquierda": "Poder de clientes",
+            "derecha": "Que tan facil es que el cliente se vaya?"
+          },
+          {
+            "izquierda": "Amenaza de sustitutos",
+            "derecha": "Que otra cosa cubre la misma necesidad?"
+          },
+          {
+            "izquierda": "Amenaza de nuevos entrantes",
+            "derecha": "Que tan facil es abrir un negocio igual?"
+          }
+        ]
+      }
+    }
+  ]
+}
